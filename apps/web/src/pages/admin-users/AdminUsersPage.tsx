@@ -43,7 +43,7 @@ export function AdminUsersPage() {
 
   const create = useMutation({
     mutationFn: (body: unknown) => api.post("/admin-users", body),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); setOpen(false); setShowPassword(false); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); setOpen(false); setShowPassword(false); setForm({ name: "", email: "", password: "", role_id: "" }); },
   });
 
   async function handleCreate() {
