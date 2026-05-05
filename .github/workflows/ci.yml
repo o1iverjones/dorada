@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  typecheck-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck all packages
+        run: pnpm typecheck
+
+      - name: Lint all packages
+        run: pnpm lint
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pulpito
+          POSTGRES_PASSWORD: pulpito
+          POSTGRES_DB: pulpito_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @pulpito/api db:generate
+
+      - name: Run database migrations
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://pulpito:pulpito@localhost:5432/pulpito_test
+        run: pnpm db:migrate:deploy
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://pulpito:pulpito@localhost:5432/pulpito_test
+          REDIS_URL: redis://localhost:6379
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
+          JWT_SECRET: test-secret-at-least-32-characters-long
+          NODE_ENV: test
+        run: pnpm test

@@ -1,0 +1,75 @@
+name: Deploy Mobile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/types/**"
+      - "packages/i18n/**"
+      - "packages/utils/**"
+      - ".github/workflows/deploy-mobile.yml"
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build and submit iOS
+        working-directory: apps/mobile
+        env:
+          EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+          EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
+        run: eas build --platform ios --profile production --auto-submit --non-interactive
+
+      - name: Build and submit Android
+        working-directory: apps/mobile
+        run: eas build --platform android --profile production --auto-submit --non-interactive
+
+  ota-update:
+    runs-on: ubuntu-latest
+    needs: []
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish OTA update
+        working-directory: apps/mobile
+        run: eas update --branch production --message "Deploy from ${{ github.sha }}" --non-interactive

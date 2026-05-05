@@ -1,0 +1,38 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "../lib/api.js";
+
+export function useSystemSettings() {
+  return useQuery({
+    queryKey: ["system-settings"],
+    queryFn: () => api.get("/settings"),
+  });
+}
+
+export function useUpdateSystemSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => api.patch("/settings", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["system-settings"] }),
+  });
+}
+
+export function useLanguages() {
+  return useQuery({
+    queryKey: ["languages"],
+    queryFn: () => api.get<{ data: unknown[] }>("/settings/languages"),
+  });
+}
+
+export function useAppointmentTypes() {
+  return useQuery({
+    queryKey: ["appointment-types"],
+    queryFn: () => api.get<{ data: unknown[] }>("/settings/appointment-types"),
+  });
+}
+
+export function useLocaleStrings(locale: string) {
+  return useQuery({
+    queryKey: ["locale-strings", locale],
+    queryFn: () => api.get<{ data: unknown[] }>(`/settings/locale-strings?locale=${locale}`),
+  });
+}

@@ -1,0 +1,234 @@
+import type { PrismaClient } from "@prisma/client";
+import type {
+  CreateInterpreterBody,
+  UpdateInterpreterBody,
+  UpdateSelfInterpreterBody,
+  CreateAvailabilityBlockBody,
+  InterpreterListQuery,
+} from "@pulpito/types";
+import { NotFoundError, ConflictError, ValidationError } from "../../lib/errors.js";
+
+function ensureTenant(record: { organization_id: string } | null, organizationId: string, code: string) {
+  if (!record || record.organization_id !== organizationId) {
+    throw new NotFoundError(code, "Interpreter not found");
+  }
+}
+
+export async function listInterpreters(query: InterpreterListQuery, organizationId: string, prisma: PrismaClient) {
+  const items = await prisma.interpreter.findMany({
+    where: {
+      organization_id: organizationId,
+      is_active: true,
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.language ? { languages: { has: query.language } } : {}),
+      ...(query.search ? { name: { contains: query.search, mode: "insensitive" as const } } : {}),
+      ...(query.clinic_id ? { clinics_not_allowed: { none: { clinic_id: query.clinic_id } } } : {}),
+      ...(query.available_on
+        ? {
+            availability_blocks: {
+              none: { from: { lte: new Date(query.available_on) }, to: { gte: new Date(query.available_on) } },
+            },
+          }
+        : {}),
+      ...(query.cursor ? { id: { gt: query.cursor } } : {}),
+    },
+    take: query.limit + 1,
+    orderBy: { name: "asc" },
+    include: { clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } } },
+  });
+
+  const hasMore = items.length > query.limit;
+  const data = hasMore ? items.slice(0, -1) : items;
+  return {
+    data: data.map(formatInterpreter),
+    pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
+  };
+}
+
+function formatInterpreter(i: {
+  id: string; name: string; phone: string; email: string | null; type: string;
+  languages: string[]; profile_picture_url: string | null; location_lat: number | null;
+  location_lng: number | null; pay_rate: unknown; payment_method: string | null; is_active: boolean;
+  created_at: Date; updated_at: Date;
+  clinics_not_allowed: { clinic: { id: string; name: string } }[];
+  address?: string | null; emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
+  notes?: string | null;
+}) {
+  return {
+    id: i.id,
+    name: i.name,
+    phone: i.phone,
+    email: i.email,
+    type: i.type,
+    languages: i.languages,
+    profile_picture_url: i.profile_picture_url,
+    location: i.location_lat != null && i.location_lng != null ? { lat: i.location_lat, lng: i.location_lng } : null,
+    pay_rate: i.pay_rate ? Number(i.pay_rate) : null,
+    payment_method: i.payment_method,
+    is_active: i.is_active,
+    clinics_not_allowed: i.clinics_not_allowed.map((b) => b.clinic),
+    created_at: i.created_at.toISOString(),
+    updated_at: i.updated_at.toISOString(),
+    ...(i.address !== undefined ? { address: i.address } : {}),
+    ...(i.emergency_contact_name !== undefined
+      ? { emergency_contact: { name: i.emergency_contact_name, phone: i.emergency_contact_phone } }
+      : {}),
+    ...(i.notes !== undefined ? { notes: i.notes } : {}),
+  };
+}
+
+export async function getInterpreter(id: string, organizationId: string, prisma: PrismaClient) {
+  const interpreter = await prisma.interpreter.findUnique({
+    where: { id },
+    include: {
+      clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } },
+      availability_blocks: { orderBy: { from: "asc" } },
+    },
+  });
+  ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
+  return formatInterpreter({ ...interpreter!, address: interpreter!.address, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes });
+}
+
+export async function createInterpreter(body: CreateInterpreterBody, organizationId: string, prisma: PrismaClient) {
+  const existing = await prisma.interpreter.findFirst({ where: { organization_id: organizationId, phone: body.phone } });
+  if (existing) throw new ConflictError("PHONE_ALREADY_EXISTS", "Phone number already registered");
+
+  const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
+  const defaultRate = body.type === "certified"
+    ? Number(settings?.default_pay_rate_certified ?? 40)
+    : Number(settings?.default_pay_rate_qualified ?? 30);
+
+  return prisma.interpreter.create({
+    data: {
+      organization_id: organizationId,
+      name: body.name,
+      phone: body.phone,
+      email: body.email ?? null,
+      type: body.type,
+      languages: body.languages,
+      location_lat: body.location?.lat ?? null,
+      location_lng: body.location?.lng ?? null,
+      pay_rate: body.pay_rate ?? defaultRate,
+      payment_method: body.payment_method ?? null,
+      address: body.address ?? null,
+      emergency_contact_name: body.emergency_contact?.name ?? null,
+      emergency_contact_phone: body.emergency_contact?.phone ?? null,
+      notes: body.notes ?? null,
+      ...(body.clinics_not_allowed?.length
+        ? { clinics_not_allowed: { create: body.clinics_not_allowed.map((id) => ({ clinic_id: id })) } }
+        : {}),
+    },
+    include: { clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } } },
+  });
+}
+
+export async function updateInterpreter(
+  id: string,
+  body: UpdateInterpreterBody,
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const interpreter = await prisma.interpreter.findUnique({ where: { id } });
+  ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
+
+  if (body.clinics_not_allowed !== undefined) {
+    await prisma.clinicInterpreterBlock.deleteMany({ where: { interpreter_id: id } });
+    if (body.clinics_not_allowed.length > 0) {
+      await prisma.clinicInterpreterBlock.createMany({
+        data: body.clinics_not_allowed.map((clinicId) => ({ clinic_id: clinicId, interpreter_id: id })),
+      });
+    }
+  }
+
+  return prisma.interpreter.update({
+    where: { id },
+    data: {
+      ...(body.name ? { name: body.name } : {}),
+      ...(body.phone ? { phone: body.phone } : {}),
+      ...(body.email !== undefined ? { email: body.email } : {}),
+      ...(body.type ? { type: body.type } : {}),
+      ...(body.languages ? { languages: body.languages } : {}),
+      ...(body.location ? { location_lat: body.location.lat, location_lng: body.location.lng } : {}),
+      ...(body.pay_rate !== undefined ? { pay_rate: body.pay_rate } : {}),
+      ...(body.payment_method !== undefined ? { payment_method: body.payment_method } : {}),
+      ...(body.address !== undefined ? { address: body.address } : {}),
+      ...(body.emergency_contact
+        ? { emergency_contact_name: body.emergency_contact.name, emergency_contact_phone: body.emergency_contact.phone }
+        : {}),
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+    },
+    include: { clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } } },
+  });
+}
+
+export async function deactivateInterpreter(id: string, organizationId: string, prisma: PrismaClient) {
+  const interpreter = await prisma.interpreter.findUnique({ where: { id } });
+  ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
+
+  const upcoming = await prisma.appointment.count({
+    where: { interpreter_id: id, status: { in: ["confirmed", "in_progress"] }, date_time: { gte: new Date() } },
+  });
+  if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Interpreter has upcoming confirmed appointments");
+
+  await prisma.interpreter.update({ where: { id }, data: { is_active: false } });
+}
+
+export async function updateSelf(interpreterId: string, body: UpdateSelfInterpreterBody, prisma: PrismaClient) {
+  return prisma.interpreter.update({
+    where: { id: interpreterId },
+    data: {
+      ...(body.email !== undefined ? { email: body.email } : {}),
+      ...(body.location ? { location_lat: body.location.lat, location_lng: body.location.lng } : {}),
+    },
+  });
+}
+
+export async function listAvailabilityBlocks(interpreterId: string, prisma: PrismaClient) {
+  const blocks = await prisma.availabilityBlock.findMany({
+    where: { interpreter_id: interpreterId },
+    orderBy: { from: "asc" },
+  });
+  return { data: blocks };
+}
+
+export async function createAvailabilityBlock(
+  interpreterId: string,
+  body: CreateAvailabilityBlockBody,
+  prisma: PrismaClient,
+) {
+  if (new Date(body.from) >= new Date(body.to)) {
+    throw new ValidationError("INVALID_DATE_RANGE", "to must be after from");
+  }
+
+  const conflict = await prisma.appointment.findFirst({
+    where: {
+      interpreter_id: interpreterId,
+      status: { in: ["confirmed", "in_progress"] },
+      date_time: { gte: new Date(body.from), lte: new Date(body.to) },
+    },
+  });
+  if (conflict) {
+    throw new ConflictError("AVAILABILITY_CONFLICTS_WITH_APPOINTMENT", "Block overlaps a confirmed appointment");
+  }
+
+  return prisma.availabilityBlock.create({
+    data: {
+      interpreter_id: interpreterId,
+      from: new Date(body.from),
+      to: new Date(body.to),
+      reason: body.reason ?? null,
+    },
+  });
+}
+
+export async function deleteAvailabilityBlock(
+  interpreterId: string,
+  blockId: string,
+  prisma: PrismaClient,
+) {
+  const block = await prisma.availabilityBlock.findUnique({ where: { id: blockId } });
+  if (!block || block.interpreter_id !== interpreterId) {
+    throw new NotFoundError("INTERPRETER_NOT_FOUND", "Availability block not found");
+  }
+  await prisma.availabilityBlock.delete({ where: { id: blockId } });
+}

@@ -1,0 +1,565 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Tenants ─────────────────────────────────────────────────────────────────
+
+model Organization {
+  id                    String   @id @default(uuid())
+  name                  String
+  slug                  String   @unique
+  locale                String   @default("en")
+  plan                  String   @default("standard")
+  intake_email_address  String?  @unique
+  is_active             Boolean  @default(true)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  users                User[]
+  roles                Role[]
+  interpreters         Interpreter[]
+  clinics              Clinic[]
+  insurance_agencies   InsuranceAgency[]
+  patients             Patient[]
+  appointments         Appointment[]
+  appointment_types    AppointmentType[]
+  languages            OrganizationLanguage[]
+  locale_strings       LocaleString[]
+  system_settings      SystemSettings?
+  messages             Message[]
+  email_intake_logs    EmailIntakeLog[]
+  super_admin_settings SuperAdminSettings?
+  report_jobs          ReportJob[]
+
+  @@map("organizations")
+}
+
+// ─── Users & Auth ─────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(uuid())
+  organization_id String
+  name            String
+  email           String
+  password_hash   String
+  totp_secret     String?
+  mfa_enabled     Boolean   @default(false)
+  language        String    @default("en")
+  fcm_token       String?
+  is_active       Boolean   @default(true)
+  failed_attempts Int       @default(0)
+  locked_until    DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  organization   Organization     @relation(fields: [organization_id], references: [id])
+  role_id        String
+  role           Role             @relation(fields: [role_id], references: [id])
+  preferences    UserPreferences?
+  refresh_tokens RefreshToken[]
+  sent_messages  Message[]        @relation("SentByUser")
+  report_jobs    ReportJob[]
+
+  @@unique([organization_id, email])
+  @@map("users")
+}
+
+model UserPreferences {
+  id                         String   @id @default(uuid())
+  user_id                    String   @unique
+  // "immediate_push" | "immediate_email" | "digest_email" | "queue_only"
+  follow_up_notification     String   @default("queue_only")
+  email_intake_notification  String   @default("queue_only")
+  digest_times               String[] @default([])
+  updated_at                 DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model RefreshToken {
+  id             String    @id @default(uuid())
+  user_id        String?
+  interpreter_id String?
+  token_hash     String    @unique
+  expires_at     DateTime
+  revoked_at     DateTime?
+  created_at     DateTime  @default(now())
+
+  user        User?        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  interpreter Interpreter? @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Role {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  is_system       Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organization_id], references: [id])
+  permissions  RolePermission[]
+  users        User[]
+
+  @@unique([organization_id, name])
+  @@map("roles")
+}
+
+model RolePermission {
+  id         String @id @default(uuid())
+  role_id    String
+  permission String
+
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, permission])
+  @@map("role_permissions")
+}
+
+// ─── Interpreters ─────────────────────────────────────────────────────────────
+
+model Interpreter {
+  id                      String    @id @default(uuid())
+  organization_id         String
+  name                    String
+  phone                   String
+  email                   String?
+  type                    String
+  languages               String[]
+  profile_picture_url     String?
+  location_lat            Float?
+  location_lng            Float?
+  pay_rate                Decimal?  @db.Decimal(10, 2)
+  payment_method          String?
+  address                 String?
+  emergency_contact_name  String?
+  emergency_contact_phone String?
+  // "push" | "sms"
+  follow_up_channel       String    @default("push")
+  fcm_token               String?
+  notes                   String?
+  is_active               Boolean   @default(true)
+  failed_otp_attempts     Int       @default(0)
+  otp_locked_until        DateTime?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  organization        Organization            @relation(fields: [organization_id], references: [id])
+  availability_blocks AvailabilityBlock[]
+  clinics_not_allowed ClinicInterpreterBlock[]
+  offers              AppointmentOffer[]
+  appointments        Appointment[]           @relation("AssignedInterpreter")
+  refresh_tokens      RefreshToken[]
+  sent_messages       Message[]               @relation("SentByInterpreter")
+  follow_up_responses FollowUpResponse[]
+
+  @@unique([organization_id, phone])
+  @@map("interpreters")
+}
+
+model AvailabilityBlock {
+  id             String   @id @default(uuid())
+  interpreter_id String
+  from           DateTime
+  to             DateTime
+  reason         String?
+  created_at     DateTime @default(now())
+
+  interpreter Interpreter @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
+
+  @@map("interpreter_availability")
+}
+
+// ─── Clinics ──────────────────────────────────────────────────────────────────
+
+model Clinic {
+  id                    String   @id @default(uuid())
+  organization_id       String
+  name                  String
+  address               String?
+  phone                 String?
+  primary_contact_name  String?
+  primary_contact_phone String?
+  primary_contact_email String?
+  billing_model         String
+  billing_hourly_rate   Decimal? @db.Decimal(10, 2)
+  billing_flat_rate     Decimal? @db.Decimal(10, 2)
+  billing_invoice_cycle String   @default("monthly")
+  is_active             Boolean  @default(true)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  organization         Organization            @relation(fields: [organization_id], references: [id])
+  appointments         Appointment[]
+  interpreters_blocked ClinicInterpreterBlock[]
+
+  @@map("clinics")
+}
+
+model ClinicInterpreterBlock {
+  id             String @id @default(uuid())
+  clinic_id      String
+  interpreter_id String
+
+  clinic      Clinic      @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
+  interpreter Interpreter @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
+
+  @@unique([clinic_id, interpreter_id])
+  @@map("clinic_interpreter_blocks")
+}
+
+// ─── Insurance Agencies ───────────────────────────────────────────────────────
+
+model InsuranceAgency {
+  id                                 String   @id @default(uuid())
+  organization_id                    String
+  name                               String
+  address                            String?
+  phone                              String?
+  primary_contact_name               String?
+  primary_contact_phone              String?
+  primary_contact_email              String?
+  notes                              String?
+  email_intake_enabled               Boolean  @default(false)
+  email_intake_sender_domains        String[] @default([])
+  email_intake_confirmation_override String?
+  email_intake_reply_template        String?
+  email_intake_reply_from_name       String?
+  email_intake_reply_from_email      String?
+  is_active                          Boolean  @default(true)
+  created_at                         DateTime @default(now())
+  updated_at                         DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organization_id], references: [id])
+  appointments Appointment[]
+  email_logs   EmailIntakeLog[]
+
+  @@map("insurance_agencies")
+}
+
+// ─── Patients ─────────────────────────────────────────────────────────────────
+
+model Patient {
+  id                 String   @id @default(uuid())
+  organization_id    String
+  name               String
+  mrn                String?
+  phone              String?
+  email              String?
+  preferred_language String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organization_id], references: [id])
+  appointments Appointment[]
+
+  @@unique([organization_id, mrn])
+  @@map("patients")
+}
+
+// ─── Appointments ─────────────────────────────────────────────────────────────
+
+model AppointmentType {
+  id                       String   @id @default(uuid())
+  organization_id          String
+  name                     String
+  pay_model                String
+  minimum_billable_minutes Int      @default(60)
+  is_active                Boolean  @default(true)
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organization_id], references: [id])
+  appointments Appointment[]
+
+  @@map("appointment_types")
+}
+
+model Appointment {
+  id                         String    @id @default(uuid())
+  organization_id            String
+  status                     String    @default("pending_offer")
+  date_time                  DateTime
+  duration_minutes           Int
+  type_id                    String
+  language                   String
+  interpreter_type_required  String
+  interpreter_id             String?
+  clinic_id                  String
+  insurance_agency_id        String
+  patient_id                 String
+  referring_physician        String?
+  department                 String?
+  pre_auth_amount            Decimal   @db.Decimal(10, 2)
+  pre_auth_mileage           Int       @default(0)
+  po_number                  String?
+  source                     String    @default("manual")
+  clock_in_time              DateTime?
+  clock_out_time             DateTime?
+  actual_duration_minutes    Int?
+  billable_duration_minutes  Int?
+  pay_rate                   Decimal?  @db.Decimal(10, 2)
+  follow_up_status           String?
+  shift_notes                String?
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
+
+  organization       Organization       @relation(fields: [organization_id], references: [id])
+  type               AppointmentType    @relation(fields: [type_id], references: [id])
+  interpreter        Interpreter?       @relation("AssignedInterpreter", fields: [interpreter_id], references: [id])
+  clinic             Clinic             @relation(fields: [clinic_id], references: [id])
+  insurance_agency   InsuranceAgency    @relation(fields: [insurance_agency_id], references: [id])
+  patient            Patient            @relation(fields: [patient_id], references: [id])
+  offers             AppointmentOffer[]
+  follow_up_response FollowUpResponse?
+  email_intake_draft EmailIntakeDraft?  @relation("EmailIntakeDraftAppointment")
+  follow_up_draft    FollowUpDraft?     @relation("FollowUpDraftAppointment")
+
+  @@map("appointments")
+}
+
+model AppointmentOffer {
+  id             String    @id @default(uuid())
+  appointment_id String
+  interpreter_id String
+  status         String    @default("pending")
+  offered_at     DateTime  @default(now())
+  expires_at     DateTime?
+  responded_at   DateTime?
+
+  appointment Appointment @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  interpreter Interpreter @relation(fields: [interpreter_id], references: [id])
+
+  @@unique([appointment_id, interpreter_id])
+  @@map("appointment_offers")
+}
+
+// ─── Follow-Up Flow ───────────────────────────────────────────────────────────
+
+model FollowUpResponse {
+  id                 String   @id @default(uuid())
+  appointment_id     String   @unique
+  interpreter_id     String
+  has_follow_up      Boolean
+  same_physician     Boolean?
+  same_clinic        Boolean?
+  follow_up_datetime String?
+  notes              String?
+  submitted_at       DateTime @default(now())
+
+  appointment Appointment     @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  interpreter Interpreter     @relation(fields: [interpreter_id], references: [id])
+  media       FollowUpMedia[]
+  draft       FollowUpDraft?
+
+  @@map("follow_up_responses")
+}
+
+model FollowUpMedia {
+  id                    String   @id @default(uuid())
+  follow_up_response_id String
+  gcs_path              String
+  public_url            String
+  mime_type             String
+  filename              String
+  uploaded_at           DateTime @default(now())
+
+  follow_up_response FollowUpResponse @relation(fields: [follow_up_response_id], references: [id], onDelete: Cascade)
+
+  @@map("follow_up_media")
+}
+
+model FollowUpDraft {
+  id                    String   @id @default(uuid())
+  follow_up_response_id String   @unique
+  appointment_id        String?  @unique
+  status                String   @default("pending_review")
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  follow_up_response FollowUpResponse @relation(fields: [follow_up_response_id], references: [id], onDelete: Cascade)
+  appointment        Appointment?     @relation("FollowUpDraftAppointment", fields: [appointment_id], references: [id])
+
+  @@map("follow_up_drafts")
+}
+
+// ─── Email Intake Agent ───────────────────────────────────────────────────────
+
+model EmailIntakeLog {
+  id                               String    @id @default(uuid())
+  organization_id                  String
+  insurance_agency_id              String?
+  received_at                      DateTime
+  from_email                       String
+  subject                          String
+  message_id                       String?
+  body_text                        String?
+  raw_email_gcs_path               String
+  status                           String    @default("pending")
+  has_unresolved_fields            Boolean   @default(false)
+  duplicate_po                     Boolean   @default(false)
+  error_detail                     String?
+  confirmation_method              String?
+  confirmation_status              String?
+  confirmation_error               String?
+  confirmation_screenshot_gcs_path String?
+  confirmation_executed_at         DateTime?
+  processed_at                     DateTime?
+  created_at                       DateTime  @default(now())
+  updated_at                       DateTime  @updatedAt
+
+  organization     Organization          @relation(fields: [organization_id], references: [id])
+  insurance_agency InsuranceAgency?      @relation(fields: [insurance_agency_id], references: [id])
+  extraction       EmailIntakeExtraction?
+  draft            EmailIntakeDraft?
+
+  @@map("email_intake_logs")
+}
+
+model EmailIntakeExtraction {
+  id                String   @id @default(uuid())
+  log_id            String   @unique
+  model_used        String
+  prompt_version    String
+  extracted_at      DateTime @default(now())
+  extracted_fields  Json
+  confidence_scores Json
+  unresolved_fields String[] @default([])
+
+  log EmailIntakeLog @relation(fields: [log_id], references: [id], onDelete: Cascade)
+
+  @@map("email_intake_extractions")
+}
+
+model EmailIntakeDraft {
+  id                      String   @id @default(uuid())
+  log_id                  String   @unique
+  appointment_id          String?  @unique
+  status                  String   @default("pending_review")
+  has_unresolved_fields   Boolean  @default(false)
+  unresolved_fields       String[] @default([])
+  po_number               String?
+  extracted_patient_name  String?
+  extracted_clinic_name   String?
+  extracted_doctor_name   String?
+  extracted_date_time     String?
+  extracted_languages     String[] @default([])
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  log         EmailIntakeLog @relation(fields: [log_id], references: [id], onDelete: Cascade)
+  appointment Appointment?   @relation("EmailIntakeDraftAppointment", fields: [appointment_id], references: [id])
+
+  @@map("email_intake_drafts")
+}
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+model ReportJob {
+  id              String    @id @default(uuid())
+  organization_id String
+  requested_by    String
+  type            String
+  format          String    @default("pdf")
+  filters         Json
+  status          String    @default("pending")
+  gcs_path        String?
+  download_url    String?
+  error_message   String?
+  created_at      DateTime  @default(now())
+  completed_at    DateTime?
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+  requested_by_user User   @relation(fields: [requested_by], references: [id])
+
+  @@map("report_jobs")
+}
+
+// ─── Messaging ────────────────────────────────────────────────────────────────
+
+model Message {
+  id              String    @id @default(uuid())
+  organization_id String
+  interpreter_id  String
+  sender_type     String
+  sender_user_id  String?
+  body            String
+  sent_at         DateTime  @default(now())
+  read_at         DateTime?
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+  sender_user  User?        @relation("SentByUser", fields: [sender_user_id], references: [id])
+  interpreter  Interpreter  @relation("SentByInterpreter", fields: [interpreter_id], references: [id])
+
+  @@map("messages")
+}
+
+// ─── Localisation & Settings ──────────────────────────────────────────────────
+
+model OrganizationLanguage {
+  id              String  @id @default(uuid())
+  organization_id String
+  code            String
+  name            String
+  active          Boolean @default(true)
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, code])
+  @@map("organization_languages")
+}
+
+model LocaleString {
+  id              String @id @default(uuid())
+  organization_id String
+  locale          String
+  key             String
+  value           String
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, locale, key])
+  @@map("locale_strings")
+}
+
+model SystemSettings {
+  id                                  String   @id @default(uuid())
+  organization_id                     String   @unique
+  default_pay_rate_certified          Decimal  @db.Decimal(10, 2) @default(40.00)
+  default_pay_rate_qualified          Decimal  @db.Decimal(10, 2) @default(30.00)
+  offer_expiry_default_minutes        Int      @default(60)
+  follow_up_reminder_window_minutes   Int      @default(60)
+  follow_up_max_reminders             Int      @default(2)
+  updated_at                          DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("system_settings")
+}
+
+model SuperAdminSettings {
+  id                           String   @id @default(uuid())
+  organization_id              String   @unique
+  email_polling_interval_minutes Int    @default(5)
+  claude_model                 String   @default("claude-sonnet-4-6")
+  llm_prompt_version           String   @default("v1.0")
+  imap_host                    String?
+  imap_user                    String?
+  imap_password                String?
+  max_confirmation_retries     Int      @default(3)
+  playwright_timeout_seconds   Int      @default(30)
+  updated_at                   DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("super_admin_settings")
+}
