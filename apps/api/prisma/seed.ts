@@ -113,6 +113,8 @@ async function main() {
 
   // ── Appointment types ──────────────────────────────────────────────────────
   for (const type of [
+    { name: "Certified", pay_model: "hourly", minimum_billable_minutes: 60 },
+    { name: "Qualified", pay_model: "hourly", minimum_billable_minutes: 60 },
     { name: "In-Person", pay_model: "hourly", minimum_billable_minutes: 60 },
     { name: "Phone", pay_model: "flat_rate", minimum_billable_minutes: 30 },
     { name: "Video", pay_model: "flat_rate", minimum_billable_minutes: 30 },

@@ -7,14 +7,14 @@ import { useCreateAppointment, useAppointments } from "../../hooks/useAppointmen
 import { useClinics } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
-import { useAppointmentTypes } from "../../hooks/useSettings.js";
+import { useSystemSettings } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
+import { useEffect } from "react";
 import { toast } from "../../hooks/use-toast.js";
 
 const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
@@ -43,8 +43,11 @@ export function NewAppointmentPage() {
   const { data: clinics } = useClinics();
   const { data: agencies } = useInsuranceAgencies();
   const { data: patients } = usePatients();
-  const { data: types } = useAppointmentTypes();
+  const { data: settings } = useSystemSettings();
   const { data: pastAppts } = useAppointments({ limit: "200" });
+
+  const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
+  const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
 
   const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string }>)
     .map((c) => ({ value: c.id, label: c.name }));
@@ -60,10 +63,16 @@ export function NewAppointmentPage() {
     )
   ).map((name) => ({ value: name, label: name }));
 
-  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { interpreter_type_required: "qualified", duration_minutes: 60, pre_auth_amount: 0, pre_auth_mileage: 0, language: "Spanish" },
   });
+
+  // Once settings load, pre-select the Qualified appointment type
+  useEffect(() => {
+    const qualifiedType = certQualTypes.find((ty) => ty.name === "Qualified");
+    if (qualifiedType) setValue("type_id", qualifiedType.id);
+  }, [settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onSubmit(data: FormData) {
     try {
@@ -89,18 +98,31 @@ export function NewAppointmentPage() {
               <Input type="number" min={15} step={15} {...register("duration_minutes")} />
             </FormField>
 
-            <FormField label={t("appointments.type")} error={errors.type_id?.message}>
+            <div className="space-y-2">
+              <Label>{t("appointments.type")}</Label>
+              {errors.type_id && <p className="text-sm text-destructive">{errors.type_id.message}</p>}
               <Controller name="type_id" control={control} render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder={t("common.select")} /></SelectTrigger>
-                  <SelectContent>
-                    {((types?.data ?? []) as Array<{ id: string; name: string }>).map((ty) => (
-                      <SelectItem key={ty.id} value={ty.id}>{ty.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  {certQualTypes.map((ty) => (
+                    <button
+                      key={ty.id}
+                      type="button"
+                      onClick={() => {
+                        field.onChange(ty.id);
+                        setValue("interpreter_type_required", ty.name.toLowerCase() as "certified" | "qualified");
+                      }}
+                      className={`rounded-full border px-4 py-1 text-sm transition-colors ${
+                        field.value === ty.id
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input hover:bg-accent"
+                      }`}
+                    >
+                      {ty.name}
+                    </button>
+                  ))}
+                </div>
               )} />
-            </FormField>
+            </div>
 
             <div className="col-span-full space-y-2">
               <Label>{t("appointments.language")}</Label>
@@ -125,19 +147,8 @@ export function NewAppointmentPage() {
               )} />
             </div>
 
-            <FormField label={t("appointments.interpreter_type")} error={errors.interpreter_type_required?.message}>
-              <Controller name="interpreter_type_required" control={control} render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="certified">{t("interpreters.certified")}</SelectItem>
-                    <SelectItem value="qualified">{t("interpreters.qualified")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              )} />
-            </FormField>
 
-            <FormField label={t("appointments.clinic")} error={errors.clinic_id?.message}>
+<FormField label={t("appointments.clinic")} error={errors.clinic_id?.message}>
               <Controller name="clinic_id" control={control} render={({ field }) => (
                 <AutocompleteInput
                   options={clinicOptions}
