@@ -12,6 +12,7 @@ import type { JwtPayload } from "../../middleware/auth.js";
 import {
   getSettings, updateSettings, createAppointmentType, updateAppointmentType,
   deactivateAppointmentType, updateLanguages, getLocalizationStrings, updateLocalizationStrings,
+  listInterpreterRates, createInterpreterRate, deleteInterpreterRate,
 } from "./settings.service.js";
 
 export default async function settingsRoutes(fastify: FastifyInstance) {
@@ -52,6 +53,24 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
     const body = UpdateLanguageListBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
     return reply.send(await updateLanguages(body, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.get("/interpreter-rates", { preHandler: [authenticateAdmin] }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    return reply.send(await listInterpreterRates(payload.organization_id, fastify.prisma));
+  });
+
+  fastify.post("/interpreter-rates", { preHandler }, async (req, reply) => {
+    const { title, amount } = req.body as { title: string; amount: number };
+    const payload = req.user as JwtPayload;
+    return reply.status(201).send(await createInterpreterRate({ title, amount }, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.delete("/interpreter-rates/:id", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    await deleteInterpreterRate(id, payload.organization_id, fastify.prisma);
+    return reply.status(204).send();
   });
 
   fastify.get("/localization/:locale", { preHandler }, async (req, reply) => {

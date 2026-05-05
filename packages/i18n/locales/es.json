@@ -545,6 +545,10 @@
     "followUp.nonResponseWindow": "Ventana sin respuesta (minutos)",
     "followUp.maxReminders": "Máximo de recordatorios antes de marcar sin respuesta",
     "localization.title": "Localización",
-    "localization.manage": "Administrar cadenas de texto"
+    "localization.manage": "Administrar cadenas de texto",
+    "interpreter_rates": "Tarifas de intérpretes",
+    "no_rates": "Aún no hay tarifas configuradas.",
+    "rate_title": "Nombre de tarifa",
+    "rate_amount": "Monto ($)"
   }
 }

@@ -30,6 +30,13 @@ export function useAppointmentTypes() {
   });
 }
 
+export function useInterpreterRates() {
+  return useQuery({
+    queryKey: ["interpreter-rates"],
+    queryFn: () => api.get<{ data: Array<{ id: string; title: string; amount: number }> }>("/settings/interpreter-rates"),
+  });
+}
+
 export function useLocaleStrings(locale: string) {
   return useQuery({
     queryKey: ["locale-strings", locale],

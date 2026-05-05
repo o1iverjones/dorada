@@ -7,7 +7,7 @@ import { useCreateAppointment, useAppointments } from "../../hooks/useAppointmen
 import { useClinics } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
-import { useSystemSettings } from "../../hooks/useSettings.js";
+import { useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { Card, CardContent } from "../../components/ui/card.js";
@@ -44,10 +44,12 @@ export function NewAppointmentPage() {
   const { data: agencies } = useInsuranceAgencies();
   const { data: patients } = usePatients();
   const { data: settings } = useSystemSettings();
+  const { data: ratesData } = useInterpreterRates();
   const { data: pastAppts } = useAppointments({ limit: "200" });
 
   const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
   const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
+  const interpreterRates = ratesData?.data ?? [];
 
   const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string }>)
     .map((c) => ({ value: c.id, label: c.name }));
@@ -197,8 +199,21 @@ export function NewAppointmentPage() {
               )} />
             </FormField>
 
-            <FormField label={t("appointments.pre_auth_amount")} error={errors.pre_auth_amount?.message}>
-              <Input type="number" step="0.01" min={0} {...register("pre_auth_amount")} />
+            <FormField label={t("settings.interpreter_rates")} error={errors.pre_auth_amount?.message}>
+              <Controller name="pre_auth_amount" control={control} render={({ field }) => (
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                >
+                  <option value="">{t("common.select")}</option>
+                  {interpreterRates.map((r) => (
+                    <option key={r.id} value={r.amount}>
+                      {r.title} — ${r.amount.toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              )} />
             </FormField>
 
             <FormField label={t("appointments.pre_auth_mileage")} error={errors.pre_auth_mileage?.message}>

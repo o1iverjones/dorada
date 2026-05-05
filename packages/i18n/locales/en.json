@@ -545,6 +545,10 @@
     "followUp.nonResponseWindow": "Non-response window (minutes)",
     "followUp.maxReminders": "Max reminders before marking no-response",
     "localization.title": "Localization",
-    "localization.manage": "Manage strings"
+    "localization.manage": "Manage strings",
+    "interpreter_rates": "Interpreter rates",
+    "no_rates": "No rates configured yet.",
+    "rate_title": "Rate title",
+    "rate_amount": "Amount ($)"
   }
 }

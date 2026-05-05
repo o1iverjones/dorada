@@ -116,6 +116,31 @@ export async function updateLanguages(body: UpdateLanguageListBody, organization
   return prisma.organizationLanguage.findMany({ where: { organization_id: organizationId }, orderBy: { name: "asc" } });
 }
 
+export async function listInterpreterRates(organizationId: string, prisma: PrismaClient) {
+  const rates = await prisma.interpreterRate.findMany({
+    where: { organization_id: organizationId, is_active: true },
+    orderBy: { title: "asc" },
+  });
+  return { data: rates.map((r) => ({ id: r.id, title: r.title, amount: Number(r.amount) })) };
+}
+
+export async function createInterpreterRate(
+  body: { title: string; amount: number },
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const rate = await prisma.interpreterRate.create({
+    data: { organization_id: organizationId, title: body.title, amount: body.amount },
+  });
+  return { id: rate.id, title: rate.title, amount: Number(rate.amount) };
+}
+
+export async function deleteInterpreterRate(id: string, organizationId: string, prisma: PrismaClient) {
+  const rate = await prisma.interpreterRate.findUnique({ where: { id } });
+  if (!rate || rate.organization_id !== organizationId) throw new NotFoundError("RATE_NOT_FOUND", "Rate not found");
+  await prisma.interpreterRate.update({ where: { id }, data: { is_active: false } });
+}
+
 export async function getLocalizationStrings(locale: string, organizationId: string, prisma: PrismaClient) {
   const overrides = await prisma.localeString.findMany({
     where: { organization_id: organizationId, locale },

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSystemSettings, useUpdateSystemSettings } from "../../hooks/useSettings.js";
+import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -11,6 +11,7 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { useNavigate } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 
 interface Language { id?: string; code: string; name: string; active: boolean; }
 interface AppointmentType { id: string; name: string; pay_model: string; minimum_billable_minutes: number; is_active: boolean; }
@@ -54,6 +55,19 @@ export function SettingsPage() {
 
   const [newLang, setNewLang] = useState({ code: "", name: "" });
   const [newType, setNewType] = useState({ name: "", pay_model: "hourly", minimum_billable_hours: 1 });
+  const [newRate, setNewRate] = useState({ title: "", amount: "" });
+
+  const { data: ratesData, refetch: refetchRates } = useInterpreterRates();
+  const rates = ratesData?.data ?? [];
+
+  const createRate = useMutation({
+    mutationFn: (body: { title: string; amount: number }) => api.post("/settings/interpreter-rates", body),
+    onSuccess: () => refetchRates(),
+  });
+  const deleteRate = useMutation({
+    mutationFn: (id: string) => api.delete(`/settings/interpreter-rates/${id}`),
+    onSuccess: () => refetchRates(),
+  });
 
   async function saveSettings() {
     try {
@@ -152,6 +166,56 @@ export function SettingsPage() {
             <Input placeholder={t("settings.languages.code")} value={newLang.code} onChange={(e) => setNewLang(s => ({ ...s, code: e.target.value }))} className="max-w-24" maxLength={10} />
             <Input placeholder={t("settings.new_language")} value={newLang.name} onChange={(e) => setNewLang(s => ({ ...s, name: e.target.value }))} className="max-w-xs" />
             <Button onClick={addLanguage} disabled={!newLang.code.trim() || !newLang.name.trim() || patchLanguages.isPending}>{t("common.add")}</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>{t("settings.interpreter_rates")}</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            {rates.map((r) => (
+              <div key={r.id} className="flex items-center justify-between rounded-md border p-3 text-sm">
+                <span className="font-medium">{r.title}</span>
+                <div className="flex items-center gap-4 text-muted-foreground">
+                  <span>${r.amount.toFixed(2)}</span>
+                  <button
+                    type="button"
+                    onClick={() => deleteRate.mutate(r.id)}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {rates.length === 0 && <p className="text-sm text-muted-foreground">{t("settings.no_rates")}</p>}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder={t("settings.rate_title")}
+              value={newRate.title}
+              onChange={(e) => setNewRate(s => ({ ...s, title: e.target.value }))}
+              className="max-w-xs"
+            />
+            <Input
+              type="number"
+              placeholder={t("settings.rate_amount")}
+              value={newRate.amount}
+              onChange={(e) => setNewRate(s => ({ ...s, amount: e.target.value }))}
+              className="max-w-32"
+              min={0}
+              step="0.01"
+            />
+            <Button
+              onClick={() => {
+                createRate.mutate({ title: newRate.title.trim(), amount: parseFloat(newRate.amount) });
+                setNewRate({ title: "", amount: "" });
+              }}
+              disabled={!newRate.title.trim() || !newRate.amount || createRate.isPending}
+            >
+              {t("common.add")}
+            </Button>
           </div>
         </CardContent>
       </Card>

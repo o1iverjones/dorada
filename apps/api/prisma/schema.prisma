@@ -31,6 +31,7 @@ model Organization {
   languages            OrganizationLanguage[]
   locale_strings       LocaleString[]
   system_settings      SystemSettings?
+  interpreter_rates    InterpreterRate[]
   messages             Message[]
   email_intake_logs    EmailIntakeLog[]
   super_admin_settings SuperAdminSettings?
@@ -544,6 +545,19 @@ model SystemSettings {
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("system_settings")
+}
+
+model InterpreterRate {
+  id              String   @id @default(uuid())
+  organization_id String
+  title           String
+  amount          Decimal  @db.Decimal(10, 2)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("interpreter_rates")
 }
 
 model SuperAdminSettings {
