@@ -7,7 +7,9 @@ import { useCreateAppointment } from "../../hooks/useAppointments.js";
 import { useClinics } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
-import { useAppointmentTypes, useLanguages } from "../../hooks/useSettings.js";
+import { useAppointmentTypes } from "../../hooks/useSettings.js";
+
+const LANGUAGES = ["English", "Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
@@ -41,7 +43,6 @@ export function NewAppointmentPage() {
   const { data: agencies } = useInsuranceAgencies();
   const { data: patients } = usePatients();
   const { data: types } = useAppointmentTypes();
-  const { data: langs } = useLanguages();
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -85,18 +86,28 @@ export function NewAppointmentPage() {
               )} />
             </FormField>
 
-            <FormField label={t("appointments.language")} error={errors.language?.message}>
+            <div className="col-span-full space-y-2">
+              <Label>{t("appointments.language")}</Label>
+              {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
               <Controller name="language" control={control} render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder={t("common.select")} /></SelectTrigger>
-                  <SelectContent>
-                    {((langs?.data ?? []) as Array<{ id: string; name: string }>).map((l) => (
-                      <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => field.onChange(lang)}
+                      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                        field.value === lang
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input hover:bg-accent"
+                      }`}
+                    >
+                      {lang}
+                    </button>
+                  ))}
+                </div>
               )} />
-            </FormField>
+            </div>
 
             <FormField label={t("appointments.interpreter_type")} error={errors.interpreter_type_required?.message}>
               <Controller name="interpreter_type_required" control={control} render={({ field }) => (
