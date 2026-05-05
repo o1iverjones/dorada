@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateInterpreter } from "../../hooks/useInterpreters.js";
-import { useLanguages } from "../../hooks/useSettings.js";
+import { useSystemSettings } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
@@ -32,7 +32,8 @@ export function NewInterpreterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const create = useCreateInterpreter();
-  const { data: langs } = useLanguages();
+  const { data: settings } = useSystemSettings();
+  const langs = ((settings as Record<string, unknown> | undefined)?.languages ?? []) as Array<{ code: string; name: string; active: boolean }>;
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -109,13 +110,13 @@ export function NewInterpreterPage() {
               <Label>{t("interpreters.languages")}</Label>
               {errors.languages && <p className="text-sm text-destructive">{errors.languages.message}</p>}
               <div className="flex flex-wrap gap-2">
-                {((langs?.data ?? []) as Array<{ id: string; name: string }>).map((lang) => (
+                {langs.filter((l) => l.active).map((lang) => (
                   <button
-                    key={lang.id}
+                    key={lang.code}
                     type="button"
-                    onClick={() => toggleLanguage(lang.name)}
+                    onClick={() => toggleLanguage(lang.code)}
                     className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                      selectedLangs.includes(lang.name)
+                      selectedLangs.includes(lang.code)
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-input hover:bg-accent"
                     }`}
