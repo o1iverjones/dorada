@@ -24,7 +24,11 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.pulpito.app",
-      "permissions": ["ACCESS_FINE_LOCATION", "RECEIVE_BOOT_COMPLETED", "VIBRATE"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -41,7 +45,8 @@
         {
           "locationWhenInUsePermission": "Used to suggest nearby appointments."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "scheme": "pulpito",
     "extra": {
