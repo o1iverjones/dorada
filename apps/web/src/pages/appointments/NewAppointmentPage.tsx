@@ -9,7 +9,7 @@ import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
 import { useAppointmentTypes } from "../../hooks/useSettings.js";
 
-const LANGUAGES = ["English", "Spanish", "French", "Tagalog", "Russian", "Mandarin"];
+const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
@@ -46,7 +46,7 @@ export function NewAppointmentPage() {
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { interpreter_type_required: "qualified", duration_minutes: 60, pre_auth_amount: 0, pre_auth_mileage: 0 },
+    defaultValues: { interpreter_type_required: "qualified", duration_minutes: 60, pre_auth_amount: 0, pre_auth_mileage: 0, language: "Spanish" },
   });
 
   async function onSubmit(data: FormData) {
