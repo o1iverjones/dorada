@@ -2,8 +2,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from "rea
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api, clearTokens } from "../../src/lib/api.js";
-import { useAuthStore } from "../../src/store/auth.js";
+import { api, clearTokens } from "../../src/lib/api";
+import { useAuthStore } from "../../src/store/auth";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function ProfileScreen() {

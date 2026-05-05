@@ -3,8 +3,8 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput 
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api } from "../../src/lib/api.js";
-import { useClockIn, useClockOut, useAddShiftNotes, useSubmitFollowUp } from "../../src/hooks/useAppointments.js";
+import { api } from "../../src/lib/api";
+import { useClockIn, useClockOut, useAddShiftNotes, useSubmitFollowUp } from "../../src/hooks/useAppointments";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function AppointmentDetailScreen() {

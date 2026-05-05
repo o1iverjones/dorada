@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
-import { queryClient } from "../src/lib/queryClient.js";
+import { queryClient } from "../src/lib/queryClient";
 import "../src/lib/i18n.js";
 
 export default function RootLayout() {

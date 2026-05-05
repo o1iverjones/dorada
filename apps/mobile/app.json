@@ -50,6 +50,7 @@
     ],
     "scheme": "pulpito",
     "extra": {
+      "apiUrl": "http://192.168.100.2:3100/api/v1",
       "eas": {
         "projectId": "YOUR_EAS_PROJECT_ID"
       }

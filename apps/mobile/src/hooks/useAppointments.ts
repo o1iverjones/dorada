@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api.js";
+import { api } from "../lib/api";
 
 export function useMyAppointments(params?: Record<string, string>) {
   const query = params ? new URLSearchParams(params).toString() : "";

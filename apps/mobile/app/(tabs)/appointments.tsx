@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert } from "react-native";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { useMyAppointments, useAppointmentOffers, useConfirmOffer, useDeclineOffer } from "../../src/hooks/useAppointments.js";
+import { useMyAppointments, useAppointmentOffers, useConfirmOffer, useDeclineOffer } from "../../src/hooks/useAppointments";
 import { Ionicons } from "@expo/vector-icons";
 
 const STATUS_COLORS: Record<string, string> = {

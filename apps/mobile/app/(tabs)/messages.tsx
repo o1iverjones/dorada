@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api } from "../../src/lib/api.js";
+import { api } from "../../src/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 
 interface Message {

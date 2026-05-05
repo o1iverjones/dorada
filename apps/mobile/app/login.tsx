@@ -2,9 +2,9 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { api, setTokens } from "../src/lib/api.js";
-import { useAuthStore } from "../src/store/auth.js";
-import { registerForPushNotifications, syncFcmToken } from "../src/lib/notifications.js";
+import { api, setTokens } from "../src/lib/api";
+import { useAuthStore } from "../src/store/auth";
+import { registerForPushNotifications, syncFcmToken } from "../src/lib/notifications";
 
 type Step = "phone" | "otp";
 
