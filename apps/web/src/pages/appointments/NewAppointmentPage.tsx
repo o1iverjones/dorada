@@ -76,7 +76,11 @@ export function NewAppointmentPage() {
 
   async function onSubmit(data: FormData) {
     try {
-      const appt = await create.mutateAsync(data) as { id: string };
+      const appt = await create.mutateAsync({
+        ...data,
+        date_time: new Date(data.date_time).toISOString(),
+        pre_auth_mileage: Math.round(data.pre_auth_mileage),
+      }) as { id: string };
       toast({ title: t("appointments.created") });
       navigate(`/appointments/${appt.id}`);
     } catch {
