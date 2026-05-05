@@ -3,20 +3,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useCreateAppointment } from "../../hooks/useAppointments.js";
+import { useCreateAppointment, useAppointments } from "../../hooks/useAppointments.js";
 import { useClinics } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
 import { useAppointmentTypes } from "../../hooks/useSettings.js";
-
-const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 import { PageHeader } from "../../components/shared/PageHeader.js";
+import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { toast } from "../../hooks/use-toast.js";
+
+const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 
 const schema = z.object({
   date_time: z.string().min(1),
@@ -43,6 +44,21 @@ export function NewAppointmentPage() {
   const { data: agencies } = useInsuranceAgencies();
   const { data: patients } = usePatients();
   const { data: types } = useAppointmentTypes();
+  const { data: pastAppts } = useAppointments({ limit: "200" });
+
+  const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string }>)
+    .map((c) => ({ value: c.id, label: c.name }));
+  const agencyOptions = ((agencies?.data ?? []) as Array<{ id: string; name: string }>)
+    .map((a) => ({ value: a.id, label: a.name }));
+  const patientOptions = ((patients?.data ?? []) as Array<{ id: string; name: string }>)
+    .map((p) => ({ value: p.id, label: p.name }));
+  const physicianOptions = Array.from(
+    new Set(
+      ((pastAppts?.data ?? []) as Array<{ referring_physician?: string }>)
+        .map((a) => a.referring_physician)
+        .filter(Boolean) as string[]
+    )
+  ).map((name) => ({ value: name, label: name }));
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -123,45 +139,47 @@ export function NewAppointmentPage() {
 
             <FormField label={t("appointments.clinic")} error={errors.clinic_id?.message}>
               <Controller name="clinic_id" control={control} render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder={t("common.select")} /></SelectTrigger>
-                  <SelectContent>
-                    {((clinics?.data ?? []) as Array<{ id: string; name: string }>).map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AutocompleteInput
+                  options={clinicOptions}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder={t("common.search")}
+                />
               )} />
             </FormField>
 
             <FormField label={t("appointments.insurance_agency")} error={errors.insurance_agency_id?.message}>
               <Controller name="insurance_agency_id" control={control} render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder={t("common.select")} /></SelectTrigger>
-                  <SelectContent>
-                    {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AutocompleteInput
+                  options={agencyOptions}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder={t("common.search")}
+                />
               )} />
             </FormField>
 
             <FormField label={t("appointments.patient")} error={errors.patient_id?.message}>
               <Controller name="patient_id" control={control} render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger><SelectValue placeholder={t("common.select")} /></SelectTrigger>
-                  <SelectContent>
-                    {((patients?.data ?? []) as Array<{ id: string; name: string }>).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AutocompleteInput
+                  options={patientOptions}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder={t("common.search")}
+                />
               )} />
             </FormField>
 
             <FormField label={t("appointments.referring_physician")} error={errors.referring_physician?.message}>
-              <Input {...register("referring_physician")} />
+              <Controller name="referring_physician" control={control} render={({ field }) => (
+                <AutocompleteInput
+                  options={physicianOptions}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder={t("common.search")}
+                  freeText
+                />
+              )} />
             </FormField>
 
             <FormField label={t("appointments.pre_auth_amount")} error={errors.pre_auth_amount?.message}>
