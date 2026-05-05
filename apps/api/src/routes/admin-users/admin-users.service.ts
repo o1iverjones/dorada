@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { NotFoundError, ConflictError } from "../../lib/errors.js";
+import { NotFoundError, ConflictError, ForbiddenError } from "../../lib/errors.js";
 
 export async function listUsers(organizationId: string, prisma: PrismaClient) {
   const users = await prisma.user.findMany({
@@ -23,6 +23,7 @@ export async function listUsers(organizationId: string, prisma: PrismaClient) {
 export async function createUser(
   body: { name: string; email: string; password: string; role_id?: string },
   organizationId: string,
+  creatorPermissions: string[],
   prisma: PrismaClient,
 ) {
   const existing = await prisma.user.findUnique({
@@ -35,6 +36,19 @@ export async function createUser(
     const defaultRole = await prisma.role.findFirst({ where: { organization_id: organizationId }, orderBy: { created_at: "asc" } });
     if (!defaultRole) throw new NotFoundError("NO_ROLE", "No roles found — create a role first");
     roleId = defaultRole.id;
+  }
+
+  // Roles that include manage_system_settings can only be assigned by Super Admins
+  const targetRole = await prisma.role.findUnique({
+    where: { id: roleId },
+    include: { permissions: true },
+  });
+  if (!targetRole || targetRole.organization_id !== organizationId) {
+    throw new NotFoundError("ROLE_NOT_FOUND", "Role not found");
+  }
+  const targetIsElevated = targetRole.permissions.some((p) => p.permission === "manage_system_settings");
+  if (targetIsElevated && !creatorPermissions.includes("manage_system_settings")) {
+    throw new ForbiddenError("FORBIDDEN", "Only Super Admins can assign the Super Admin role");
   }
 
   const password_hash = await bcrypt.hash(body.password, 12);

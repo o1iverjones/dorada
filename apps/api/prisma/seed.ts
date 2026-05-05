@@ -42,41 +42,25 @@ async function main() {
   console.log(`Role: ${superAdminRole.name} (${superAdminRole.id})`);
 
   // ── Admin role ─────────────────────────────────────────────────────────────
+  const adminRolePerms = ["manage_interpreters", "manage_clinics", "manage_admin_users", "view_reports", "manage_appointments"];
   const adminRole = await prisma.role.upsert({
     where: { organization_id_name: { organization_id: org.id, name: "Admin" } },
-    update: {},
-    create: {
-      organization_id: org.id,
-      name: "Admin",
-      is_system: true,
-      permissions: {
-        create: [
-          { permission: "manage_interpreters" },
-          { permission: "manage_clinics" },
-          { permission: "view_reports" },
-          { permission: "manage_appointments" },
-        ],
-      },
-    },
+    update: { is_system: true },
+    create: { organization_id: org.id, name: "Admin", is_system: true },
   });
+  await prisma.rolePermission.deleteMany({ where: { role_id: adminRole.id } });
+  await prisma.rolePermission.createMany({ data: adminRolePerms.map((p) => ({ role_id: adminRole.id, permission: p as never })) });
   console.log(`Role: ${adminRole.name} (${adminRole.id})`);
 
   // ── Supervisor role ────────────────────────────────────────────────────────
+  const supervisorRolePerms = ["manage_appointments", "view_reports"];
   const supervisorRole = await prisma.role.upsert({
     where: { organization_id_name: { organization_id: org.id, name: "Supervisor" } },
-    update: {},
-    create: {
-      organization_id: org.id,
-      name: "Supervisor",
-      is_system: true,
-      permissions: {
-        create: [
-          { permission: "manage_appointments" },
-          { permission: "view_reports" },
-        ],
-      },
-    },
+    update: { is_system: true },
+    create: { organization_id: org.id, name: "Supervisor", is_system: true },
   });
+  await prisma.rolePermission.deleteMany({ where: { role_id: supervisorRole.id } });
+  await prisma.rolePermission.createMany({ data: supervisorRolePerms.map((p) => ({ role_id: supervisorRole.id, permission: p as never })) });
   console.log(`Role: ${supervisorRole.name} (${supervisorRole.id})`);
 
   // ── Admin user ─────────────────────────────────────────────────────────────

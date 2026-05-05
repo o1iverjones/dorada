@@ -28,7 +28,7 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
   fastify.post("/admin-users", { preHandler: manage }, async (req, reply) => {
     const body = CreateUserBody.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.status(201).send(await createUser(body, payload.organization_id, fastify.prisma));
+    return reply.status(201).send(await createUser(body, payload.organization_id, payload.permissions, fastify.prisma));
   });
 
   fastify.get("/roles", { preHandler: [authenticateAdmin] }, async (req, reply) => {

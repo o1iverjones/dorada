@@ -13,11 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "../../hooks/use-toast.js";
 import { Plus, Link, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../store/auth.js";
 
 export function AdminUsersPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const canManageUsers = hasPermission("manage_admin_users");
+  const isSuperAdmin = hasPermission("manage_system_settings");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role_id: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -27,10 +31,15 @@ export function AdminUsersPage() {
     queryFn: () => api.get<{ data: unknown[] }>("/admin-users"),
   });
 
-  const { data: roles } = useQuery({
+  const { data: rolesData } = useQuery({
     queryKey: ["roles"],
-    queryFn: () => api.get<{ data: unknown[] }>("/roles"),
+    queryFn: () => api.get<{ data: Array<{ id: string; name: string; permissions: string[] }> }>("/roles"),
   });
+
+  // Non-super-admins cannot assign the Super Admin role (identified by manage_system_settings permission)
+  const assignableRoles = (rolesData?.data ?? []).filter(
+    (r) => isSuperAdmin || !r.permissions.includes("manage_system_settings"),
+  );
 
   const create = useMutation({
     mutationFn: (body: unknown) => api.post("/admin-users", body),
@@ -69,9 +78,11 @@ export function AdminUsersPage() {
             <Button variant="outline" onClick={() => navigate("/admin-users/roles")}>
               {t("admin_users.manage_roles")}
             </Button>
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> {t("admin_users.new")}
-            </Button>
+            {canManageUsers && (
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> {t("admin_users.new")}
+              </Button>
+            )}
           </div>
         }
       />
@@ -110,7 +121,7 @@ export function AdminUsersPage() {
                 <Label>{t("admin_users.role")}</Label>
                 <select className="w-full rounded-md border p-2 text-sm" value={form.role_id} onChange={(e) => setForm(s => ({ ...s, role_id: e.target.value }))}>
                   <option value="">{t("common.select")}</option>
-                  {((roles?.data ?? []) as Array<{ id: string; name: string }>).map(r => (
+                  {assignableRoles.map(r => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </select>
