@@ -11,7 +11,7 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { Plus, Link } from "lucide-react";
+import { Plus, Link, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export function AdminUsersPage() {
@@ -20,6 +20,7 @@ export function AdminUsersPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role_id: "" });
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -33,7 +34,7 @@ export function AdminUsersPage() {
 
   const create = useMutation({
     mutationFn: (body: unknown) => api.post("/admin-users", body),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); setOpen(false); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); setOpen(false); setShowPassword(false); },
   });
 
   async function handleCreate() {
@@ -85,7 +86,7 @@ export function AdminUsersPage() {
         />
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setShowPassword(false); }}>
         <DialogContent>
           <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
             <DialogHeader><DialogTitle>{t("admin_users.new")}</DialogTitle></DialogHeader>
@@ -97,8 +98,13 @@ export function AdminUsersPage() {
                 </div>
               ))}
               <div className="space-y-1">
-                <Label>Password</Label>
-                <Input type="password" value={form.password} onChange={(e) => setForm(s => ({ ...s, password: e.target.value }))} />
+                <Label>{t("auth.password")}</Label>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm(s => ({ ...s, password: e.target.value }))} className="pr-10" />
+                  <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div className="space-y-1">
                 <Label>{t("admin_users.role")}</Label>
