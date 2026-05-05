@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import authRoutes from "./auth/auth.routes.js";
+import adminUsersRoutes from "./admin-users/admin-users.routes.js";
 import appointmentRoutes from "./appointments/appointments.routes.js";
 import interpreterRoutes from "./interpreters/interpreters.routes.js";
 import clinicRoutes from "./clinics/clinics.routes.js";
@@ -13,6 +14,7 @@ import importRoutes from "./import/import.routes.js";
 
 export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(authRoutes, { prefix: "/auth" });
+  await fastify.register(adminUsersRoutes);
   await fastify.register(appointmentRoutes, { prefix: "/appointments" });
   await fastify.register(interpreterRoutes, { prefix: "/interpreters" });
   await fastify.register(clinicRoutes, { prefix: "/clinics" });

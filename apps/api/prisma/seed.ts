@@ -41,6 +41,44 @@ async function main() {
 
   console.log(`Role: ${superAdminRole.name} (${superAdminRole.id})`);
 
+  // ── Admin role ─────────────────────────────────────────────────────────────
+  const adminRole = await prisma.role.upsert({
+    where: { organization_id_name: { organization_id: org.id, name: "Admin" } },
+    update: {},
+    create: {
+      organization_id: org.id,
+      name: "Admin",
+      is_system: true,
+      permissions: {
+        create: [
+          { permission: "manage_interpreters" },
+          { permission: "manage_clinics" },
+          { permission: "view_reports" },
+          { permission: "manage_appointments" },
+        ],
+      },
+    },
+  });
+  console.log(`Role: ${adminRole.name} (${adminRole.id})`);
+
+  // ── Supervisor role ────────────────────────────────────────────────────────
+  const supervisorRole = await prisma.role.upsert({
+    where: { organization_id_name: { organization_id: org.id, name: "Supervisor" } },
+    update: {},
+    create: {
+      organization_id: org.id,
+      name: "Supervisor",
+      is_system: true,
+      permissions: {
+        create: [
+          { permission: "manage_appointments" },
+          { permission: "view_reports" },
+        ],
+      },
+    },
+  });
+  console.log(`Role: ${supervisorRole.name} (${supervisorRole.id})`);
+
   // ── Admin user ─────────────────────────────────────────────────────────────
   const password = "Password123!";
   const passwordHash = await bcrypt.hash(password, 12);
