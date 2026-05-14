@@ -4,6 +4,7 @@ import { UuidSchema } from "./common.js";
 export const PatientSchema = z.object({
   id: UuidSchema,
   name: z.string(),
+  date_of_birth: z.string().nullable(),
   mrn: z.string().nullable(),
   phone: z.string().nullable(),
   email: z.string().email().nullable(),
@@ -14,6 +15,7 @@ export const PatientSchema = z.object({
 
 export const CreatePatientBodySchema = z.object({
   name: z.string().min(1).max(255),
+  date_of_birth: z.string().date().optional(),
   mrn: z.string().max(100).optional(),
   phone: z.string().max(20).optional(),
   email: z.string().email().optional(),
@@ -25,8 +27,8 @@ export const UpdatePatientBodySchema = CreatePatientBodySchema.partial();
 export const PatientListQuerySchema = z.object({
   search: z.string().optional(),
   language: z.string().optional(),
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(500).default(25),
 });
 
 export type Patient = z.infer<typeof PatientSchema>;

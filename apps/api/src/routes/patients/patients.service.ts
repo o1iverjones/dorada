@@ -9,27 +9,31 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
 }
 
 export async function listPatients(query: PatientListQuery, organizationId: string, prisma: PrismaClient) {
-  const items = await prisma.patient.findMany({
-    where: {
-      organization_id: organizationId,
-      ...(query.search ? {
-        OR: [
-          { name: { contains: query.search, mode: "insensitive" as const } },
-          { mrn: { contains: query.search, mode: "insensitive" as const } },
-        ],
-      } : {}),
-      ...(query.language ? { preferred_language: query.language } : {}),
-      ...(query.cursor ? { id: { gt: query.cursor } } : {}),
-    },
-    take: query.limit + 1,
-    orderBy: { name: "asc" },
-  });
+  const where = {
+    organization_id: organizationId,
+    ...(query.search ? {
+      OR: [
+        { name: { contains: query.search, mode: "insensitive" as const } },
+        { mrn: { contains: query.search, mode: "insensitive" as const } },
+      ],
+    } : {}),
+    ...(query.language ? { preferred_language: query.language } : {}),
+  };
 
-  const hasMore = items.length > query.limit;
-  const data = hasMore ? items.slice(0, -1) : items;
+  const [total, items] = await prisma.$transaction([
+    prisma.patient.count({ where }),
+    prisma.patient.findMany({
+      where,
+      take: query.limit,
+      skip: (query.page - 1) * query.limit,
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / query.limit);
   return {
-    data,
-    pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
+    data: items,
+    pagination: { page: query.page, total_pages: totalPages, total, has_more: query.page < totalPages },
   };
 }
 
@@ -72,6 +76,7 @@ export async function updatePatient(id: string, body: UpdatePatientBody, organiz
     where: { id },
     data: {
       ...(body.name ? { name: body.name } : {}),
+      ...(body.date_of_birth !== undefined ? { date_of_birth: body.date_of_birth ? new Date(body.date_of_birth) : null } : {}),
       ...(body.mrn !== undefined ? { mrn: body.mrn } : {}),
       ...(body.phone !== undefined ? { phone: body.phone } : {}),
       ...(body.email !== undefined ? { email: body.email } : {}),

@@ -1,8 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { Queue } from "bullmq";
-import admin from "firebase-admin";
-import twilio from "twilio";
-import sgMail from "@sendgrid/mail";
 import { config } from "../config.js";
 import { createAppointmentRemindersWorker } from "./appointment-reminders.worker.js";
 import { createFollowUpFlowWorker } from "./follow-up-flow.worker.js";
@@ -11,16 +8,45 @@ import { createEmailIntakeWorker } from "./email-intake.worker.js";
 
 const prisma = new PrismaClient();
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    projectId: config.GCP_PROJECT_ID,
-  });
-}
-const fcmApp = admin.app();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyApp = any;
 
-const twilioClient = twilio(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN);
-sgMail.setApiKey(config.SENDGRID_API_KEY);
+// Firebase — dynamically imported so the worker boots even if firebase-admin isn't installed
+let fcmApp: AnyApp;
+try {
+  const admin = await import("firebase-admin");
+  const adminDefault = admin.default ?? admin;
+  if (!adminDefault.apps.length) {
+    adminDefault.initializeApp({
+      credential: adminDefault.credential.applicationDefault(),
+      projectId: config.GCP_PROJECT_ID || undefined,
+    });
+  }
+  fcmApp = adminDefault.app();
+} catch {
+  console.warn("⚠️  firebase-admin not available — push notifications disabled");
+  fcmApp = { messaging: () => ({ send: async () => {} }) };
+}
+
+// Twilio — dynamically imported so the worker boots even if credentials aren't set
+let twilioClient: AnyApp;
+try {
+  if (!config.TWILIO_ACCOUNT_SID || !config.TWILIO_AUTH_TOKEN) throw new Error("No credentials");
+  const { default: twilio } = await import("twilio");
+  twilioClient = twilio(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN);
+} catch {
+  console.warn("⚠️  Twilio not configured — SMS disabled");
+  twilioClient = { messages: { create: async () => {} } };
+}
+
+// SendGrid — optional
+try {
+  if (!config.SENDGRID_API_KEY) throw new Error("No key");
+  const sgMail = await import("@sendgrid/mail");
+  (sgMail.default ?? sgMail).setApiKey(config.SENDGRID_API_KEY);
+} catch {
+  console.warn("⚠️  SendGrid not configured — emails disabled");
+}
 
 const reminderWorker = createAppointmentRemindersWorker(prisma, fcmApp);
 const followUpWorker = createFollowUpFlowWorker(prisma, fcmApp, twilioClient);
@@ -66,4 +92,4 @@ function shutdown() {
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 
-console.log("Workers started");
+console.log("✅ Workers started");

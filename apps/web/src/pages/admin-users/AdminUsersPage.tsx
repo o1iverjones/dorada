@@ -11,7 +11,7 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { Plus, Link, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth.js";
 
@@ -25,6 +25,9 @@ export function AdminUsersPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role_id: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [editUser, setEditUser] = useState<null | { id: string; name: string; email: string; role: { id: string; name: string }; is_active: boolean }>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", password: "", role_id: "", is_active: true });
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -40,6 +43,35 @@ export function AdminUsersPage() {
   const assignableRoles = (rolesData?.data ?? []).filter(
     (r) => isSuperAdmin || !r.permissions.includes("manage_system_settings"),
   );
+
+  const update = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: unknown }) => api.patch(`/admin-users/${id}`, body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); setEditUser(null); setShowEditPassword(false); },
+  });
+
+  function openEdit(user: typeof editUser) {
+    if (!user) return;
+    setEditUser(user);
+    setEditForm({ name: user.name, email: user.email, password: "", role_id: user.role.id, is_active: user.is_active });
+    setShowEditPassword(false);
+  }
+
+  async function handleEdit() {
+    if (!editUser) return;
+    try {
+      const payload: Record<string, unknown> = {
+        name: editForm.name,
+        email: editForm.email,
+        role_id: editForm.role_id,
+        is_active: editForm.is_active,
+      };
+      if (editForm.password) payload.password = editForm.password;
+      await update.mutateAsync({ id: editUser.id, body: payload });
+      toast({ title: t("admin_users.updated") });
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
+  }
 
   const create = useMutation({
     mutationFn: (body: unknown) => api.post("/admin-users", body),
@@ -67,6 +99,26 @@ export function AdminUsersPage() {
     { key: "mfa_enabled", header: "2FA", render: (r: Record<string, unknown>) => (
       <Badge variant={r.mfa_enabled ? "success" : "warning"}>{r.mfa_enabled ? t("common.enabled") : t("common.disabled")}</Badge>
     )},
+    ...(canManageUsers ? [{
+      key: "actions",
+      header: "",
+      render: (r: Record<string, unknown>) => {
+        const role = r.role as { id: string; name: string; permissions?: string[] };
+        // Non-super-admins cannot edit Super Admin users — check via rolesData
+        const fullRole = (rolesData?.data ?? []).find(rd => rd.id === role.id);
+        const rowIsElevated = fullRole?.permissions.includes("manage_system_settings") ?? false;
+        if (rowIsElevated && !isSuperAdmin) return null;
+        return (
+          <button
+            type="button"
+            onClick={() => openEdit(r as typeof editUser)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        );
+      },
+    }] : []),
   ];
 
   return (
@@ -96,6 +148,54 @@ export function AdminUsersPage() {
           emptyMessage={t("admin_users.empty")}
         />
       )}
+
+      <Dialog open={!!editUser} onOpenChange={(v) => { if (!v) { setEditUser(null); setShowEditPassword(false); } }}>
+        <DialogContent>
+          <form onSubmit={(e) => { e.preventDefault(); handleEdit(); }}>
+            <DialogHeader><DialogTitle>{t("admin_users.edit")}</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-4">
+              {(["name", "email"] as const).map((field) => (
+                <div key={field} className="space-y-1">
+                  <Label>{t(`admin_users.${field}`)}</Label>
+                  <Input value={editForm[field]} onChange={(e) => setEditForm(s => ({ ...s, [field]: e.target.value }))} />
+                </div>
+              ))}
+              <div className="space-y-1">
+                <Label>{t("admin_users.new_password_optional")}</Label>
+                <div className="relative">
+                  <Input type={showEditPassword ? "text" : "password"} value={editForm.password} onChange={(e) => setEditForm(s => ({ ...s, password: e.target.value }))} className="pr-10" placeholder={t("admin_users.leave_blank_to_keep")} />
+                  <button type="button" onClick={() => setShowEditPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>{t("admin_users.role")}</Label>
+                <select className="w-full rounded-md border p-2 text-sm" value={editForm.role_id} onChange={(e) => setEditForm(s => ({ ...s, role_id: e.target.value }))}>
+                  <option value="">{t("common.select")}</option>
+                  {assignableRoles.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit-active"
+                  checked={editForm.is_active}
+                  onChange={(e) => setEditForm(s => ({ ...s, is_active: e.target.checked }))}
+                  className="h-4 w-4 rounded border"
+                />
+                <Label htmlFor="edit-active">{t("common.active")}</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setEditUser(null); setShowEditPassword(false); }}>{t("common.cancel")}</Button>
+              <Button type="submit" disabled={update.isPending || !editForm.name || !editForm.email || (!!editForm.password && editForm.password.length < 10)}>{t("common.save_changes")}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setShowPassword(false); }}>
         <DialogContent>

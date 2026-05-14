@@ -27,6 +27,10 @@ model Organization {
   insurance_agencies   InsuranceAgency[]
   patients             Patient[]
   appointments         Appointment[]
+  appointment_activities AppointmentActivity[]
+  activity_logs          ActivityLog[]
+  appointment_notes    AppointmentNote[]
+  clinic_notes         ClinicNote[]
   appointment_types    AppointmentType[]
   languages            OrganizationLanguage[]
   locale_strings       LocaleString[]
@@ -36,6 +40,7 @@ model Organization {
   email_intake_logs    EmailIntakeLog[]
   super_admin_settings SuperAdminSettings?
   report_jobs          ReportJob[]
+  invoices             Invoice[]
 
   @@map("organizations")
 }
@@ -58,13 +63,14 @@ model User {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
 
-  organization   Organization     @relation(fields: [organization_id], references: [id])
-  role_id        String
-  role           Role             @relation(fields: [role_id], references: [id])
-  preferences    UserPreferences?
-  refresh_tokens RefreshToken[]
-  sent_messages  Message[]        @relation("SentByUser")
-  report_jobs    ReportJob[]
+  organization      Organization     @relation(fields: [organization_id], references: [id])
+  role_id           String
+  role              Role             @relation(fields: [role_id], references: [id])
+  preferences       UserPreferences?
+  refresh_tokens    RefreshToken[]
+  sent_messages     Message[]        @relation("SentByUser")
+  report_jobs       ReportJob[]
+  approved_invoices Invoice[]        @relation("InvoiceApprovedBy")
 
   @@unique([organization_id, email])
   @@map("users")
@@ -162,6 +168,8 @@ model Interpreter {
   refresh_tokens      RefreshToken[]
   sent_messages       Message[]               @relation("SentByInterpreter")
   follow_up_responses FollowUpResponse[]
+  invoices            Invoice[]
+  appointment_media   AppointmentMedia[]
 
   @@unique([organization_id, phone])
   @@map("interpreters")
@@ -187,6 +195,9 @@ model Clinic {
   organization_id       String
   name                  String
   address               String?
+  location_lat          Float?
+  location_lng          Float?
+  parking               String?
   phone                 String?
   primary_contact_name  String?
   primary_contact_phone String?
@@ -202,6 +213,8 @@ model Clinic {
   organization         Organization            @relation(fields: [organization_id], references: [id])
   appointments         Appointment[]
   interpreters_blocked ClinicInterpreterBlock[]
+  notes                ClinicNote[]
+  interpreter_notes    ClinicInterpreterNote[]
 
   @@map("clinics")
 }
@@ -253,6 +266,7 @@ model Patient {
   id                 String   @id @default(uuid())
   organization_id    String
   name               String
+  date_of_birth      DateTime? @db.Date
   mrn                String?
   phone              String?
   email              String?
@@ -305,7 +319,11 @@ model Appointment {
   po_number                  String?
   source                     String    @default("manual")
   clock_in_time              DateTime?
+  clock_in_lat               Float?
+  clock_in_lng               Float?
+  clock_in_distance_miles    Float?
   clock_out_time             DateTime?
+  patient_arrived_at         DateTime?
   actual_duration_minutes    Int?
   billable_duration_minutes  Int?
   pay_rate                   Decimal?  @db.Decimal(10, 2)
@@ -324,8 +342,109 @@ model Appointment {
   follow_up_response FollowUpResponse?
   email_intake_draft EmailIntakeDraft?  @relation("EmailIntakeDraftAppointment")
   follow_up_draft    FollowUpDraft?     @relation("FollowUpDraftAppointment")
+  activities         AppointmentActivity[]
+  admin_notes        AppointmentNote[]
+  invoice            Invoice?
+  media              AppointmentMedia[]
 
   @@map("appointments")
+}
+
+model AppointmentMedia {
+  id              String   @id @default(uuid())
+  appointment_id  String
+  organization_id String
+  interpreter_id  String
+  gcs_path        String
+  public_url      String
+  mime_type       String
+  filename        String
+  file_size       Int
+  uploaded_at     DateTime @default(now())
+
+  appointment  Appointment  @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  interpreter  Interpreter  @relation(fields: [interpreter_id], references: [id])
+
+  @@map("appointment_media")
+}
+
+model AppointmentActivity {
+  id              String   @id @default(uuid())
+  appointment_id  String
+  organization_id String
+  action          String
+  detail          String?
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  appointment  Appointment  @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("appointment_activities")
+}
+
+model ActivityLog {
+  id              String   @id @default(uuid())
+  organization_id String
+  entity_type     String   // "appointment" | "clinic" | "interpreter" | "agency"
+  entity_id       String
+  entity_name     String?
+  action          String
+  detail          String?
+  po_number       String?
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, created_at(sort: Desc)])
+  @@map("activity_logs")
+}
+
+model AppointmentNote {
+  id              String   @id @default(uuid())
+  appointment_id  String
+  organization_id String
+  content         String   @db.VarChar(800)
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  appointment  Appointment  @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("appointment_notes")
+}
+
+model ClinicNote {
+  id              String   @id @default(uuid())
+  clinic_id       String
+  organization_id String
+  content         String   @db.VarChar(800)
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  clinic       Clinic       @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("clinic_notes")
+}
+
+model ClinicInterpreterNote {
+  id         String   @id @default(uuid())
+  clinic_id  String
+  content    String   @db.VarChar(1000)
+  type       String   @default("notice") // "important" | "notice" | "info"
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
+
+  @@map("clinic_interpreter_notes")
 }
 
 model AppointmentOffer {
@@ -540,6 +659,7 @@ model SystemSettings {
   offer_expiry_default_minutes        Int      @default(60)
   follow_up_reminder_window_minutes   Int      @default(60)
   follow_up_max_reminders             Int      @default(2)
+  timezone                            String   @default("America/Los_Angeles")
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
@@ -558,6 +678,32 @@ model InterpreterRate {
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("interpreter_rates")
+}
+
+// ─── Invoices ─────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id               String    @id @default(uuid())
+  organization_id  String
+  appointment_id   String    @unique
+  interpreter_id   String
+  status           String    @default("submitted") // submitted | approved
+  amount           Decimal   @db.Decimal(10, 2)
+  billable_minutes Int
+  pay_rate         Decimal   @db.Decimal(10, 2)
+  submitted_at     DateTime  @default(now())
+  approved_at      DateTime?
+  approved_by_id   String?
+  notes            String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+  appointment  Appointment  @relation(fields: [appointment_id], references: [id])
+  interpreter  Interpreter  @relation(fields: [interpreter_id], references: [id])
+  approved_by  User?        @relation("InvoiceApprovedBy", fields: [approved_by_id], references: [id])
+
+  @@map("invoices")
 }
 
 model SuperAdminSettings {

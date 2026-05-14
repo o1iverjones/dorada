@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePatient, useUpdatePatient } from "../../hooks/usePatients.js";
 import { useAppointments } from "../../hooks/useAppointments.js";
+import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
@@ -17,11 +19,13 @@ import { Pencil } from "lucide-react";
 export function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
+  const tz = useOrgTimezone();
   const { data, isLoading } = usePatient(id!);
+  const navigate = useNavigate();
   const { data: appts } = useAppointments({ patient_id: id!, limit: "20" });
   const update = useUpdatePatient(id!);
   const [editOpen, setEditOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", mrn: "", preferred_language: "" });
+  const [form, setForm] = useState({ name: "", date_of_birth: "", phone: "", email: "", mrn: "", preferred_language: "" });
 
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
@@ -29,8 +33,10 @@ export function PatientDetailPage() {
   const p = data as Record<string, unknown>;
 
   function openEdit() {
+    const dob = p.date_of_birth as string | null;
     setForm({
       name: (p.name as string) ?? "",
+      date_of_birth: dob ? dob.slice(0, 10) : "",
       phone: (p.phone as string) ?? "",
       email: (p.email as string) ?? "",
       mrn: (p.mrn as string) ?? "",
@@ -66,6 +72,7 @@ export function PatientDetailPage() {
           <CardHeader><CardTitle>{t("patients.details")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {[
+              [t("appointments.dob"), p.date_of_birth ? new Date(p.date_of_birth as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) : null],
               [t("patients.phone"), p.phone],
               [t("patients.email"), p.email],
               [t("patients.mrn"), p.mrn],
@@ -87,12 +94,17 @@ export function PatientDetailPage() {
             ) : (
               <ul className="space-y-2">
                 {(appts.data as Array<Record<string, unknown>>).map((a) => (
-                  <li key={a.id as string} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                    <div>
-                      <p className="font-medium">{new Date(a.date_time as string).toLocaleDateString()}</p>
-                      <p className="text-muted-foreground">{a.clinic_name as string}</p>
-                    </div>
-                    <StatusBadge status={a.status as string} />
+                  <li key={a.id as string}>
+                    <button
+                      onClick={() => navigate(`/appointments/${a.id as string}`)}
+                      className="w-full flex items-center justify-between rounded-md border p-3 text-sm text-left hover:bg-muted/50 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium">{formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</p>
+                        <p className="text-muted-foreground">{(a.clinic as Record<string, unknown>)?.name as string ?? "—"}</p>
+                      </div>
+                      <StatusBadge status={a.status as string} />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -107,15 +119,16 @@ export function PatientDetailPage() {
             <DialogHeader><DialogTitle>{t("patients.edit.title")}</DialogTitle></DialogHeader>
             <div className="space-y-3 py-4">
               {([
-                { key: "name", label: t("patients.name") },
-                { key: "phone", label: t("patients.phone") },
-                { key: "email", label: t("patients.email") },
-                { key: "mrn", label: t("patients.mrn") },
-                { key: "preferred_language", label: t("patients.preferred_language") },
-              ] as const).map(({ key, label }) => (
+                { key: "name", label: t("patients.name"), type: "text" },
+                { key: "date_of_birth", label: t("appointments.dob"), type: "date" },
+                { key: "phone", label: t("patients.phone"), type: "text" },
+                { key: "email", label: t("patients.email"), type: "email" },
+                { key: "mrn", label: t("patients.mrn"), type: "text" },
+                { key: "preferred_language", label: t("patients.preferred_language"), type: "text" },
+              ] as const).map(({ key, label, type }) => (
                 <div key={key} className="space-y-1">
                   <Label>{label}</Label>
-                  <Input value={form[key]} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
+                  <Input type={type} value={form[key]} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
                 </div>
               ))}
             </div>

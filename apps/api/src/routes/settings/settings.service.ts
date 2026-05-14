@@ -28,6 +28,7 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
       non_response_window_minutes: settings?.follow_up_reminder_window_minutes ?? 60,
       max_reminders: settings?.follow_up_max_reminders ?? 2,
     },
+    timezone: settings?.timezone ?? "America/Los_Angeles",
     languages,
     appointment_types: appointmentTypes,
   };
@@ -46,6 +47,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
         follow_up_reminder_window_minutes: body.follow_up_config.non_response_window_minutes,
         follow_up_max_reminders: body.follow_up_config.max_reminders,
       } : {}),
+      ...(body.timezone ? { timezone: body.timezone } : {}),
     },
     create: {
       organization_id: organizationId,
@@ -54,6 +56,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       offer_expiry_default_minutes: body.offer_expiry_default_minutes ?? 60,
       follow_up_reminder_window_minutes: body.follow_up_config?.non_response_window_minutes ?? 60,
       follow_up_max_reminders: body.follow_up_config?.max_reminders ?? 2,
+      timezone: body.timezone ?? "America/Los_Angeles",
     },
   });
 

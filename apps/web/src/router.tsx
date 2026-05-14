@@ -14,6 +14,7 @@ import { CalendarPage } from "./pages/appointments/CalendarPage.js";
 import { AppointmentsPage } from "./pages/appointments/AppointmentsPage.js";
 import { AppointmentDetailPage } from "./pages/appointments/AppointmentDetailPage.js";
 import { NewAppointmentPage } from "./pages/appointments/NewAppointmentPage.js";
+import { EditAppointmentPage } from "./pages/appointments/EditAppointmentPage.js";
 import { FollowUpDraftsPage } from "./pages/appointments/FollowUpDraftsPage.js";
 import { InterpretersPage } from "./pages/interpreters/InterpretersPage.js";
 import { InterpreterDetailPage } from "./pages/interpreters/InterpreterDetailPage.js";
@@ -34,6 +35,8 @@ import { SettingsPage } from "./pages/settings/SettingsPage.js";
 import { LocalizationPage } from "./pages/settings/LocalizationPage.js";
 import { AccountPage } from "./pages/account/AccountPage.js";
 import { ImportPage } from "./pages/import/ImportPage.js";
+import { IconGalleryPage } from "./pages/icons/IconGalleryPage.js";
+import { InvoicesPage } from "./pages/invoices/InvoicesPage.js";
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +73,9 @@ export const router = createBrowserRouter([
       {
         path: "appointments/:id",
         element: <PermissionGuard permission="manage_appointments"><AppointmentDetailPage /></PermissionGuard>,
+      }, {
+        path: "appointments/:id/edit",
+        element: <PermissionGuard permission="manage_appointments"><EditAppointmentPage /></PermissionGuard>,
       },
       {
         path: "appointments/follow-up-drafts",
@@ -144,7 +150,12 @@ export const router = createBrowserRouter([
         path: "import",
         element: <PermissionGuard permission="manage_interpreters"><ImportPage /></PermissionGuard>,
       },
+      {
+        path: "invoices",
+        element: <PermissionGuard permission="manage_invoices"><InvoicesPage /></PermissionGuard>,
+      },
       { path: "account", element: <AccountPage /> },
+      { path: "icons", element: <IconGalleryPage /> },
     ],
   },
 ]);

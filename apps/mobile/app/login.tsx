@@ -1,10 +1,19 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { C } from "../src/theme";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
+import * as SecureStore from "expo-secure-store";
 import { api, setTokens } from "../src/lib/api";
 import { useAuthStore } from "../src/store/auth";
 import { registerForPushNotifications, syncFcmToken } from "../src/lib/notifications";
+
+const SAVED_PHONE_KEY = "pulpito_saved_phone";
+
+function normalizePhone(raw: string): string {
+  const trimmed = raw.trim();
+  return trimmed.startsWith("+") ? trimmed : `+${trimmed}`;
+}
 
 type Step = "phone" | "otp";
 
@@ -16,11 +25,20 @@ export default function LoginScreen() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    SecureStore.getItemAsync(SAVED_PHONE_KEY).then((saved) => {
+      if (saved) setPhone(saved);
+    });
+  }, []);
+
   async function requestOtp() {
     if (!phone.trim()) return;
+    const normalized = normalizePhone(phone);
     setLoading(true);
     try {
-      await api.post("/auth/interpreter/request-otp", { phone: phone.trim() });
+      await api.post("/auth/interpreter/otp/request", { phone: normalized });
+      await SecureStore.setItemAsync(SAVED_PHONE_KEY, normalized);
+      setPhone(normalized);
       setStep("otp");
     } catch {
       Alert.alert(t("auth.error"), t("auth.otp_failed"));
@@ -37,7 +55,7 @@ export default function LoginScreen() {
         access_token: string;
         refresh_token: string;
         interpreter: { id: string; name: string; phone: string; organization_id: string };
-      }>("/auth/interpreter/verify-otp", { phone: phone.trim(), otp: otp.trim() });
+      }>("/auth/interpreter/otp/verify", { phone: normalizePhone(phone), otp: otp.trim() });
 
       await setTokens(res.access_token, res.refresh_token);
       setInterpreter(res.interpreter);
@@ -56,7 +74,10 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
       <View style={styles.inner}>
-        <Text style={styles.logo}>Pulpito</Text>
+        <View style={styles.logoRow}>
+          <Image source={require("../assets/logo.jpeg")} style={styles.logoImage} />
+          <Text style={styles.logo}>Pulpito</Text>
+        </View>
         <Text style={styles.subtitle}>
           {step === "phone" ? t("auth.enter_phone") : t("auth.enter_otp")}
         </Text>
@@ -100,14 +121,16 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
+  container: { flex: 1, backgroundColor: C.background },
   inner: { flex: 1, justifyContent: "center", paddingHorizontal: 32 },
-  logo: { fontSize: 36, fontWeight: "bold", color: "#3b82f6", textAlign: "center", marginBottom: 8 },
-  subtitle: { fontSize: 16, color: "#64748b", textAlign: "center", marginBottom: 32 },
-  input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, marginBottom: 16 },
-  button: { backgroundColor: "#3b82f6", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
+  logoRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 8 },
+  logoImage: { width: 48, height: 48, borderRadius: 24 },
+  logo: { fontSize: 36, fontWeight: "bold", color: C.primary },
+  subtitle: { fontSize: 16, color: C.textMuted, textAlign: "center", marginBottom: 32 },
+  input: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, marginBottom: 16, color: C.text },
+  button: { backgroundColor: C.primary, borderRadius: 8, paddingVertical: 14, alignItems: "center" },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   backButton: { marginTop: 16, alignItems: "center" },
-  backText: { color: "#3b82f6", fontSize: 14 },
+  backText: { color: C.primary, fontSize: 14 },
 });

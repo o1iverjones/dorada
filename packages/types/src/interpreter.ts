@@ -59,6 +59,7 @@ export const UpdateInterpreterBodySchema = CreateInterpreterBodySchema.partial()
 export const UpdateSelfInterpreterBodySchema = z.object({
   email: z.string().email().optional(),
   location: LocationSchema.optional(),
+  fcm_token: z.string().max(512).optional(),
 });
 
 export const CreateAvailabilityBlockBodySchema = z.object({
@@ -72,6 +73,7 @@ export const InterpreterListQuerySchema = z.object({
   language: z.string().optional(),
   clinic_id: UuidSchema.optional(),
   available_on: z.string().datetime().optional(),
+  check_availability_on: z.string().datetime().optional(),
   search: z.string().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),

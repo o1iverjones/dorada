@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/main.ts",
-    "dev:worker": "tsx watch --env-file=.env src/workers/index.ts",
+    "dev:worker": "tsx watch --env-file=.env src/workers/reports-worker.ts",
     "build": "tsc",
     "start": "node dist/main.js",
     "start:worker": "node dist/workers/index.js",
@@ -36,7 +36,7 @@
     "csv-stringify": "^6.4.6",
     "fastify": "^4.27.0",
     "fastify-plugin": "^4.5.1",
-    "firebase-admin": "^12.1.0",
+    "fastify-socket.io": "^5.1.0",
     "imap": "^0.8.19",
     "ioredis": "^5.3.2",
     "mailparser": "^3.7.1",
@@ -46,6 +46,7 @@
     "pino": "^9.1.0",
     "playwright": "^1.44.0",
     "qrcode": "^1.5.3",
+    "socket.io": "^4.8.3",
     "twilio": "^5.1.0",
     "zod": "^3.23.0"
   },

@@ -12,6 +12,7 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "dev:api": "pnpm --filter @pulpito/api dev",
+    "dev:worker": "pnpm --filter @pulpito/api dev:worker",
     "dev:web": "pnpm --filter @pulpito/web dev",
     "dev:mobile": "pnpm --filter @pulpito/mobile start"
   },

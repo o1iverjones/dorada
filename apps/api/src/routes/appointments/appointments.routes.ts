@@ -1,4 +1,9 @@
 import type { FastifyInstance } from "fastify";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { fileURLToPath } from "url";
+import { randomUUID } from "crypto";
+import { extname } from "path";
 import {
   AppointmentListQuerySchema,
   CreateAppointmentBodySchema,
@@ -12,6 +17,7 @@ import { z } from "zod";
 import { authenticate, authenticateAdmin, authenticateInterpreter } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
+import { sendExpoPushNotifications } from "../../lib/push.js";
 import {
   listAppointments,
   getAppointment,
@@ -23,12 +29,28 @@ import {
   declineOffer,
   clockIn,
   clockOut,
+  markPatientArrived,
   addShiftNotes,
   getInterpreterAppointments,
+  getInterpreterAppointment,
+  getInterpreterOffers,
   submitFollowUp,
   listFollowUpDrafts,
   reviewFollowUpDraft,
+  getOrgActivityLog,
+  getActivityLog,
+  getAdminNotes,
+  addAdminNote,
+  patchClockTimes,
+  uploadAppointmentMedia,
+  getAppointmentMedia,
 } from "./appointments.service.js";
+
+async function resolveActor(payload: JwtPayload, fastify: FastifyInstance) {
+  if (payload.name) return { id: payload.sub, name: payload.name };
+  const user = await fastify.prisma.user.findUnique({ where: { id: payload.sub }, select: { name: true } });
+  return { id: payload.sub, name: user?.name ?? "Admin" };
+}
 
 export default async function appointmentRoutes(fastify: FastifyInstance) {
   // GET /appointments
@@ -56,7 +78,8 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
   fastify.post("/", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
     const body = CreateAppointmentBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.status(201).send(await createAppointment(body, payload.organization_id, fastify.prisma));
+    const actor = await resolveActor(payload, fastify);
+    return reply.status(201).send(await createAppointment(body, payload.organization_id, actor, fastify.prisma));
   });
 
   // PATCH /appointments/:id
@@ -64,14 +87,28 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const { id } = req.params as { id: string };
     const body = UpdateAppointmentBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.send(await updateAppointment(id, body, payload.organization_id, fastify.prisma));
+    const actor = await resolveActor(payload, fastify);
+    return reply.send(await updateAppointment(id, body, payload.organization_id, actor, fastify.prisma));
+  });
+
+  // PATCH /appointments/:id/clock-times
+  fastify.patch("/:id/clock-times", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = z.object({
+      clock_in_time: z.string().datetime().optional(),
+      clock_out_time: z.string().datetime().optional(),
+    }).parse(req.body);
+    const payload = req.user as JwtPayload;
+    const actor = await resolveActor(payload, fastify);
+    return reply.send(await patchClockTimes(id, body, payload.organization_id, actor, fastify.prisma));
   });
 
   // DELETE /appointments/:id
   fastify.delete("/:id", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
-    await cancelAppointment(id, payload.organization_id, fastify.prisma);
+    const actor = await resolveActor(payload, fastify);
+    await cancelAppointment(id, payload.organization_id, actor, fastify.prisma);
     return reply.status(204).send();
   });
 
@@ -80,7 +117,94 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const { id } = req.params as { id: string };
     const body = OfferAppointmentBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.status(201).send(await offerAppointment(id, body, payload.organization_id, fastify.prisma));
+    const actor = await resolveActor(payload, fastify);
+    const result = await offerAppointment(id, body, payload.organization_id, actor, fastify.prisma);
+
+    // Send push notifications to each interpreter who received an offer
+    const appt = await fastify.prisma.appointment.findUnique({
+      where: { id },
+      include: { clinic: { select: { name: true } } },
+    });
+    const dateStr = appt ? new Date(appt.date_time).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+    const clinicName = appt?.clinic?.name ?? "";
+
+    const interpreterIds = result.offers.map((o) => o.interpreter.id).filter(Boolean);
+    if (interpreterIds.length) {
+      const interpreters = await fastify.prisma.interpreter.findMany({
+        where: { id: { in: interpreterIds } },
+        select: { fcm_token: true },
+      });
+      const messages = interpreters
+        .filter((i) => !!i.fcm_token)
+        .map((i) => ({
+          to: i.fcm_token!,
+          title: "New appointment offer",
+          body: `${dateStr}${clinicName ? ` · ${clinicName}` : ""}`,
+          data: { type: "offer", appointment_id: id },
+          sound: "default" as const,
+          priority: "high" as const,
+        }));
+      void sendExpoPushNotifications(messages);
+    }
+
+    return reply.status(201).send(result);
+  });
+
+  // GET /appointments/activity — org-wide log (all entity types)
+  fastify.get("/activity", { preHandler: [authenticateAdmin] }, async (req, reply) => {
+    const { limit } = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).parse(req.query);
+    const payload = req.user as JwtPayload;
+    const entries = await fastify.prisma.activityLog.findMany({
+      where: { organization_id: payload.organization_id },
+      orderBy: { created_at: "desc" },
+      take: limit,
+    });
+
+    // Back-fill entity_name for appointment entries that were logged before
+    // entity_name tracking was added (entity_name may be null for older rows).
+    const missingIds = entries
+      .filter((e) => e.entity_type === "appointment" && !e.entity_name)
+      .map((e) => e.entity_id);
+
+    let nameMap: Record<string, string> = {};
+    if (missingIds.length > 0) {
+      const appts = await fastify.prisma.appointment.findMany({
+        where: { id: { in: missingIds }, organization_id: payload.organization_id },
+        select: { id: true, patient: { select: { name: true } } },
+      });
+      nameMap = Object.fromEntries(appts.map((a) => [a.id, a.patient?.name ?? ""]));
+    }
+
+    const enriched = entries.map((e) =>
+      e.entity_type === "appointment" && !e.entity_name && nameMap[e.entity_id]
+        ? { ...e, entity_name: nameMap[e.entity_id] }
+        : e,
+    );
+
+    return reply.send(enriched);
+  });
+
+  // GET /appointments/:id/activity
+  fastify.get("/:id/activity", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getActivityLog(id, payload.organization_id, fastify.prisma));
+  });
+
+  // GET /appointments/:id/admin-notes
+  fastify.get("/:id/admin-notes", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getAdminNotes(id, payload.organization_id, fastify.prisma));
+  });
+
+  // POST /appointments/:id/admin-notes
+  fastify.post("/:id/admin-notes", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { content } = z.object({ content: z.string().min(1).max(800) }).parse(req.body);
+    const payload = req.user as JwtPayload;
+    const actor = await resolveActor(payload, fastify);
+    return reply.status(201).send(await addAdminNote(id, content, payload.organization_id, actor, fastify.prisma));
   });
 
   // POST /appointments/:id/offers/:offer_id/confirm
@@ -101,7 +225,11 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
   fastify.post("/:id/clock-in", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
-    return reply.send(await clockIn(id, payload.sub, fastify.prisma));
+    const { lat, lng } = z.object({
+      lat: z.number().optional(),
+      lng: z.number().optional(),
+    }).parse(req.body ?? {});
+    return reply.send(await clockIn(id, payload.sub, fastify.prisma, lat, lng));
   });
 
   // POST /appointments/:id/clock-out
@@ -111,12 +239,32 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     return reply.send(await clockOut(id, payload.sub, fastify.prisma));
   });
 
+  // POST /appointments/:id/patient-arrived
+  fastify.post("/:id/patient-arrived", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await markPatientArrived(id, payload.sub, fastify.prisma));
+  });
+
   // POST /appointments/:id/notes
   fastify.post("/:id/notes", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = ShiftNotesBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
     return reply.send(await addShiftNotes(id, payload.sub, body, fastify.prisma));
+  });
+
+  // GET /appointments/me/:id  (interpreter's own appointment detail)
+  fastify.get("/me/:id", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getInterpreterAppointment(id, payload.sub, fastify.prisma));
+  });
+
+  // GET /appointments/me/offers  (interpreter's pending offers)
+  fastify.get("/me/offers", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    return reply.send(await getInterpreterOffers(payload.sub, fastify.prisma));
   });
 
   // GET /appointments/me/appointments  (interpreter's own)
@@ -157,5 +305,58 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const body = ReviewFollowUpDraftBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
     return reply.send(await reviewFollowUpDraft(draft_id, payload.organization_id, body, fastify.prisma));
+  });
+
+  // POST /appointments/:id/media  (interpreter uploads a photo)
+  fastify.post("/:id/media", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+
+    const data = await req.file({ limits: { fileSize: 5 * 1024 * 1024 } }); // 5 MB limit
+    if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
+
+    const ALLOWED = new Set(["image/jpeg", "image/png", "image/heic", "image/webp"]);
+    if (!ALLOWED.has(data.mimetype)) {
+      return reply.status(400).send({ error: { code: "INVALID_FILE_TYPE", message: "Only JPEG, PNG, HEIC and WebP images are accepted" } });
+    }
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of data.file) chunks.push(chunk);
+    const buffer = Buffer.concat(chunks);
+
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.status(400).send({ error: { code: "FILE_TOO_LARGE", message: "File exceeds the 5 MB limit" } });
+    }
+
+    const ext = extname(data.filename || "") || (data.mimetype === "image/png" ? ".png" : data.mimetype === "image/webp" ? ".webp" : ".jpg");
+    const filename = `${randomUUID()}${ext}`;
+
+    // Local dev: save to uploads/; production: use GCS
+    const __dirname = fileURLToPath(new URL(".", import.meta.url));
+    const uploadsDir = join(__dirname, "..", "..", "..", "uploads", "appointment-media");
+    await mkdir(uploadsDir, { recursive: true });
+    await writeFile(join(uploadsDir, filename), buffer);
+    const publicUrl = `/uploads/appointment-media/${filename}`;
+
+    const media = await uploadAppointmentMedia({
+      appointmentId: id,
+      interpreterId: payload.sub,
+      organizationId: payload.organization_id,
+      filename: data.filename || filename,
+      mimeType: data.mimetype,
+      fileSize: buffer.length,
+      gcsPath: publicUrl,
+      publicUrl,
+      prisma: fastify.prisma,
+    });
+
+    return reply.status(201).send(media);
+  });
+
+  // GET /appointments/:id/media  (admin views uploaded media)
+  fastify.get("/:id/media", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getAppointmentMedia(id, payload.organization_id, fastify.prisma));
   });
 }

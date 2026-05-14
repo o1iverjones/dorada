@@ -44,7 +44,10 @@ export function InterpreterDetailPage() {
 
   async function saveEdit() {
     try {
-      await update.mutateAsync(editForm);
+      const payload = Object.fromEntries(
+        Object.entries(editForm).filter(([, v]) => v !== null && v !== undefined && v !== "")
+      );
+      await update.mutateAsync(payload);
       toast({ title: t("common.saved") });
       setEditing(false);
     } catch {

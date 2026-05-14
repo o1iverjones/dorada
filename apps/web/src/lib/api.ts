@@ -14,8 +14,9 @@ class ApiError extends Error {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("pulpito_access_token");
   const isFormData = init.body instanceof FormData;
+  const hasBody = init.body != null;
   const headers: Record<string, string> = {
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(hasBody && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(init.headers as Record<string, string>),
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -47,23 +48,31 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
 async function tryRefresh(): Promise<boolean> {
-  const token = localStorage.getItem("pulpito_refresh_token");
-  if (!token) return false;
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: token }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    localStorage.setItem("pulpito_access_token", data.access_token);
-    localStorage.setItem("pulpito_refresh_token", data.refresh_token);
-    return true;
-  } catch {
-    return false;
-  }
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    const token = localStorage.getItem("pulpito_refresh_token");
+    if (!token) return false;
+    try {
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: token }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      localStorage.setItem("pulpito_access_token", data.access_token);
+      localStorage.setItem("pulpito_refresh_token", data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
 }
 
 export function clearTokens() {

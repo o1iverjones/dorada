@@ -37,6 +37,11 @@ export function useInterpreterRates() {
   });
 }
 
+export function useOrgTimezone(): string {
+  const { data } = useSystemSettings();
+  return (data as Record<string, unknown> | undefined)?.timezone as string ?? "America/Los_Angeles";
+}
+
 export function useLocaleStrings(locale: string) {
   return useQuery({
     queryKey: ["locale-strings", locale],

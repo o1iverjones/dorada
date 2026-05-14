@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,16 +26,28 @@ export function LoginPage() {
   const setMfaToken = useAuthStore((s) => s.setMfaToken);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem("pulpito_remembered_email"));
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("pulpito_remembered_email");
+    if (saved) setValue("email", saved);
+  }, [setValue]);
 
   async function onSubmit(data: FormData) {
     try {
       const res = await api.post<
         { mfa_token: string } | { access_token: string; refresh_token: string; admin: { id: string; name: string; email: string; role: object; permissions: string[] } }
       >("/auth/admin/login", data);
+
+      if (rememberMe) {
+        localStorage.setItem("pulpito_remembered_email", data.email);
+      } else {
+        localStorage.removeItem("pulpito_remembered_email");
+      }
 
       if ("mfa_token" in res) {
         setMfaToken(res.mfa_token);
@@ -78,6 +90,18 @@ export function LoginPage() {
                 </button>
               </div>
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 cursor-pointer accent-primary"
+              />
+              <Label htmlFor="remember-me" className="cursor-pointer font-normal text-muted-foreground">
+                {t("auth.remember_me")}
+              </Label>
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? t("common.loading") : t("auth.sign_in")}

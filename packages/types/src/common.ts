@@ -68,6 +68,7 @@ export const PermissionSchema = z.enum([
   "view_reports",
   "manage_appointments",
   "manage_system_settings",
+  "manage_invoices",
 ]);
 
 export const ConfidenceLevelSchema = z.enum(["high", "medium", "low"]);

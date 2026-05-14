@@ -62,7 +62,7 @@ export async function listMessages(
   requesterId: string,
   isAdmin: boolean,
   organizationId: string,
-  query: { cursor?: string; limit: number },
+  query: { cursor?: string; limit: number; since?: string },
   prisma: PrismaClient,
 ) {
   if (!isAdmin && requesterId !== interpreterId) {
@@ -74,6 +74,33 @@ export async function listMessages(
   });
   if (!interpreter) throw new NotFoundError("CONVERSATION_NOT_FOUND", "Interpreter not found");
 
+  // `since` mode: return only new messages in ascending order — no cursor pagination needed
+  if (query.since) {
+    const messages = await prisma.message.findMany({
+      where: {
+        organization_id: organizationId,
+        interpreter_id: interpreterId,
+        sent_at: { gt: new Date(query.since) },
+      },
+      orderBy: { sent_at: "asc" },
+      include: { sender_user: { select: { id: true, name: true } } },
+    });
+    return {
+      data: messages.map((m) => ({
+        id: m.id,
+        body: m.body,
+        sender_type: m.sender_type,
+        sender: m.sender_type === "admin" && m.sender_user
+          ? { id: m.sender_user.id, name: m.sender_user.name }
+          : { id: interpreter.id, name: interpreter.name },
+        sent_at: m.sent_at.toISOString(),
+        read_at: m.read_at?.toISOString() ?? null,
+      })),
+      pagination: { next_cursor: null, has_more: false },
+    };
+  }
+
+  // Initial load: latest messages in descending order with cursor pagination
   const messages = await prisma.message.findMany({
     where: {
       organization_id: organizationId,
@@ -128,7 +155,10 @@ export async function sendMessage(
       sender_user_id: isAdmin ? senderId : null,
       body: body.body,
     },
-    include: { sender_user: { select: { id: true, name: true } } },
+    include: {
+      sender_user: { select: { id: true, name: true } },
+      interpreter: { select: { id: true, name: true } },
+    },
   });
 }
 

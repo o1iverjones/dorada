@@ -76,6 +76,57 @@ export async function listRoles(organizationId: string, prisma: PrismaClient) {
   };
 }
 
+export async function updateUser(
+  id: string,
+  body: { name?: string; email?: string; password?: string; role_id?: string; is_active?: boolean },
+  organizationId: string,
+  actorPermissions: string[],
+  prisma: PrismaClient,
+) {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: { role: { include: { permissions: true } } },
+  });
+  if (!user || user.organization_id !== organizationId) throw new NotFoundError("NOT_FOUND", "User not found");
+
+  // Non-super-admins cannot edit a Super Admin user
+  const targetIsElevated = user.role.permissions.some((p) => p.permission === "manage_system_settings");
+  if (targetIsElevated && !actorPermissions.includes("manage_system_settings")) {
+    throw new ForbiddenError("FORBIDDEN", "Only Super Admins can edit Super Admin users");
+  }
+
+  if (body.role_id && body.role_id !== user.role_id) {
+    const targetRole = await prisma.role.findUnique({ where: { id: body.role_id }, include: { permissions: true } });
+    if (!targetRole || targetRole.organization_id !== organizationId) throw new NotFoundError("ROLE_NOT_FOUND", "Role not found");
+    const newRoleElevated = targetRole.permissions.some((p) => p.permission === "manage_system_settings");
+    if (newRoleElevated && !actorPermissions.includes("manage_system_settings")) {
+      throw new ForbiddenError("FORBIDDEN", "Only Super Admins can assign the Super Admin role");
+    }
+  }
+
+  if (body.email && body.email !== user.email) {
+    const existing = await prisma.user.findUnique({
+      where: { organization_id_email: { organization_id: organizationId, email: body.email } },
+    });
+    if (existing) throw new ConflictError("EMAIL_TAKEN", "Email already in use");
+  }
+
+  const data: Record<string, unknown> = {};
+  if (body.name !== undefined) data.name = body.name;
+  if (body.email !== undefined) data.email = body.email;
+  if (body.role_id !== undefined) data.role_id = body.role_id;
+  if (body.is_active !== undefined) data.is_active = body.is_active;
+  if (body.password) data.password_hash = await bcrypt.hash(body.password, 12);
+
+  const updated = await prisma.user.update({
+    where: { id },
+    data,
+    include: { role: true },
+  });
+
+  return { id: updated.id, name: updated.name, email: updated.email, is_active: updated.is_active, mfa_enabled: updated.mfa_enabled, role: { id: updated.role.id, name: updated.role.name } };
+}
+
 export async function createRole(
   body: { name: string; permissions: string[] },
   organizationId: string,

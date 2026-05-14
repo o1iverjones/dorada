@@ -1,12 +1,14 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/auth.js";
+import { useUnreadMessageCount } from "../../hooks/useMessages.js";
 import { cn } from "../../lib/utils.js";
 import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
   ShieldCheck, UserSquare2, BarChart3, MessageSquare, Mail,
-  Settings, User, Upload,
+  Settings, User, Upload, Receipt,
 } from "lucide-react";
+import { useInvoiceStats } from "../../hooks/useInvoices.js";
 
 interface NavItem {
   label: string;
@@ -18,6 +20,10 @@ interface NavItem {
 export function Sidebar() {
   const { t } = useTranslation();
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  const unreadCount = useUnreadMessageCount();
+  const canManageInvoices = hasPermission("manage_invoices");
+  const { data: invoiceStats } = useInvoiceStats(canManageInvoices);
+  const pendingInvoices = invoiceStats?.submitted_count ?? 0;
 
   const navItems: NavItem[] = [
     { label: t("nav.dashboard"), to: "/dashboard", icon: LayoutDashboard },
@@ -28,6 +34,7 @@ export function Sidebar() {
     { label: t("nav.insurance_agencies"), to: "/insurance-agencies", icon: ShieldCheck, permission: "manage_clinics" },
     { label: t("nav.patients"), to: "/patients", icon: UserSquare2, permission: "manage_appointments" },
     { label: t("nav.reports"), to: "/reports", icon: BarChart3, permission: "view_reports" },
+    { label: t("nav.invoices"), to: "/invoices", icon: Receipt, permission: "manage_invoices" },
     { label: t("nav.messages"), to: "/messages", icon: MessageSquare },
     { label: t("nav.email_intake"), to: "/email-intake", icon: Mail, permission: "manage_appointments" },
     { label: t("nav.admin_users"), to: "/admin-users", icon: Users, permission: "manage_admin_users" },
@@ -44,7 +51,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5 border-b border-white/10">
         <img src="/pulpito-logo-trans.jpeg" alt="Pulpito" className="h-9 w-9 rounded-full object-cover" />
-        <span className="text-xl font-bold tracking-tight text-white">Pulpito</span>
+        <span style={{ fontFamily: "PlanetComic, sans-serif", fontSize: "1.75rem" }} className="text-white">PULPITO</span>
       </div>
 
       {/* Nav */}
@@ -62,7 +69,15 @@ export function Sidebar() {
               )
             }
           >
-            <item.icon className="h-4 w-4 shrink-0" />
+            <div className="relative shrink-0">
+              <item.icon className="h-4 w-4" />
+              {item.to === "/messages" && unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-orange-500" />
+              )}
+              {item.to === "/invoices" && pendingInvoices > 0 && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-orange-500" />
+              )}
+            </div>
             {item.label}
           </NavLink>
         ))}

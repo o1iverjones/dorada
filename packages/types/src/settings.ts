@@ -39,6 +39,7 @@ export const UpdateSystemSettingsBodySchema = z.object({
     non_response_window_minutes: z.number().int().positive(),
     max_reminders: z.number().int().nonnegative(),
   }).optional(),
+  timezone: z.string().optional(),
 });
 
 export const CreateAppointmentTypeBodySchema = z.object({

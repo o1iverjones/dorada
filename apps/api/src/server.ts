@@ -12,6 +12,7 @@ import prismaPlugin from "./plugins/prisma.js";
 import redisPlugin from "./plugins/redis.js";
 import jwtPlugin from "./plugins/jwt.js";
 import multipartPlugin from "./plugins/multipart.js";
+import socketPlugin from "./plugins/socket.js";
 import { registerRoutes } from "./routes/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,7 @@ export async function buildServer() {
   await fastify.register(redisPlugin);
   await fastify.register(jwtPlugin);
   await fastify.register(multipartPlugin);
+  await fastify.register(socketPlugin);
 
   await fastify.register(registerRoutes, { prefix: "/api/v1" });
 

@@ -4,24 +4,27 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useMyAppointments, useAppointmentOffers, useConfirmOffer, useDeclineOffer } from "../../src/hooks/useAppointments";
 import { Ionicons } from "@expo/vector-icons";
+import { C } from "../../src/theme";
 
 const STATUS_COLORS: Record<string, string> = {
-  confirmed: "#16a34a",
-  pending_offer: "#d97706",
-  in_progress: "#2563eb",
-  completed: "#64748b",
-  cancelled: "#dc2626",
+  confirmed: C.success,
+  pending_offer: C.warning,
+  in_progress: C.inProgress,
+  completed: C.completed,
+  cancelled: C.danger,
 };
 
 export default function AppointmentsScreen() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"upcoming" | "offers">("upcoming");
+  const [tab, setTab] = useState<"upcoming" | "offers" | "history">("upcoming");
 
   const { data: appts, isLoading: apptLoading, refetch: refetchAppts } = useMyAppointments({ status: "confirmed,in_progress", limit: "30" });
   const { data: offers, isLoading: offersLoading, refetch: refetchOffers } = useAppointmentOffers();
+  const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useMyAppointments({ status: "completed", limit: "50" });
 
   const upcoming = (appts?.data ?? []) as Array<Record<string, unknown>>;
   const pendingOffers = (offers?.data ?? []) as Array<Record<string, unknown>>;
+  const history = (historyData?.data ?? []) as Array<Record<string, unknown>>;
 
   return (
     <View style={styles.container}>
@@ -43,28 +46,25 @@ export default function AppointmentsScreen() {
             )}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, tab === "history" && styles.activeTab]}
+          onPress={() => setTab("history")}
+        >
+          <Text style={[styles.tabText, tab === "history" && styles.activeTabText]}>{t("appointments.history")}</Text>
+        </TouchableOpacity>
       </View>
 
-      {tab === "upcoming" ? (
+      {tab === "upcoming" && (
         <FlatList
           data={upcoming}
           keyExtractor={(item) => item.id as string}
           refreshControl={<RefreshControl refreshing={apptLoading} onRefresh={refetchAppts} />}
           ListEmptyComponent={<Text style={styles.empty}>{t("appointments.no_upcoming")}</Text>}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} onPress={() => router.push(`/appointment/${item.id}`)}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardDate}>{new Date(item.date_time as string).toLocaleDateString()}</Text>
-                <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status as string] ?? "#64748b" }]} />
-              </View>
-              <Text style={styles.cardTitle}>{new Date(item.date_time as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
-              <Text style={styles.cardSubtitle}>{item.clinic_name as string}</Text>
-              <Text style={styles.cardLang}>{item.language as string}</Text>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => <AppointmentCard item={item} />}
         />
-      ) : (
+      )}
+      {tab === "offers" && (
         <FlatList
           data={pendingOffers}
           keyExtractor={(item) => item.offer_id as string ?? item.id as string}
@@ -74,7 +74,54 @@ export default function AppointmentsScreen() {
           renderItem={({ item }) => <OfferCard offer={item} />}
         />
       )}
+      {tab === "history" && (
+        <FlatList
+          data={history}
+          keyExtractor={(item) => item.id as string}
+          refreshControl={<RefreshControl refreshing={historyLoading} onRefresh={refetchHistory} />}
+          ListEmptyComponent={<Text style={styles.empty}>{t("appointments.no_history")}</Text>}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => <AppointmentCard item={item} />}
+        />
+      )}
     </View>
+  );
+}
+
+function AppointmentCard({ item }: { item: Record<string, unknown> }) {
+  const clinic = item.clinic as Record<string, unknown> | null;
+  const patient = item.patient as Record<string, unknown> | null;
+  const dt = new Date(item.date_time as string);
+  const notes = (clinic?.interpreter_notes as Array<{ id: string; type: string }>) ?? [];
+  const noteTypes = [...new Set(notes.map((n) => n.type))];
+  return (
+    <TouchableOpacity style={styles.card} onPress={() => { const id = item.id as string; if (id) router.navigate(`/appointment/${id}`); }}>
+      <View style={styles.cardHeader}>
+        <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status as string] ?? C.completed }]} />
+        <Text style={styles.cardDate}>
+          {dt.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}
+        </Text>
+        <Text style={styles.cardTime}>
+          {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </Text>
+        {noteTypes.length > 0 && (
+          <View style={styles.noteIcons}>
+            {noteTypes.map((type) => (
+              <Ionicons
+                key={type}
+                name={type === "important" ? "alert-circle" : type === "notice" ? "warning-outline" : "information-circle-outline"}
+                size={22}
+                color={type === "important" ? "#b91c1c" : type === "notice" ? C.warning : "#1e40af"}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+      <Text style={styles.cardPatient}>{patient?.name as string ?? "—"}</Text>
+      <Text style={styles.cardClinic}>{clinic?.name as string ?? "—"}</Text>
+      <Text style={styles.cardLang}>{item.language as string}</Text>
+      <Ionicons name="chevron-forward" size={16} color={C.textMuted} style={styles.chevron} />
+    </TouchableOpacity>
   );
 }
 
@@ -82,11 +129,10 @@ function OfferCard({ offer }: { offer: Record<string, unknown> }) {
   const { t } = useTranslation();
   const confirm = useConfirmOffer(offer.id as string, offer.offer_id as string);
   const decline = useDeclineOffer(offer.id as string, offer.offer_id as string);
-
   async function handleConfirm() {
     try {
       await confirm.mutateAsync(undefined);
-    } catch (err) {
+    } catch {
       Alert.alert(t("common.error"), t("appointments.confirm_failed"));
     }
   }
@@ -119,26 +165,29 @@ function OfferCard({ offer }: { offer: Record<string, unknown> }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  tabs: { flexDirection: "row", backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#e2e8f0" },
+  container: { flex: 1, backgroundColor: C.background },
+  tabs: { flexDirection: "row", backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
   tab: { flex: 1, paddingVertical: 14, alignItems: "center" },
-  activeTab: { borderBottomWidth: 2, borderBottomColor: "#3b82f6" },
-  tabText: { fontSize: 14, color: "#64748b", fontWeight: "500" },
-  activeTabText: { color: "#3b82f6" },
-  badge: { color: "#ef4444", fontWeight: "700" },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: C.primary },
+  tabText: { fontSize: 14, color: C.textMuted, fontWeight: "500" },
+  activeTabText: { color: C.primary },
+  badge: { color: C.danger, fontWeight: "700" },
   list: { padding: 16, gap: 12 },
-  card: { backgroundColor: "#fff", borderRadius: 12, padding: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  offerCard: { backgroundColor: "#fff", borderRadius: 12, padding: 16, borderWidth: 1, borderColor: "#fbbf24" },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  cardDate: { fontSize: 12, color: "#64748b" },
+  card: { backgroundColor: C.surface, borderRadius: 12, padding: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  offerCard: { backgroundColor: C.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: C.warningBorder },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  cardTitle: { fontSize: 16, fontWeight: "600", color: "#0f172a", marginBottom: 2 },
-  cardSubtitle: { fontSize: 14, color: "#64748b" },
-  cardLang: { fontSize: 12, color: "#94a3b8", marginTop: 4 },
-  empty: { textAlign: "center", color: "#94a3b8", marginTop: 48, fontSize: 15 },
+  cardDate: { fontSize: 13, fontWeight: "600", color: C.text },
+  cardTime: { fontSize: 13, color: C.textMuted },
+  noteIcons: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto", marginRight: 24 },
+  cardPatient: { fontSize: 15, fontWeight: "700", color: C.text, marginBottom: 2 },
+  cardClinic: { fontSize: 14, color: C.textMuted, marginBottom: 2 },
+  cardLang: { fontSize: 12, color: C.textSubtle },
+  chevron: { position: "absolute", right: 16, bottom: 16 },
+  empty: { textAlign: "center", color: C.textSubtle, marginTop: 48, fontSize: 15 },
   offerActions: { flexDirection: "row", gap: 10, marginTop: 12 },
   actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 8, gap: 6 },
-  confirmBtn: { backgroundColor: "#16a34a" },
-  declineBtn: { backgroundColor: "#dc2626" },
+  confirmBtn: { backgroundColor: C.success },
+  declineBtn: { backgroundColor: C.danger },
   actionBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 });

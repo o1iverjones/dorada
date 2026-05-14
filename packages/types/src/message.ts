@@ -33,6 +33,7 @@ export const ConversationListQuerySchema = z.object({
 export const MessageListQuerySchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
+  since: z.string().datetime().optional(),
 });
 
 export type Message = z.infer<typeof MessageSchema>;

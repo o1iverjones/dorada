@@ -10,7 +10,7 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 export function PatientsPage() {
   const { t } = useTranslation();
@@ -18,11 +18,18 @@ export function PatientsPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", email: "", mrn: "", preferred_language: "" });
+  const [page, setPage] = useState(1);
 
-  const params: Record<string, string> = { limit: "50" };
+  const params: Record<string, string> = { limit: "50", page: String(page) };
   if (search) params.search = search;
 
   const { data, isLoading } = usePatients(params);
+  const pagination = data?.pagination;
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
   const create = useCreatePatient();
 
   async function handleCreate() {
@@ -59,21 +66,26 @@ export function PatientsPage() {
         <Input
           placeholder={t("common.search")}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="max-w-sm"
         />
       </div>
+
+      <PaginationBar page={page} totalPages={pagination?.total_pages} hasMore={!!pagination?.has_more} hasPrev={page > 1} onNext={() => setPage(p => p + 1)} onPrev={() => setPage(p => p - 1)} />
 
       {isLoading ? (
         <LoadingSpinner />
       ) : (
         <DataTable
+          key={page}
           columns={columns as never}
           data={(data?.data ?? []) as Array<{ id: string } & Record<string, unknown>>}
           onRowClick={(row) => navigate(`/patients/${row.id}`)}
           emptyMessage={t("patients.empty")}
         />
       )}
+
+      <PaginationBar page={page} totalPages={pagination?.total_pages} hasMore={!!pagination?.has_more} hasPrev={page > 1} onNext={() => setPage(p => p + 1)} onPrev={() => setPage(p => p - 1)} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -100,6 +112,25 @@ export function PatientsPage() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function PaginationBar({ page, totalPages, hasMore, hasPrev, onNext, onPrev }: {
+  page: number; totalPages?: number; hasMore: boolean; hasPrev: boolean; onNext: () => void; onPrev: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-between py-2">
+      <Button variant="outline" size="sm" onClick={onPrev} disabled={!hasPrev}>
+        <ChevronLeft className="mr-1 h-4 w-4" /> {t("common.previous")}
+      </Button>
+      <span className="text-sm text-muted-foreground">
+        {t("common.page")} {page}{totalPages ? ` / ${totalPages}` : ""}
+      </span>
+      <Button variant="outline" size="sm" onClick={onNext} disabled={!hasMore}>
+        {t("common.next")} <ChevronRight className="ml-1 h-4 w-4" />
+      </Button>
     </div>
   );
 }

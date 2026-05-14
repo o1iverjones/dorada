@@ -5,7 +5,7 @@ export function usePatients(params?: Record<string, string>) {
   const query = new URLSearchParams(params).toString();
   return useQuery({
     queryKey: ["patients", params],
-    queryFn: () => api.get<{ data: unknown[] }>(`/patients${query ? `?${query}` : ""}`),
+    queryFn: () => api.get<{ data: unknown[]; pagination: { page: number; total_pages: number; total: number; has_more: boolean } }>(`/patients${query ? `?${query}` : ""}`),
   });
 }
 

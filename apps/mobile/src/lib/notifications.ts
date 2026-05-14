@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import { api } from "./api";
 
 Notifications.setNotificationHandler({
@@ -34,8 +35,14 @@ export async function registerForPushNotifications(): Promise<string | null> {
     });
   }
 
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  return token;
+  try {
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+    const token = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)).data;
+    return token;
+  } catch {
+    // Push tokens require a physical device or EAS projectId; ignored in Expo Go / dev simulators
+    return null;
+  }
 }
 
 export async function syncFcmToken(token: string) {

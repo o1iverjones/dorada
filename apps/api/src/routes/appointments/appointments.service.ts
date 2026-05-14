@@ -15,6 +15,35 @@ import {
   ForbiddenError,
 } from "../../lib/errors.js";
 import { addMinutes, diffMinutes } from "@pulpito/utils";
+import { writeActivityLog } from "../../lib/activityLog.js";
+import { distanceMiles } from "../../lib/geo.js";
+
+async function logActivity(
+  appointmentId: string,
+  organizationId: string,
+  action: string,
+  adminName: string,
+  adminId: string | null,
+  detail: string | null,
+  prisma: PrismaClient,
+  entityName?: string | null,
+  poNumber?: string | null,
+) {
+  await prisma.appointmentActivity.create({
+    data: { appointment_id: appointmentId, organization_id: organizationId, action, admin_name: adminName, admin_id: adminId, detail },
+  });
+  await writeActivityLog(prisma, {
+    organizationId,
+    entityType: "appointment",
+    entityId: appointmentId,
+    entityName: entityName ?? null,
+    action,
+    detail,
+    poNumber: poNumber ?? null,
+    adminId,
+    adminName,
+  });
+}
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string, code: string) {
   if (!record || record.organization_id !== organizationId) {
@@ -63,10 +92,12 @@ export async function listAppointments(query: AppointmentListQuery, organization
     orderBy: { date_time: "asc" },
     include: {
       type: true,
-      interpreter: { select: { id: true, name: true } },
+      interpreter: { select: { id: true, name: true, profile_picture_url: true, pay_rate: true } },
       clinic: { select: { id: true, name: true } },
       insurance_agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true, mrn: true } },
+      offers: { where: { status: "pending" }, select: { interpreter: { select: { id: true, name: true } } } },
+      invoice: { select: { id: true, status: true, billable_minutes: true } },
     },
   });
 
@@ -84,18 +115,67 @@ export async function getAppointment(id: string, organizationId: string, prisma:
     include: {
       type: true,
       interpreter: { select: { id: true, name: true } },
-      clinic: { select: { id: true, name: true } },
+      clinic: { select: { id: true, name: true, address: true, parking: true } },
       insurance_agency: { select: { id: true, name: true } },
-      patient: { select: { id: true, name: true, mrn: true } },
+      patient: { select: { id: true, name: true, mrn: true, date_of_birth: true } },
       offers: { include: { interpreter: { select: { id: true, name: true } } } },
+      invoice: { select: { id: true, status: true, amount: true, submitted_at: true } },
     },
   });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
   return appt;
 }
 
-export async function createAppointment(body: CreateAppointmentBody, organizationId: string, prisma: PrismaClient) {
-  return prisma.appointment.create({
+export async function getOrgActivityLog(organizationId: string, limit: number, prisma: PrismaClient) {
+  return prisma.appointmentActivity.findMany({
+    where: { organization_id: organizationId },
+    orderBy: { created_at: "desc" },
+    take: limit,
+    include: { appointment: { select: { id: true, patient: { select: { name: true } } } } },
+  });
+}
+
+export async function getActivityLog(id: string, organizationId: string, prisma: PrismaClient) {
+  const appt = await prisma.appointment.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+  return prisma.appointmentActivity.findMany({
+    where: { appointment_id: id },
+    orderBy: { created_at: "desc" },
+  });
+}
+
+export async function getAdminNotes(id: string, organizationId: string, prisma: PrismaClient) {
+  const appt = await prisma.appointment.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+  return prisma.appointmentNote.findMany({
+    where: { appointment_id: id },
+    orderBy: { created_at: "desc" },
+  });
+}
+
+export async function addAdminNote(
+  id: string,
+  content: string,
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+) {
+  const appt = await prisma.appointment.findUnique({ where: { id }, select: { organization_id: true, po_number: true, patient: { select: { name: true } } } });
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+  const note = await prisma.appointmentNote.create({
+    data: { appointment_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name },
+  });
+  await logActivity(id, organizationId, "note_added", actor.name, actor.id, null, prisma, appt!.patient?.name, appt!.po_number);
+  return note;
+}
+
+export async function createAppointment(
+  body: CreateAppointmentBody,
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+) {
+  const appt = await prisma.appointment.create({
     data: {
       organization_id: organizationId,
       date_time: new Date(body.date_time),
@@ -122,12 +202,15 @@ export async function createAppointment(body: CreateAppointmentBody, organizatio
       patient: { select: { id: true, name: true, mrn: true } },
     },
   });
+  await logActivity(appt.id, organizationId, "created", actor.name, actor.id, null, prisma, appt.patient?.name, appt.po_number);
+  return appt;
 }
 
 export async function updateAppointment(
   id: string,
   body: UpdateAppointmentBody,
   organizationId: string,
+  actor: { id: string; name: string },
   prisma: PrismaClient,
 ) {
   const appt = await prisma.appointment.findUnique({ where: { id } });
@@ -135,7 +218,7 @@ export async function updateAppointment(
 
   if (body.status) assertValidTransition(appt!.status, body.status);
 
-  return prisma.appointment.update({
+  const updated = await prisma.appointment.update({
     where: { id },
     data: {
       ...(body.date_time ? { date_time: new Date(body.date_time) } : {}),
@@ -148,6 +231,7 @@ export async function updateAppointment(
       ...(body.patient_id ? { patient_id: body.patient_id } : {}),
       ...(body.referring_physician !== undefined ? { referring_physician: body.referring_physician } : {}),
       ...(body.department !== undefined ? { department: body.department } : {}),
+      ...(body.po_number !== undefined ? { po_number: body.po_number || null } : {}),
       ...(body.pre_auth_amount !== undefined ? { pre_auth_amount: body.pre_auth_amount } : {}),
       ...(body.pre_auth_mileage !== undefined ? { pre_auth_mileage: body.pre_auth_mileage } : {}),
       ...(body.status ? { status: body.status } : {}),
@@ -160,9 +244,90 @@ export async function updateAppointment(
       patient: { select: { id: true, name: true, mrn: true } },
     },
   });
+  const FIELD_LABELS: Record<string, string> = {
+    duration_minutes: "Duration",
+    type_id: "Appointment Type",
+    language: "Language",
+    interpreter_type_required: "Interpreter Type",
+    clinic_id: "Clinic",
+    insurance_agency_id: "Insurance Agency",
+    patient_id: "Patient",
+    referring_physician: "Referring Physician",
+    department: "Department",
+    pre_auth_amount: "Pre-Auth Amount",
+    pre_auth_mileage: "Pre-Auth Mileage",
+    po_number: "PO Number",
+  };
+
+  if (body.status && body.status !== appt!.status) {
+    await logActivity(id, organizationId, "status_changed", actor.name, actor.id, `Status changed to ${body.status}`, prisma, updated.patient?.name, updated.po_number);
+  } else {
+    const changed: string[] = [];
+    if (body.date_time !== undefined) {
+      const newDt = new Date(body.date_time);
+      const oldDt = appt!.date_time;
+      if (newDt.toISOString().slice(0, 10) !== oldDt.toISOString().slice(0, 10)) changed.push("Date");
+      if (newDt.toISOString().slice(11, 16) !== oldDt.toISOString().slice(11, 16)) changed.push("Time");
+    }
+    if (body.duration_minutes !== undefined && body.duration_minutes !== appt!.duration_minutes) changed.push(FIELD_LABELS.duration_minutes);
+    if (body.type_id !== undefined && body.type_id !== appt!.type_id) changed.push(FIELD_LABELS.type_id);
+    if (body.language !== undefined && body.language !== appt!.language) changed.push(FIELD_LABELS.language);
+    if (body.interpreter_type_required !== undefined && body.interpreter_type_required !== appt!.interpreter_type_required) changed.push(FIELD_LABELS.interpreter_type_required);
+    if (body.clinic_id !== undefined && body.clinic_id !== appt!.clinic_id) changed.push(FIELD_LABELS.clinic_id);
+    if (body.insurance_agency_id !== undefined && body.insurance_agency_id !== appt!.insurance_agency_id) changed.push(FIELD_LABELS.insurance_agency_id);
+    if (body.patient_id !== undefined && body.patient_id !== appt!.patient_id) changed.push(FIELD_LABELS.patient_id);
+    if (body.referring_physician !== undefined && (body.referring_physician ?? null) !== appt!.referring_physician) changed.push(FIELD_LABELS.referring_physician);
+    if (body.department !== undefined && (body.department ?? null) !== appt!.department) changed.push(FIELD_LABELS.department);
+    if (body.pre_auth_amount !== undefined && Number(body.pre_auth_amount) !== Number(appt!.pre_auth_amount)) changed.push(FIELD_LABELS.pre_auth_amount);
+    if (body.pre_auth_mileage !== undefined && body.pre_auth_mileage !== appt!.pre_auth_mileage) changed.push(FIELD_LABELS.pre_auth_mileage);
+    if (body.po_number !== undefined && (body.po_number ?? null) !== appt!.po_number) changed.push(FIELD_LABELS.po_number);
+    await logActivity(id, organizationId, "updated", actor.name, actor.id, changed.length ? changed.join(", ") : null, prisma, updated.patient?.name, updated.po_number);
+  }
+  return updated;
 }
 
-export async function cancelAppointment(id: string, organizationId: string, prisma: PrismaClient) {
+export async function patchClockTimes(
+  id: string,
+  body: { clock_in_time?: string; clock_out_time?: string },
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+) {
+  const [appt, settings] = await Promise.all([
+    prisma.appointment.findUnique({ where: { id }, include: { patient: { select: { name: true } } } }),
+    prisma.systemSettings.findUnique({ where: { organization_id: organizationId } }),
+  ]);
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+
+  const clockIn = body.clock_in_time !== undefined ? new Date(body.clock_in_time) : undefined;
+  const clockOut = body.clock_out_time !== undefined ? new Date(body.clock_out_time) : undefined;
+
+  // Recalculate actual duration when both times are known
+  const inTime = clockIn ?? appt!.clock_in_time;
+  const outTime = clockOut ?? appt!.clock_out_time;
+  const actualMinutes = inTime && outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : undefined;
+
+  const updated = await prisma.appointment.update({
+    where: { id },
+    data: {
+      ...(clockIn !== undefined ? { clock_in_time: clockIn } : {}),
+      ...(clockOut !== undefined ? { clock_out_time: clockOut } : {}),
+      ...(actualMinutes !== undefined ? { actual_duration_minutes: actualMinutes } : {}),
+    },
+  });
+
+  const tz = settings?.timezone ?? "America/Los_Angeles";
+  const fmtTime = (d: Date) => new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: tz }).format(d);
+  const changed: string[] = [];
+  if (clockIn !== undefined) changed.push(`Clock-in → ${fmtTime(updated.clock_in_time!)}`);
+  if (clockOut !== undefined) changed.push(`Clock-out → ${fmtTime(updated.clock_out_time!)}`);
+
+  await logActivity(id, organizationId, "clock_times_edited", actor.name, actor.id, changed.join("; "), prisma, appt!.patient?.name, appt!.po_number);
+
+  return updated;
+}
+
+export async function cancelAppointment(id: string, organizationId: string, actor: { id: string; name: string }, prisma: PrismaClient) {
   const appt = await prisma.appointment.findUnique({ where: { id } });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
   assertValidTransition(appt!.status, "cancelled");
@@ -174,12 +339,14 @@ export async function cancelAppointment(id: string, organizationId: string, pris
       data: { status: "expired" },
     }),
   ]);
+  await logActivity(id, organizationId, "cancelled", actor.name, actor.id, null, prisma, appt!.patient?.name ?? null, appt!.po_number);
 }
 
 export async function offerAppointment(
   id: string,
   body: OfferAppointmentBody,
   organizationId: string,
+  actor: { id: string; name: string },
   prisma: PrismaClient,
 ) {
   const appt = await prisma.appointment.findUnique({ where: { id } });
@@ -195,10 +362,19 @@ export async function offerAppointment(
     include: { clinics_not_allowed: true, availability_blocks: true },
   });
 
+  const existingOffers = await prisma.appointmentOffer.findMany({
+    where: { appointment_id: id, interpreter_id: { in: body.interpreter_ids } },
+  });
+  const alreadyOffered = new Set(existingOffers.map((o) => o.interpreter_id));
+
   const offers = [];
   for (const interpreter of interpreters) {
-    if (interpreter.type !== appt!.interpreter_type_required) {
-      throw new ValidationError("INTERPRETER_NOT_ELIGIBLE", `Interpreter ${interpreter.name} type mismatch`);
+    if (alreadyOffered.has(interpreter.id)) continue;
+
+    const requiredType = appt!.interpreter_type_required;
+    const eligible = interpreter.type === "certified" || requiredType === "qualified";
+    if (!eligible) {
+      throw new ValidationError("INTERPRETER_NOT_ELIGIBLE", `Interpreter ${interpreter.name} is qualified-only and cannot be assigned to a certified appointment`);
     }
     const blocked = interpreter.clinics_not_allowed.some((b) => b.clinic_id === appt!.clinic_id);
     if (blocked) {
@@ -225,6 +401,8 @@ export async function offerAppointment(
   }
 
   const created = await Promise.all(offers);
+  const names = created.map((o) => o.interpreter.name).join(", ");
+  await logActivity(id, organizationId, "offer_sent", actor.name, actor.id, `Offered to: ${names}`, prisma, null, appt!.po_number);
   return { offers: created };
 }
 
@@ -285,44 +463,116 @@ export async function declineOffer(
   return { offer: { id: offerId, status: "declined" } };
 }
 
-export async function clockIn(appointmentId: string, interpreterId: string, prisma: PrismaClient) {
-  const appt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+export async function clockIn(
+  appointmentId: string,
+  interpreterId: string,
+  prisma: PrismaClient,
+  lat?: number,
+  lng?: number,
+) {
+  const appt = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: { clinic: { select: { location_lat: true, location_lng: true } } },
+  });
   if (!appt || appt.interpreter_id !== interpreterId) {
     throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
   }
   if (appt.status !== "confirmed") throw new ValidationError("INVALID_STATUS_TRANSITION", "Appointment must be confirmed");
-  if (appt.clock_in) throw new ConflictError("ALREADY_CLOCKED_IN", "Already clocked in");
+  if (appt.clock_in_time) throw new ConflictError("ALREADY_CLOCKED_IN", "Already clocked in");
+
+  // Compute distance from clinic if both interpreter and clinic coordinates are available
+  let distMiles: number | null = null;
+  if (lat != null && lng != null && appt.clinic?.location_lat != null && appt.clinic?.location_lng != null) {
+    distMiles = distanceMiles(lat, lng, appt.clinic.location_lat, appt.clinic.location_lng);
+  }
 
   const updated = await prisma.appointment.update({
     where: { id: appointmentId },
-    data: { clock_in: new Date(), status: "in_progress" },
+    data: {
+      clock_in_time: new Date(),
+      status: "in_progress",
+      ...(lat != null ? { clock_in_lat: lat } : {}),
+      ...(lng != null ? { clock_in_lng: lng } : {}),
+      ...(distMiles != null ? { clock_in_distance_miles: distMiles } : {}),
+    },
   });
 
-  return { clock_in: updated.clock_in!.toISOString(), status: "in_progress" };
+  return {
+    clock_in_time: updated.clock_in_time!.toISOString(),
+    status: "in_progress",
+    clock_in_distance_miles: distMiles,
+  };
 }
 
 export async function clockOut(appointmentId: string, interpreterId: string, prisma: PrismaClient) {
-  const appt = await prisma.appointment.findUnique({ where: { id: appointmentId }, include: { type: true } });
+  const appt = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: {
+      type: true,
+      interpreter: { select: { pay_rate: true } },
+    },
+  });
   if (!appt || appt.interpreter_id !== interpreterId) {
     throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
   }
   if (appt.status !== "in_progress") throw new ValidationError("INVALID_STATUS_TRANSITION", "Must be in progress");
 
   const now = new Date();
-  const actualMinutes = appt.clock_in ? diffMinutes(appt.clock_in.toISOString(), now.toISOString()) : 0;
+  const actualMinutes = appt.clock_in_time ? diffMinutes(appt.clock_in_time.toISOString(), now.toISOString()) : 0;
   const billableMinutes = Math.max(actualMinutes, appt.type.minimum_billable_minutes);
 
-  const updated = await prisma.appointment.update({
+  await prisma.appointment.update({
     where: { id: appointmentId },
-    data: { clock_out: now, status: "completed" },
+    data: { clock_out_time: now, status: "completed", actual_duration_minutes: actualMinutes, billable_duration_minutes: billableMinutes },
+  });
+
+  // Determine pay rate: appointment-level → interpreter-level → system default
+  let payRate = appt.pay_rate ? Number(appt.pay_rate) : null;
+  if (!payRate) payRate = appt.interpreter?.pay_rate ? Number(appt.interpreter.pay_rate) : null;
+  if (!payRate) {
+    const settings = await prisma.systemSettings.findUnique({ where: { organization_id: appt.organization_id } });
+    const isQualified = appt.interpreter_type_required === "qualified";
+    payRate = settings
+      ? Number(isQualified ? settings.default_pay_rate_qualified : settings.default_pay_rate_certified)
+      : 30;
+  }
+
+  const amount = payRate * (billableMinutes / 60.0);
+
+  await prisma.invoice.create({
+    data: {
+      organization_id: appt.organization_id,
+      appointment_id: appointmentId,
+      interpreter_id: interpreterId,
+      status: "submitted",
+      amount,
+      billable_minutes: billableMinutes,
+      pay_rate: payRate,
+    },
   });
 
   return {
-    clock_out: updated.clock_out!.toISOString(),
+    clock_out_time: now.toISOString(),
     actual_duration_minutes: actualMinutes,
     billable_duration_minutes: billableMinutes,
     status: "completed",
   };
+}
+
+export async function markPatientArrived(appointmentId: string, interpreterId: string, prisma: PrismaClient) {
+  const appt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+  if (!appt || appt.interpreter_id !== interpreterId) {
+    throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
+  }
+  if (appt.status !== "in_progress") throw new ValidationError("INVALID_STATUS", "Appointment must be in progress");
+  if (appt.patient_arrived_at) throw new ConflictError("ALREADY_MARKED", "Patient already marked as arrived");
+
+  const updated = await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { patient_arrived_at: new Date() },
+  });
+
+  return { patient_arrived_at: updated.patient_arrived_at!.toISOString() };
 }
 
 export async function addShiftNotes(
@@ -335,13 +585,38 @@ export async function addShiftNotes(
   if (!appt || appt.interpreter_id !== interpreterId) {
     throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
   }
-  if (appt.status !== "completed") throw new ValidationError("INVALID_STATUS_TRANSITION", "Appointment must be completed");
+  if (appt.status !== "completed" && appt.status !== "in_progress") {
+    throw new ValidationError("INVALID_STATUS_TRANSITION", "Appointment must be in progress or completed");
+  }
 
   return prisma.appointment.update({
     where: { id: appointmentId },
     data: { shift_notes: body.notes },
     select: { shift_notes: true, updated_at: true },
   });
+}
+
+export async function getInterpreterAppointment(appointmentId: string, interpreterId: string, prisma: PrismaClient) {
+  const appt = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: {
+      type: true,
+      clinic: {
+        select: {
+          id: true, name: true, address: true, parking: true,
+          interpreter_notes: { where: { is_active: true }, select: { id: true, content: true, type: true }, orderBy: { created_at: "asc" } },
+        },
+      },
+      insurance_agency: { select: { id: true, name: true } },
+      patient: { select: { id: true, name: true, mrn: true } },
+      invoice: { select: { id: true, status: true, amount: true } },
+      media: { select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true }, orderBy: { uploaded_at: "asc" } },
+    },
+  });
+  if (!appt || appt.interpreter_id !== interpreterId) {
+    throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
+  }
+  return { ...appt, invoice: appt.invoice ? { ...appt.invoice, amount: Number(appt.invoice.amount) } : null };
 }
 
 export async function getInterpreterAppointments(
@@ -367,7 +642,12 @@ export async function getInterpreterAppointments(
     orderBy: { date_time: "asc" },
     include: {
       type: true,
-      clinic: { select: { id: true, name: true } },
+      clinic: {
+        select: {
+          id: true, name: true,
+          interpreter_notes: { where: { is_active: true }, select: { id: true, type: true }, orderBy: { created_at: "asc" } },
+        },
+      },
       insurance_agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true, mrn: true } },
     },
@@ -378,6 +658,37 @@ export async function getInterpreterAppointments(
   return {
     data,
     pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
+  };
+}
+
+export async function getInterpreterOffers(interpreterId: string, prisma: PrismaClient) {
+  const offers = await prisma.appointmentOffer.findMany({
+    where: { interpreter_id: interpreterId, status: "pending", expires_at: { gt: new Date() } },
+    include: {
+      appointment: {
+        include: {
+          clinic: { select: { id: true, name: true } },
+          insurance_agency: { select: { id: true, name: true } },
+          patient: { select: { id: true, name: true } },
+        },
+      },
+    },
+    orderBy: { offered_at: "desc" },
+  });
+
+  return {
+    data: offers.map((o) => ({
+      offer_id: o.id,
+      id: o.appointment_id,
+      expires_at: o.expires_at,
+      date_time: o.appointment.date_time,
+      duration_minutes: o.appointment.duration_minutes,
+      language: o.appointment.language,
+      interpreter_type_required: o.appointment.interpreter_type_required,
+      clinic_name: o.appointment.clinic?.name ?? null,
+      insurance_agency_name: o.appointment.insurance_agency?.name ?? null,
+      patient_name: o.appointment.patient?.name ?? null,
+    })),
   };
 }
 
@@ -452,7 +763,7 @@ export async function listFollowUpDrafts(
     include: {
       follow_up_response: {
         include: {
-          appointment: { include: { patient: true, clinic: true } },
+          appointment: { include: { patient: true, clinic: true, insurance_agency: true } },
           interpreter: { select: { id: true, name: true } },
           media: true,
         },
@@ -473,6 +784,9 @@ export async function listFollowUpDrafts(
       patient: { id: d.follow_up_response.appointment.patient.id, name: d.follow_up_response.appointment.patient.name },
       clinic: d.follow_up_response.appointment.clinic
         ? { id: d.follow_up_response.appointment.clinic.id, name: d.follow_up_response.appointment.clinic.name }
+        : null,
+      insurance_agency: d.follow_up_response.appointment.insurance_agency
+        ? { id: d.follow_up_response.appointment.insurance_agency.id, name: d.follow_up_response.appointment.insurance_agency.name }
         : null,
       interpreter: { id: d.follow_up_response.interpreter.id, name: d.follow_up_response.interpreter.name },
       follow_up_response: {
@@ -542,4 +856,36 @@ export async function reviewFollowUpDraft(
     draft_status: "scheduled",
     appointment: { id: appointment.id, status: "pending_offer", date_time: appointment.date_time.toISOString() },
   };
+}
+
+export async function uploadAppointmentMedia(params: {
+  appointmentId: string;
+  interpreterId: string;
+  organizationId: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+  gcsPath: string;
+  publicUrl: string;
+  prisma: PrismaClient;
+}) {
+  const { appointmentId, interpreterId, organizationId, filename, mimeType, fileSize, gcsPath, publicUrl, prisma } = params;
+  const appt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+  if (!appt || appt.interpreter_id !== interpreterId) {
+    throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
+  }
+  return prisma.appointmentMedia.create({
+    data: { appointment_id: appointmentId, interpreter_id: interpreterId, organization_id: organizationId, filename, mime_type: mimeType, file_size: fileSize, gcs_path: gcsPath, public_url: publicUrl },
+    select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true },
+  });
+}
+
+export async function getAppointmentMedia(appointmentId: string, organizationId: string, prisma: PrismaClient) {
+  const appt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+  return prisma.appointmentMedia.findMany({
+    where: { appointment_id: appointmentId },
+    select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true, interpreter: { select: { name: true } } },
+    orderBy: { uploaded_at: "asc" },
+  });
 }

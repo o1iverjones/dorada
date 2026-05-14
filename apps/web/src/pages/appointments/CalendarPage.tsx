@@ -1,65 +1,247 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
+import { useClinics } from "../../hooks/useClinics.js";
+import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { formatInTz } from "../../lib/timezone.js";
+import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Button } from "../../components/ui/button.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
-import { StatusBadge } from "../../components/shared/StatusBadge.js";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, CalendarOff } from "lucide-react";
+import { api } from "../../lib/api.js";
+
+type View = "month" | "week";
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-green-100 border-green-300 text-green-800",
   pending_offer: "bg-yellow-100 border-yellow-300 text-yellow-800",
   in_progress: "bg-blue-100 border-blue-300 text-blue-800",
-  completed: "bg-gray-100 border-gray-300 text-gray-600",
+  completed: "bg-green-100 border-green-300 text-green-800",
   cancelled: "bg-red-100 border-red-300 text-red-800",
 };
+
+const BLOCK_COLORS = [
+  "bg-purple-200 border-purple-400 text-purple-900",
+  "bg-pink-200 border-pink-400 text-pink-900",
+  "bg-orange-200 border-orange-400 text-orange-900",
+  "bg-teal-200 border-teal-400 text-teal-900",
+  "bg-indigo-200 border-indigo-400 text-indigo-900",
+];
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+function startOfWeek(d: Date): Date {
+  const s = new Date(d);
+  s.setHours(0, 0, 0, 0);
+  s.setDate(s.getDate() - s.getDay());
+  return s;
+}
+
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
 
 export function CalendarPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const tz = useOrgTimezone();
+  const [view, setView] = useState<View>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [interpreterFilter, setInterpreterFilter] = useState("all");
+  const [interpreterFilter, setInterpreterFilter] = useState("");
+  const [clinicFilter, setClinicFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showBlocks, setShowBlocks] = useState(false);
+  const [tooltip, setTooltip] = useState<{ appt: Record<string, unknown>; x: number; y: number } | null>(null);
+  const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mousePos = useRef({ x: 0, y: 0 });
+
+  const startTooltip = useCallback((a: Record<string, unknown>) => {
+    if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+    tooltipTimer.current = setTimeout(() => {
+      setTooltip({ appt: a, x: mousePos.current.x, y: mousePos.current.y });
+    }, 750);
+  }, []);
+
+  const clearTooltip = useCallback(() => {
+    if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+    setTooltip(null);
+  }, []);
+
+  const trackMouse = useCallback((e: React.MouseEvent) => {
+    mousePos.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  // ── Date ranges ────────────────────────────────────────────────────────────
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
+  const monthStart = `${year}-${pad(month + 1)}-01`;
+  const monthEnd = `${year}-${pad(month + 1)}-${pad(lastDay.getDate())}`;
 
-  const params: Record<string, string> = {
-    date_from: firstDay.toISOString().slice(0, 10),
-    date_to: lastDay.toISOString().slice(0, 10),
-    limit: "200",
-  };
-  if (interpreterFilter !== "all") params.interpreter_id = interpreterFilter;
+  const weekStart = startOfWeek(currentDate);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
 
-  const { data } = useAppointments(params);
-  const { data: interpreters } = useInterpreters({ limit: "100" });
+  const dateFrom = view === "month" ? monthStart : toDateStr(weekStart);
+  const dateTo   = view === "month" ? monthEnd   : toDateStr(weekEnd);
+
+  // ── Data fetching ──────────────────────────────────────────────────────────
+
+  const apptParams: Record<string, string> = { date_from: dateFrom, date_to: dateTo, limit: "500" };
+  if (interpreterFilter) apptParams.interpreter_id = interpreterFilter;
+  if (clinicFilter !== "all") apptParams.clinic_id = clinicFilter;
+  if (statusFilter !== "all") apptParams.status = statusFilter;
+
+  const { data } = useAppointments(apptParams);
+  const { data: interpretersData } = useInterpreters({ limit: "100" });
+  const { data: clinicsData } = useClinics({ limit: "100" });
+
+  const blockParams = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+  if (interpreterFilter) blockParams.set("interpreter_id", interpreterFilter);
+  const { data: blocksData } = useQuery({
+    queryKey: ["availability-blocks-admin", dateFrom, dateTo, interpreterFilter],
+    queryFn: () => api.get<{ data: Array<Record<string, unknown>> }>(`/interpreters/availability-blocks?${blockParams}`),
+    enabled: showBlocks,
+  });
 
   const appointments = (data?.data ?? []) as Array<Record<string, unknown>>;
+  const availabilityBlocks = (blocksData?.data ?? []) as Array<Record<string, unknown>>;
 
-  // Build calendar grid (Sun–Sat)
-  const startDow = firstDay.getDay();
-  const daysInMonth = lastDay.getDate();
-  const cells: Array<number | null> = [
-    ...Array(startDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
+  const interpreterOptions = ((interpretersData?.data ?? []) as Array<{ id: string; name: string }>).map((i) => ({
+    value: i.id,
+    label: i.name,
+  }));
 
-  function prevMonth() { setCurrentDate(new Date(year, month - 1, 1)); }
-  function nextMonth() { setCurrentDate(new Date(year, month + 1, 1)); }
+  const interpreterColorMap = new Map<string, string>();
+  availabilityBlocks.forEach((b) => {
+    const iid = b.interpreter_id as string;
+    if (!interpreterColorMap.has(iid)) {
+      interpreterColorMap.set(iid, BLOCK_COLORS[interpreterColorMap.size % BLOCK_COLORS.length]);
+    }
+  });
 
-  function appointmentsForDay(day: number) {
-    return appointments.filter((a) => {
-      const d = new Date(a.date_time as string);
-      return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function appointmentsForDate(date: Date) {
+    return appointments
+      .filter((a) => isSameDay(new Date(a.date_time as string), date))
+      .sort((a, b) => new Date(a.date_time as string).getTime() - new Date(b.date_time as string).getTime());
+  }
+
+  function blocksForDate(date: Date) {
+    if (!showBlocks) return [];
+    return availabilityBlocks.filter((b) => {
+      const from = new Date(b.from as string); from.setHours(0,0,0,0);
+      const to   = new Date(b.to   as string); to.setHours(23,59,59,999);
+      return from <= date && to >= date;
     });
   }
 
-  const monthLabel = currentDate.toLocaleString("default", { month: "long", year: "numeric" });
+  // ── Navigation ─────────────────────────────────────────────────────────────
+
+  function prev() {
+    if (view === "month") setCurrentDate(new Date(year, month - 1, 1));
+    else { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }
+  }
+  function next() {
+    if (view === "month") setCurrentDate(new Date(year, month + 1, 1));
+    else { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }
+  }
+
+  const rangeLabel = view === "month"
+    ? formatInTz(currentDate, { month: "long", year: "numeric" }, tz)
+    : formatInTz(weekStart, { month: "short", day: "numeric" }, tz) +
+      " – " +
+      formatInTz(weekEnd, { month: "short", day: "numeric", year: "numeric" }, tz);
+
+  // ── Month grid ─────────────────────────────────────────────────────────────
+
+  const firstDay = new Date(year, month, 1);
+  const cells: Array<Date | null> = [
+    ...Array(firstDay.getDay()).fill(null),
+    ...Array.from({ length: lastDay.getDate() }, (_, i) => new Date(year, month, i + 1)),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  // ── Shared appointment pill ────────────────────────────────────────────────
+
+  function apptColorClass(a: Record<string, unknown>) {
+    const hasInterpreter = !!(a.interpreter as Record<string, unknown> | null)?.id;
+    if (!hasInterpreter) return "bg-gray-100 border-gray-300 text-gray-500";
+    return STATUS_COLORS[a.status as string] ?? "bg-muted border-gray-300";
+  }
+
+  function ApptPill({ a }: { a: Record<string, unknown> }) {
+    return (
+      <button
+        onClick={() => navigate(`/appointments/${a.id}`)}
+        onMouseEnter={() => startTooltip(a)}
+        onMouseLeave={clearTooltip}
+        onMouseMove={trackMouse}
+        className={`w-full truncate rounded border px-1 py-0.5 text-left text-xs ${apptColorClass(a)}`}
+      >
+        {formatInTz(a.date_time as string, { hour: "2-digit", minute: "2-digit" }, tz)}{" "}
+        {(a.patient as Record<string, unknown>)?.name as string ?? "—"}
+      </button>
+    );
+  }
+
+  function WeekApptCard({ a }: { a: Record<string, unknown> }) {
+    const dt = new Date(a.date_time as string);
+    const endDt = new Date(dt.getTime() + (a.duration_minutes as number) * 60000);
+    const timeStr =
+      formatInTz(dt, { hour: "2-digit", minute: "2-digit" }, tz) +
+      " – " +
+      formatInTz(endDt, { hour: "2-digit", minute: "2-digit" }, tz);
+    const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
+    const clinicName = (a.clinic as Record<string, unknown>)?.name as string;
+    const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string;
+    const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
+    const colorClass = apptColorClass(a);
+    return (
+      <button
+        onClick={() => navigate(`/appointments/${a.id}`)}
+        onMouseEnter={() => startTooltip(a)}
+        onMouseLeave={clearTooltip}
+        onMouseMove={trackMouse}
+        className={`w-full rounded border px-1.5 py-1 text-left space-y-0.5 ${colorClass}`}
+      >
+        <p className="text-xs font-bold leading-tight truncate">{patientName}</p>
+        <p className="text-xs leading-tight text-current/80">{timeStr}</p>
+        {clinicName && <p className="text-xs leading-tight truncate opacity-75">{clinicName}</p>}
+        {agencyName && <p className="text-xs leading-tight truncate opacity-75">{agencyName}</p>}
+        <p className="text-xs leading-tight truncate opacity-75 italic">
+          {interpreterName ?? t("appointments.unassigned")}
+        </p>
+      </button>
+    );
+  }
+
+  function BlockPill({ b }: { b: Record<string, unknown> }) {
+    return (
+      <div
+        className={`truncate rounded border px-1 py-0.5 text-xs ${interpreterColorMap.get(b.interpreter_id as string) ?? "bg-gray-100"}`}
+        title={`${(b.interpreter as Record<string, unknown>)?.name as string}${b.reason ? ` — ${b.reason}` : ""}`}
+      >
+        🚫 {(b.interpreter as Record<string, unknown>)?.name as string}
+      </div>
+    );
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
@@ -72,63 +254,209 @@ export function CalendarPage() {
         }
       />
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="min-w-40 text-center font-semibold">{monthLabel}</span>
-          <Button variant="outline" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
+      <div className="flex flex-wrap items-center gap-3">
+        {/* View toggle */}
+        <div className="flex rounded-md border">
+          <button
+            onClick={() => setView("month")}
+            className={`px-3 py-1.5 text-sm font-medium rounded-l-md transition-colors ${view === "month" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          >
+            {t("calendar.month")}
+          </button>
+          <button
+            onClick={() => setView("week")}
+            className={`px-3 py-1.5 text-sm font-medium rounded-r-md border-l transition-colors ${view === "week" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          >
+            {t("calendar.week")}
+          </button>
         </div>
-        <Select value={interpreterFilter} onValueChange={setInterpreterFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder={t("appointments.filter_interpreter")} />
+
+        {/* Navigation */}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={prev}><ChevronLeft className="h-4 w-4" /></Button>
+          <span className="min-w-44 text-center font-semibold text-sm">{rangeLabel}</span>
+          <Button variant="outline" size="icon" onClick={next}><ChevronRight className="h-4 w-4" /></Button>
+        </div>
+
+        {/* Interpreter autocomplete */}
+        <div className="w-52">
+          <AutocompleteInput
+            options={interpreterOptions}
+            value={interpreterFilter}
+            onChange={setInterpreterFilter}
+            placeholder={t("appointments.filter_interpreter")}
+          />
+        </div>
+
+        {/* Clinic autocomplete */}
+        <div className="w-52">
+          <AutocompleteInput
+            options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
+            value={clinicFilter === "all" ? "" : clinicFilter}
+            onChange={(v) => setClinicFilter(v || "all")}
+            placeholder={t("appointments.clinic")}
+          />
+        </div>
+
+        {/* Status filter */}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder={t("common.status")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("common.all")}</SelectItem>
-            {((interpreters?.data ?? []) as Array<{ id: string; name: string }>).map((i) => (
-              <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
-            ))}
+            <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
+            <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
+            <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
+            <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
+            <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Schedule blocks toggle */}
+        <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
+          <CalendarOff className="h-4 w-4" />
+          {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
+        </Button>
+
+        {(interpreterFilter || clinicFilter !== "all") && (
+          <Button variant="ghost" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
+        )}
       </div>
 
-      <div className="rounded-md border">
-        <div className="grid grid-cols-7 border-b bg-muted/50">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
-          ))}
+      {/* ── Month view ── */}
+      {view === "month" && (
+        <div className="rounded-md border">
+          <div className="grid grid-cols-7 border-b bg-muted/50">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+              <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {cells.map((date, idx) => {
+              const dayAppts = date ? appointmentsForDate(date) : [];
+              const dayBlocks = date ? blocksForDate(date) : [];
+              const isToday = date ? isSameDay(date, today) : false;
+              return (
+                <div key={idx} className="min-h-24 border-b border-r p-1 last:border-r-0 [&:nth-child(7n)]:border-r-0">
+                  {date && (
+                    <>
+                      <p className={`mb-1 text-xs font-medium ${isToday ? "flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white" : "text-muted-foreground"}`}>
+                        {date.getDate()}
+                      </p>
+                      <div className="space-y-0.5">
+                        {dayAppts.slice(0, 3).map((a) => <ApptPill key={a.id as string} a={a} />)}
+                        {dayAppts.length > 3 && (
+                          <p className="px-1 text-xs text-muted-foreground">+{dayAppts.length - 3} more</p>
+                        )}
+                        {dayBlocks.map((b) => <BlockPill key={b.id as string} b={b} />)}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="grid grid-cols-7">
-          {cells.map((day, idx) => {
-            const dayAppts = day ? appointmentsForDay(day) : [];
-            return (
-              <div
-                key={idx}
-                className="min-h-24 border-b border-r p-1 last:border-r-0 [&:nth-child(7n)]:border-r-0"
-              >
-                {day && (
-                  <>
-                    <p className="mb-1 text-xs text-muted-foreground">{day}</p>
-                    <div className="space-y-0.5">
-                      {dayAppts.slice(0, 3).map((a) => (
-                        <button
-                          key={a.id as string}
-                          onClick={() => navigate(`/appointments/${a.id}`)}
-                          className={`w-full truncate rounded border px-1 py-0.5 text-left text-xs ${STATUS_COLORS[a.status as string] ?? "bg-muted"}`}
-                        >
-                          {new Date(a.date_time as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} {a.patient_name as string}
-                        </button>
-                      ))}
-                      {dayAppts.length > 3 && (
-                        <p className="px-1 text-xs text-muted-foreground">+{dayAppts.length - 3} more</p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+      )}
+
+      {/* ── Week view ── */}
+      {view === "week" && (
+        <div className="rounded-md border overflow-x-auto">
+          <div className="grid grid-cols-7 border-b bg-muted/50 min-w-[700px]">
+            {weekDays.map((date) => {
+              const isToday = isSameDay(date, today);
+              const dayTotal = appointmentsForDate(date).length;
+              return (
+                <div key={date.toISOString()} className="p-2 text-center border-r last:border-r-0">
+                  <p className={`text-xs font-medium ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
+                    {formatInTz(date, { weekday: "short" }, tz).toUpperCase()}{" "}
+                    {formatInTz(date, { month: "short" }, tz)}{" "}
+                    <span className="font-bold">{formatInTz(date, { day: "numeric" }, tz)}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Total: {dayTotal}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-7 min-w-[700px]">
+            {weekDays.map((date) => {
+              const dayAppts = appointmentsForDate(date);
+              const dayBlocks = blocksForDate(date);
+              const isToday = isSameDay(date, today);
+              return (
+                <div key={date.toISOString()} className={`border-r last:border-r-0 p-1.5 min-h-32 space-y-1 ${isToday ? "bg-blue-50/50" : ""}`}>
+                  {dayAppts.map((a) => <WeekApptCard key={a.id as string} a={a} />)}
+                  {dayBlocks.map((b) => <BlockPill key={b.id as string} b={b} />)}
+                  {dayAppts.length === 0 && dayBlocks.length === 0 && (
+                    <p className="text-xs text-muted-foreground/40 text-center pt-4">—</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
+      )}
+
+      {tooltip && <ApptTooltip appt={tooltip.appt} x={tooltip.x} y={tooltip.y} />}
+    </div>
+  );
+}
+
+function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: number; y: number }) {
+  const { t } = useTranslation();
+  const tz = useOrgTimezone();
+
+  const dt = new Date(a.date_time as string);
+  const endDt = new Date(dt.getTime() + (a.duration_minutes as number) * 60000);
+  const timeStr = formatInTz(dt, { dateStyle: "medium", timeStyle: "short" }, tz);
+  const durationStr = `${a.duration_minutes} min`;
+  const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
+  const poNumber = a.po_number as string | null;
+  const status = String(a.status).replace(/_/g, " ");
+  const language = a.language as string;
+  const interpType = a.interpreter_type_required as string;
+  const clinicName = (a.clinic as Record<string, unknown>)?.name as string ?? "—";
+  const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string ?? "—";
+  const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned");
+  const physician = a.referring_physician as string | null;
+
+  const flipLeft = x + 280 > window.innerWidth;
+  const flipUp = y + 320 > window.innerHeight;
+
+  return (
+    <div
+      className="fixed z-50 w-64 rounded-lg border bg-popover shadow-lg text-sm"
+      style={{
+        left: flipLeft ? x - 272 : x + 12,
+        top: flipUp ? y - 8 : y + 12,
+        pointerEvents: "none",
+      }}
+    >
+      <div className="border-b px-3 py-2 font-semibold">{patientName}</div>
+      <div className="px-3 py-2 space-y-1.5">
+        <Row label={t("appointments.po_number")} value={poNumber ?? "—"} />
+        <Row label={t("common.status")} value={<span className="capitalize">{status}</span>} />
+        <Row label={t("appointments.date_time")} value={timeStr} />
+        <Row label={t("appointments.duration")} value={durationStr} />
+        <Row label={t("appointments.language")} value={language} />
+        <Row label={t("appointments.interpreter_type")} value={interpType} />
+        <Row label={t("appointments.clinic")} value={clinicName} />
+        <Row label={t("appointments.insurance_agency")} value={agencyName} />
+        <Row label={t("appointments.interpreter")} value={interpreterName} />
+        {physician && <Row label={t("appointments.referring_physician")} value={physician} />}
       </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-2 text-xs">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="text-right font-medium">{value}</span>
     </div>
   );
 }

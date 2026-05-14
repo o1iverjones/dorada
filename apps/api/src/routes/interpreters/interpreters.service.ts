@@ -15,6 +15,8 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
 }
 
 export async function listInterpreters(query: InterpreterListQuery, organizationId: string, prisma: PrismaClient) {
+  const checkDate = query.check_availability_on ? new Date(query.check_availability_on) : null;
+
   const items = await prisma.interpreter.findMany({
     where: {
       organization_id: organizationId,
@@ -34,13 +36,26 @@ export async function listInterpreters(query: InterpreterListQuery, organization
     },
     take: query.limit + 1,
     orderBy: { name: "asc" },
-    include: { clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } } },
+    include: {
+      clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } },
+      ...(checkDate
+        ? {
+            availability_blocks: {
+              where: { from: { lte: checkDate }, to: { gte: checkDate } },
+              select: { id: true },
+            },
+          }
+        : {}),
+    },
   });
 
   const hasMore = items.length > query.limit;
   const data = hasMore ? items.slice(0, -1) : items;
   return {
-    data: data.map(formatInterpreter),
+    data: data.map((i) => ({
+      ...formatInterpreter(i),
+      ...(checkDate ? { is_available: (i as typeof i & { availability_blocks?: { id: string }[] }).availability_blocks?.length === 0 } : {}),
+    })),
     pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
   };
 }
@@ -89,8 +104,13 @@ export async function getInterpreter(id: string, organizationId: string, prisma:
   return formatInterpreter({ ...interpreter!, address: interpreter!.address, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes });
 }
 
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
 export async function createInterpreter(body: CreateInterpreterBody, organizationId: string, prisma: PrismaClient) {
-  const existing = await prisma.interpreter.findFirst({ where: { organization_id: organizationId, phone: body.phone } });
+  const phone = normalizePhone(body.phone);
+  const existing = await prisma.interpreter.findFirst({ where: { organization_id: organizationId, phone } });
   if (existing) throw new ConflictError("PHONE_ALREADY_EXISTS", "Phone number already registered");
 
   const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
@@ -102,7 +122,7 @@ export async function createInterpreter(body: CreateInterpreterBody, organizatio
     data: {
       organization_id: organizationId,
       name: body.name,
-      phone: body.phone,
+      phone,
       email: body.email ?? null,
       type: body.type,
       languages: body.languages,
@@ -144,7 +164,7 @@ export async function updateInterpreter(
     where: { id },
     data: {
       ...(body.name ? { name: body.name } : {}),
-      ...(body.phone ? { phone: body.phone } : {}),
+      ...(body.phone ? { phone: normalizePhone(body.phone) } : {}),
       ...(body.email !== undefined ? { email: body.email } : {}),
       ...(body.type ? { type: body.type } : {}),
       ...(body.languages ? { languages: body.languages } : {}),
@@ -179,6 +199,7 @@ export async function updateSelf(interpreterId: string, body: UpdateSelfInterpre
     data: {
       ...(body.email !== undefined ? { email: body.email } : {}),
       ...(body.location ? { location_lat: body.location.lat, location_lng: body.location.lng } : {}),
+      ...(body.fcm_token !== undefined ? { fcm_token: body.fcm_token } : {}),
     },
   });
 }
@@ -186,6 +207,26 @@ export async function updateSelf(interpreterId: string, body: UpdateSelfInterpre
 export async function listAvailabilityBlocks(interpreterId: string, prisma: PrismaClient) {
   const blocks = await prisma.availabilityBlock.findMany({
     where: { interpreter_id: interpreterId },
+    orderBy: { from: "asc" },
+  });
+  return { data: blocks };
+}
+
+export async function listAllAvailabilityBlocks(
+  organizationId: string,
+  dateFrom: string,
+  dateTo: string,
+  interpreterId: string | undefined,
+  prisma: PrismaClient,
+) {
+  const blocks = await prisma.availabilityBlock.findMany({
+    where: {
+      interpreter: { organization_id: organizationId },
+      ...(interpreterId ? { interpreter_id: interpreterId } : {}),
+      from: { lte: new Date(dateTo + "T23:59:59Z") },
+      to: { gte: new Date(dateFrom) },
+    },
+    include: { interpreter: { select: { id: true, name: true } } },
     orderBy: { from: "asc" },
   });
   return { data: blocks };

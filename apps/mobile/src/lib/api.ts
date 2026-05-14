@@ -13,7 +13,7 @@ class ApiError extends Error {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await SecureStore.getItemAsync("pulpito_access_token");
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(init.body ? { "Content-Type": "application/json" } : {}),
     ...(init.headers as Record<string, string>),
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -37,8 +37,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, body.code ?? "UNKNOWN", body.message ?? res.statusText);
+    const body = await res.json().catch(() => ({}) as { error?: { code?: string; message?: string } });
+    throw new ApiError(res.status, body.error?.code ?? "UNKNOWN", body.error?.message ?? res.statusText);
   }
 
   if (res.status === 204) return undefined as unknown as T;

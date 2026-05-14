@@ -11,6 +11,7 @@ import messageRoutes from "./messages/messages.routes.js";
 import settingsRoutes from "./settings/settings.routes.js";
 import emailIntakeRoutes from "./email-intake/email-intake.routes.js";
 import importRoutes from "./import/import.routes.js";
+import invoiceRoutes from "./invoices/invoices.routes.js";
 
 export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(authRoutes, { prefix: "/auth" });
@@ -25,4 +26,5 @@ export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(settingsRoutes, { prefix: "/settings" });
   await fastify.register(emailIntakeRoutes, { prefix: "/email-intake" });
   await fastify.register(importRoutes, { prefix: "/import" });
+  await fastify.register(invoiceRoutes, { prefix: "/invoices" });
 }

@@ -1,21 +1,25 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateAppointment, useAppointments } from "../../hooks/useAppointments.js";
+import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { fromTzDateTimeInput } from "../../lib/timezone.js";
 import { useClinics } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
 import { useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
+import { DurationInput } from "../../components/shared/DurationInput.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { useEffect } from "react";
 import { toast } from "../../hooks/use-toast.js";
+import { DateTimePicker } from "../../components/ui/date-time-picker.js";
 
 const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 
@@ -28,7 +32,8 @@ const schema = z.object({
   clinic_id: z.string().min(1),
   insurance_agency_id: z.string().min(1),
   patient_id: z.string().min(1),
-  referring_physician: z.string().optional(),
+  referring_physician: z.string().transform((v) => v || undefined).optional(),
+  po_number: z.string().optional(),
   pre_auth_amount: z.coerce.number().default(0),
   pre_auth_mileage: z.coerce.number().default(0),
 });
@@ -38,11 +43,14 @@ type FormData = z.infer<typeof schema>;
 export function NewAppointmentPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill = (location.state as { prefill?: Partial<FormData> } | null)?.prefill;
+  const tz = useOrgTimezone();
   const create = useCreateAppointment();
 
-  const { data: clinics } = useClinics();
-  const { data: agencies } = useInsuranceAgencies();
-  const { data: patients } = usePatients();
+  const { data: clinics } = useClinics({ limit: "500" });
+  const { data: agencies } = useInsuranceAgencies({ limit: "500" });
+  const { data: patients } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
   const { data: pastAppts } = useAppointments({ limit: "200" });
@@ -67,11 +75,19 @@ export function NewAppointmentPage() {
 
   const { register, control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { interpreter_type_required: "qualified", duration_minutes: 60, pre_auth_amount: 0, pre_auth_mileage: 0, language: "Spanish" },
+    defaultValues: {
+      interpreter_type_required: "qualified",
+      duration_minutes: 120,
+      pre_auth_amount: 0,
+      pre_auth_mileage: 0,
+      language: "Spanish",
+      ...prefill,
+    },
   });
 
-  // Once settings load, pre-select the Qualified appointment type
+  // Once settings load, pre-select the Qualified appointment type (skip if duplicating — type already set)
   useEffect(() => {
+    if (prefill?.type_id) return;
     const qualifiedType = certQualTypes.find((ty) => ty.name === "Qualified");
     if (qualifiedType) setValue("type_id", qualifiedType.id);
   }, [settings]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -80,7 +96,7 @@ export function NewAppointmentPage() {
     try {
       const appt = await create.mutateAsync({
         ...data,
-        date_time: new Date(data.date_time).toISOString(),
+        date_time: fromTzDateTimeInput(data.date_time, tz),
         pre_auth_mileage: Math.round(data.pre_auth_mileage),
       }) as { id: string };
       toast({ title: t("appointments.created") });
@@ -92,16 +108,20 @@ export function NewAppointmentPage() {
 
   return (
     <div>
-      <PageHeader title={t("appointments.new")} />
+      <PageHeader title={prefill ? t("appointments.duplicate_title") : t("appointments.new")} />
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
             <FormField label={t("appointments.date_time")} error={errors.date_time?.message}>
-              <Input type="datetime-local" {...register("date_time")} />
+              <Controller name="date_time" control={control} render={({ field }) => (
+                <DateTimePicker value={field.value ?? ""} onChange={field.onChange} />
+              )} />
             </FormField>
 
-            <FormField label={t("appointments.duration_minutes")} error={errors.duration_minutes?.message}>
-              <Input type="number" min={15} step={15} {...register("duration_minutes")} />
+            <FormField label={t("appointments.duration")} error={errors.duration_minutes?.message}>
+              <Controller name="duration_minutes" control={control} render={({ field }) => (
+                <DurationInput value={field.value ?? 120} onChange={field.onChange} />
+              )} />
             </FormField>
 
             <div className="space-y-2">
@@ -197,6 +217,10 @@ export function NewAppointmentPage() {
                   freeText
                 />
               )} />
+            </FormField>
+
+            <FormField label={t("appointments.po_number")} error={errors.po_number?.message}>
+              <Input {...register("po_number")} placeholder="—" />
             </FormField>
 
             <FormField label={t("settings.interpreter_rates")} error={errors.pre_auth_amount?.message}>

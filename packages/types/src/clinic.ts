@@ -18,6 +18,7 @@ export const ClinicSchema = z.object({
   id: UuidSchema,
   name: z.string(),
   address: z.string().nullable(),
+  parking: z.string().nullable(),
   phone: z.string().nullable(),
   primary_contact: ContactSchema.nullable(),
   billing: ClinicBillingSchema,
@@ -30,6 +31,7 @@ export const ClinicSchema = z.object({
 export const CreateClinicBodySchema = z.object({
   name: z.string().min(1).max(255),
   address: z.string().max(500).optional(),
+  parking: z.string().max(255).optional(),
   phone: z.string().max(20).optional(),
   primary_contact: ContactSchema.optional(),
   billing: ClinicBillingSchema,
@@ -40,7 +42,30 @@ export const UpdateClinicBodySchema = CreateClinicBodySchema.partial();
 export const ClinicListQuerySchema = z.object({
   search: z.string().optional(),
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  limit: z.coerce.number().int().min(1).max(500).default(25),
+});
+
+export const ClinicInterpreterNoteTypeSchema = z.enum(["important", "notice", "info"]);
+
+export const ClinicInterpreterNoteSchema = z.object({
+  id: UuidSchema,
+  clinic_id: UuidSchema,
+  content: z.string(),
+  type: ClinicInterpreterNoteTypeSchema,
+  is_active: z.boolean(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+
+export const CreateClinicInterpreterNoteBodySchema = z.object({
+  content: z.string().min(1).max(1000),
+  type: ClinicInterpreterNoteTypeSchema.default("notice"),
+});
+
+export const UpdateClinicInterpreterNoteBodySchema = z.object({
+  content: z.string().min(1).max(1000).optional(),
+  type: ClinicInterpreterNoteTypeSchema.optional(),
+  is_active: z.boolean().optional(),
 });
 
 export type Contact = z.infer<typeof ContactSchema>;
@@ -49,3 +74,7 @@ export type Clinic = z.infer<typeof ClinicSchema>;
 export type CreateClinicBody = z.infer<typeof CreateClinicBodySchema>;
 export type UpdateClinicBody = z.infer<typeof UpdateClinicBodySchema>;
 export type ClinicListQuery = z.infer<typeof ClinicListQuerySchema>;
+export type ClinicInterpreterNoteType = z.infer<typeof ClinicInterpreterNoteTypeSchema>;
+export type ClinicInterpreterNote = z.infer<typeof ClinicInterpreterNoteSchema>;
+export type CreateClinicInterpreterNoteBody = z.infer<typeof CreateClinicInterpreterNoteBodySchema>;
+export type UpdateClinicInterpreterNoteBody = z.infer<typeof UpdateClinicInterpreterNoteBodySchema>;

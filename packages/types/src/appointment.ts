@@ -25,9 +25,9 @@ export const AppointmentSchema = z.object({
   language: z.string(),
   interpreter_type_required: InterpreterTypeSchema,
   interpreter: z.object({ id: UuidSchema, name: z.string() }).nullable(),
-  clinic: z.object({ id: UuidSchema, name: z.string() }),
+  clinic: z.object({ id: UuidSchema, name: z.string(), address: z.string().nullable().optional(), parking: z.string().nullable().optional() }),
   insurance_agency: z.object({ id: UuidSchema, name: z.string() }),
-  patient: z.object({ id: UuidSchema, name: z.string(), mrn: z.string() }),
+  patient: z.object({ id: UuidSchema, name: z.string(), mrn: z.string(), date_of_birth: z.string().nullable().optional() }),
   referring_physician: z.string().nullable(),
   department: z.string().nullable(),
   pre_auth_amount: z.number().nonnegative(),
@@ -46,15 +46,15 @@ export const CreateAppointmentBodySchema = z.object({
   date_time: z.string().datetime(),
   duration_minutes: z.number().int().positive(),
   type_id: UuidSchema,
-  language: z.string().min(2).max(10),
+  language: z.string().min(1).max(50),
   interpreter_type_required: InterpreterTypeSchema,
   clinic_id: UuidSchema,
   insurance_agency_id: UuidSchema,
   patient_id: UuidSchema,
   referring_physician: z.string().max(255).optional(),
   department: z.string().max(255).optional(),
-  pre_auth_amount: z.number().nonnegative(),
-  pre_auth_mileage: z.number().int().nonnegative(),
+  pre_auth_amount: z.coerce.number().nonnegative(),
+  pre_auth_mileage: z.coerce.number().int().nonnegative(),
   po_number: z.string().max(100).optional(),
 });
 
@@ -88,7 +88,7 @@ export const AppointmentListQuerySchema = z.object({
   date_from: z.string().date().optional(),
   date_to: z.string().date().optional(),
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  limit: z.coerce.number().int().min(1).max(500).default(25),
 });
 
 export type AppointmentType = z.infer<typeof AppointmentTypeSchema>;

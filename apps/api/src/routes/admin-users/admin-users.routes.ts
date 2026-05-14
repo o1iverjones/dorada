@@ -3,13 +3,22 @@ import { z } from "zod";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
-import { listUsers, createUser, listRoles, createRole } from "./admin-users.service.js";
+import { listUsers, createUser, updateUser, listRoles, createRole } from "./admin-users.service.js";
+import { writeActivityLog } from "../../lib/activityLog.js";
 
 const CreateUserBody = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(10),
   role_id: z.string().uuid().optional(),
+});
+
+const UpdateUserBody = z.object({
+  name: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(10).optional(),
+  role_id: z.string().uuid().optional(),
+  is_active: z.boolean().optional(),
 });
 
 const CreateRoleBody = z.object({
@@ -28,7 +37,18 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
   fastify.post("/admin-users", { preHandler: manage }, async (req, reply) => {
     const body = CreateUserBody.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.status(201).send(await createUser(body, payload.organization_id, payload.permissions, fastify.prisma));
+    const user = await createUser(body, payload.organization_id, payload.permissions, fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: user.id, entityName: user.name, action: "created", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+    return reply.status(201).send(user);
+  });
+
+  fastify.patch("/admin-users/:id", { preHandler: manage }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = UpdateUserBody.parse(req.body);
+    const payload = req.user as JwtPayload;
+    const user = await updateUser(id, body, payload.organization_id, payload.permissions, fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: id, entityName: user.name, action: "updated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+    return reply.send(user);
   });
 
   fastify.get("/roles", { preHandler: [authenticateAdmin] }, async (req, reply) => {
@@ -39,6 +59,8 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
   fastify.post("/roles", { preHandler: manage }, async (req, reply) => {
     const body = CreateRoleBody.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.status(201).send(await createRole(body, payload.organization_id, fastify.prisma));
+    const role = await createRole(body, payload.organization_id, fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: role.id, entityName: role.name, action: "role_created", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+    return reply.status(201).send(role);
   });
 }

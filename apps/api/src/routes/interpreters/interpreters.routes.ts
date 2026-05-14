@@ -15,9 +15,10 @@ import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import {
   listInterpreters, getInterpreter, createInterpreter, updateInterpreter,
-  deactivateInterpreter, updateSelf, listAvailabilityBlocks,
+  deactivateInterpreter, updateSelf, listAvailabilityBlocks, listAllAvailabilityBlocks,
   createAvailabilityBlock, deleteAvailabilityBlock,
 } from "./interpreters.service.js";
+import { writeActivityLog } from "../../lib/activityLog.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = join(__dirname, "..", "..", "..", "uploads");
@@ -64,6 +65,12 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
     return reply.redirect("/api/v1/appointments/me/appointments");
   });
 
+  fastify.get("/availability-blocks", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
+    const { date_from, date_to, interpreter_id } = req.query as { date_from: string; date_to: string; interpreter_id?: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await listAllAvailabilityBlocks(payload.organization_id, date_from, date_to, interpreter_id, fastify.prisma));
+  });
+
   fastify.get("/:id", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
@@ -73,20 +80,26 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
   fastify.post("/", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
     const body = CreateInterpreterBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.status(201).send(await createInterpreter(body, payload.organization_id, fastify.prisma));
+    const interpreter = await createInterpreter(body, payload.organization_id, fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "interpreter", entityId: interpreter.id, entityName: interpreter.name, action: "created", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+    return reply.status(201).send(interpreter);
   });
 
   fastify.patch("/:id", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = UpdateInterpreterBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
-    return reply.send(await updateInterpreter(id, body, payload.organization_id, fastify.prisma));
+    const interpreter = await updateInterpreter(id, body, payload.organization_id, fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "interpreter", entityId: id, entityName: interpreter.name, action: "updated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+    return reply.send(interpreter);
   });
 
   fastify.delete("/:id", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
+    const existing = await fastify.prisma.interpreter.findUnique({ where: { id }, select: { name: true } });
     await deactivateInterpreter(id, payload.organization_id, fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "interpreter", entityId: id, entityName: existing?.name ?? null, action: "deactivated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
     return reply.status(204).send();
   });
 

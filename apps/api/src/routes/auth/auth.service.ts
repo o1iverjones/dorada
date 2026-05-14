@@ -14,6 +14,10 @@ import {
 } from "../../lib/errors.js";
 import { config } from "../../config.js";
 
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
 const OTP_TTL_SECONDS = 600; // 10 minutes
 const OTP_RATE_LIMIT_WINDOW = 600;
 const OTP_RATE_LIMIT_MAX = 3;
@@ -30,23 +34,24 @@ export async function requestOtp(
   prisma: PrismaClient,
   redis: Redis,
 ): Promise<void> {
-  const rateLimitKey = `otp:rate:${phone}`;
+  const normalized = normalizePhone(phone);
+  const rateLimitKey = `otp:rate:${normalized}`;
   const count = await redis.incr(rateLimitKey);
   if (count === 1) await redis.expire(rateLimitKey, OTP_RATE_LIMIT_WINDOW);
   if (count > OTP_RATE_LIMIT_MAX) {
     throw new TooManyRequestsError("OTP_RATE_LIMITED", "Too many OTP requests");
   }
 
-  const interpreter = await prisma.interpreter.findFirst({ where: { phone, is_active: true } });
+  const interpreter = await prisma.interpreter.findFirst({ where: { phone: normalized, is_active: true } });
   if (!interpreter) return; // silent — prevents enumeration
 
   const otp = String(randomInt(100000, 999999));
-  const otpKey = `otp:${phone}`;
+  const otpKey = `otp:${normalized}`;
   await redis.set(otpKey, otp, "EX", OTP_TTL_SECONDS);
 
   // In production, send via Twilio. Here we log in dev.
   if (config.NODE_ENV === "development") {
-    console.warn(`[DEV] OTP for ${phone}: ${otp}`);
+    console.warn(`[DEV] OTP for ${normalized}: ${otp}`);
   }
   // TODO: twilio.messages.create({ to: phone, from: config.TWILIO_FROM_NUMBER, body: `Your Pulpito code: ${otp}` })
 }
@@ -58,18 +63,19 @@ export async function verifyOtp(
   redis: Redis,
   fastify: FastifyInstance,
 ): Promise<{ access_token: string; refresh_token: string; interpreter: { id: string; name: string; phone: string } }> {
-  const lockKey = `otp:lock:${phone}`;
-  const attemptsKey = `otp:attempts:${phone}`;
+  const normalized = normalizePhone(phone);
+  const lockKey = `otp:lock:${normalized}`;
+  const attemptsKey = `otp:attempts:${normalized}`;
 
   const locked = await redis.get(lockKey);
   if (locked) throw new TooManyRequestsError("ACCOUNT_LOCKED", "Account locked. Try again later.");
 
   const interpreter = await prisma.interpreter.findFirst({
-    where: { phone, is_active: true },
+    where: { phone: normalized, is_active: true },
   });
   if (!interpreter) throw new UnauthorizedError("INVALID_CREDENTIALS", "Invalid OTP");
 
-  const storedOtp = await redis.get(`otp:${phone}`);
+  const storedOtp = await redis.get(`otp:${normalized}`);
   if (!storedOtp || storedOtp !== otp) {
     const attempts = await redis.incr(attemptsKey);
     if (attempts === 1) await redis.expire(attemptsKey, OTP_LOCK_SECONDS);
@@ -80,7 +86,7 @@ export async function verifyOtp(
     throw new UnauthorizedError("INVALID_CREDENTIALS", "Invalid OTP");
   }
 
-  await redis.del(`otp:${phone}`, attemptsKey);
+  await redis.del(`otp:${normalized}`, attemptsKey);
 
   const accessToken = fastify.jwt.sign(
     { sub: interpreter.id, type: "interpreter", organization_id: interpreter.organization_id },
@@ -101,7 +107,7 @@ export async function verifyOtp(
   return {
     access_token: accessToken,
     refresh_token: refreshToken,
-    interpreter: { id: interpreter.id, name: interpreter.name, phone: interpreter.phone },
+    interpreter: { id: interpreter.id, name: interpreter.name, phone: interpreter.phone, organization_id: interpreter.organization_id },
   };
 }
 
@@ -143,7 +149,7 @@ export async function adminLogin(
   if (!user.mfa_enabled) {
     const permissions = user.role.permissions.map((p) => p.permission);
     const accessToken = fastify.jwt.sign(
-      { sub: user.id, type: "admin", organization_id: user.organization_id, role_id: user.role_id, permissions },
+      { sub: user.id, type: "admin", name: user.name, organization_id: user.organization_id, role_id: user.role_id, permissions },
       { expiresIn: config.JWT_ACCESS_TTL },
     );
     const refreshToken = fastify.jwt.sign(
@@ -203,6 +209,7 @@ export async function adminMfaVerify(
     {
       sub: user.id,
       type: "admin",
+      name: user.name,
       organization_id: user.organization_id,
       role_id: user.role_id,
       permissions,
@@ -338,7 +345,7 @@ export async function refreshTokens(
 
   const permissions = user.role.permissions.map((p) => p.permission);
   const newAccess = fastify.jwt.sign(
-    { sub: user.id, type: "admin", organization_id: user.organization_id, role_id: user.role_id, permissions },
+    { sub: user.id, type: "admin", name: user.name, organization_id: user.organization_id, role_id: user.role_id, permissions },
     { expiresIn: config.JWT_ACCESS_TTL },
   );
   const newRefresh = fastify.jwt.sign(

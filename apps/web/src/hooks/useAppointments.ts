@@ -21,7 +21,10 @@ export function useCreateAppointment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: unknown) => api.post("/appointments", body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
   });
 }
 
@@ -32,6 +35,8 @@ export function useUpdateAppointment(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments", id] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
     },
   });
 }
@@ -39,16 +44,52 @@ export function useUpdateAppointment(id: string) {
 export function useCancelAppointment(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post(`/appointments/${id}/cancel`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+    mutationFn: () => api.delete(`/appointments/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
   });
 }
 
 export function useOfferAppointment(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: unknown) => api.post(`/appointments/${id}/offer`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments", id] }),
+    mutationFn: (body: unknown) => api.post(`/appointments/${id}/offers`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
+  });
+}
+
+export function useAppointmentActivity(id: string) {
+  return useQuery({
+    queryKey: ["appointments", id, "activity"],
+    queryFn: () => api.get<unknown[]>(`/appointments/${id}/activity`),
+    enabled: !!id,
+  });
+}
+
+export function useAppointmentNotes(id: string) {
+  return useQuery({
+    queryKey: ["appointments", id, "notes"],
+    queryFn: () => api.get<unknown[]>(`/appointments/${id}/admin-notes`),
+    enabled: !!id,
+  });
+}
+
+export function useAddAppointmentNote(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) => api.post(`/appointments/${id}/admin-notes`, { content }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id, "notes"] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
   });
 }
 
@@ -65,5 +106,25 @@ export function useReviewFollowUpDraft(draftId: string) {
   return useMutation({
     mutationFn: (body: unknown) => api.patch(`/appointments/follow-up-drafts/${draftId}`, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["follow-up-drafts"] }),
+  });
+}
+
+export function usePatchClockTimes(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { clock_in_time?: string; clock_out_time?: string }) =>
+      api.patch(`/appointments/${id}/clock-times`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+    },
+  });
+}
+
+export function useAppointmentMedia(id: string) {
+  return useQuery({
+    queryKey: ["appointments", id, "media"],
+    queryFn: () => api.get<Array<{ id: string; public_url: string; filename: string; mime_type: string; file_size: number; uploaded_at: string; interpreter: { name: string } }>>(`/appointments/${id}/media`),
+    enabled: !!id,
   });
 }

@@ -12,6 +12,7 @@ import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
+import { useAuthStore } from "../../store/auth.js";
 
 interface Language { id?: string; code: string; name: string; active: boolean; }
 interface AppointmentType { id: string; name: string; pay_model: string; minimum_billable_minutes: number; is_active: boolean; }
@@ -22,12 +23,16 @@ export function SettingsPage() {
   const { data: settings, isLoading } = useSystemSettings();
   const update = useUpdateSystemSettings();
   const qc = useQueryClient();
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const canRemoveLanguages = hasPermission("manage_admin_users");
+  const [removingMode, setRemovingMode] = useState(false);
 
   const [form, setForm] = useState({
     default_certified_rate: 0,
     default_qualified_rate: 0,
     follow_up_reminder_window_minutes: 60,
     follow_up_max_reminders: 2,
+    timezone: "America/Los_Angeles",
   });
 
   useEffect(() => {
@@ -40,6 +45,7 @@ export function SettingsPage() {
         default_qualified_rate: rates?.qualified ?? 0,
         follow_up_reminder_window_minutes: followUp?.non_response_window_minutes ?? 60,
         follow_up_max_reminders: followUp?.max_reminders ?? 2,
+        timezone: (s.timezone as string) ?? "America/Los_Angeles",
       });
     }
   }, [settings]);
@@ -80,6 +86,7 @@ export function SettingsPage() {
           non_response_window_minutes: form.follow_up_reminder_window_minutes,
           max_reminders: form.follow_up_max_reminders,
         },
+        timezone: form.timezone,
       });
       toast({ title: t("common.saved") });
     } catch (err) {
@@ -125,6 +132,37 @@ export function SettingsPage() {
       />
 
       <Card>
+        <CardHeader><CardTitle>{t("settings.timezone")}</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">{t("settings.timezone_description")}</p>
+          <select
+            className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.timezone}
+            onChange={(e) => setForm(s => ({ ...s, timezone: e.target.value }))}
+          >
+            <optgroup label="United States">
+              <option value="America/New_York">Eastern — New York (ET)</option>
+              <option value="America/Chicago">Central — Chicago (CT)</option>
+              <option value="America/Denver">Mountain — Denver (MT)</option>
+              <option value="America/Phoenix">Mountain (no DST) — Phoenix</option>
+              <option value="America/Los_Angeles">Pacific — Los Angeles (PT)</option>
+              <option value="America/Anchorage">Alaska — Anchorage (AKT)</option>
+              <option value="Pacific/Honolulu">Hawaii — Honolulu (HT)</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="UTC">UTC</option>
+              <option value="America/Puerto_Rico">Puerto Rico (AST)</option>
+              <option value="America/Mexico_City">Mexico City (CST)</option>
+              <option value="Europe/London">London (GMT/BST)</option>
+            </optgroup>
+          </select>
+          <p className="text-xs text-muted-foreground">
+            {t("settings.timezone_current")}: <span className="font-medium">{new Date().toLocaleString([], { timeZone: form.timezone, timeZoneName: "long" }).split(", ").pop()}</span>
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle>{t("settings.pay_rates")}</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
@@ -158,14 +196,38 @@ export function SettingsPage() {
         <CardHeader><CardTitle>{t("settings.languages")}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {languages.map((l) => (
-              <span key={l.code} className={`rounded-full border px-3 py-1 text-sm ${l.active ? "" : "opacity-50"}`}>{l.name}</span>
+            {languages.filter((l) => l.active).map((l) => (
+              removingMode ? (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => {
+                    const merged = languages.map((x) =>
+                      x.code === l.code ? { code: x.code, name: x.name, active: false } : { code: x.code, name: x.name, active: x.active }
+                    );
+                    patchLanguages.mutate({ languages: merged });
+                  }}
+                  className="rounded-full border px-3 py-1 text-sm cursor-pointer animate-pulse shadow-[0_0_0_3px_hsl(var(--destructive)/0.3)] hover:bg-destructive/10 hover:shadow-[0_0_0_3px_hsl(var(--destructive)/0.6)] transition-all"
+                >
+                  {l.name}
+                </button>
+              ) : (
+                <span key={l.code} className="rounded-full border px-3 py-1 text-sm">{l.name}</span>
+              )
             ))}
           </div>
           <div className="flex gap-2">
-            <Input placeholder={t("settings.languages.code")} value={newLang.code} onChange={(e) => setNewLang(s => ({ ...s, code: e.target.value }))} className="max-w-24" maxLength={10} />
-            <Input placeholder={t("settings.new_language")} value={newLang.name} onChange={(e) => setNewLang(s => ({ ...s, name: e.target.value }))} className="max-w-xs" />
-            <Button onClick={addLanguage} disabled={!newLang.code.trim() || !newLang.name.trim() || patchLanguages.isPending}>{t("common.add")}</Button>
+            {!removingMode && (
+              <>
+                <Input placeholder={t("settings.new_language")} value={newLang.name} onChange={(e) => setNewLang(s => ({ ...s, name: e.target.value, code: e.target.value.trim().toLowerCase().slice(0, 10).replace(/\s+/g, "_") }))} className="max-w-xs" />
+                <Button onClick={addLanguage} disabled={!newLang.name.trim() || patchLanguages.isPending}>{t("common.add")}</Button>
+              </>
+            )}
+            {canRemoveLanguages && (
+              <Button onClick={() => setRemovingMode((v) => !v)}>
+                {removingMode ? t("settings.languages_done") : t("settings.remove_languages")}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

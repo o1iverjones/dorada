@@ -9,6 +9,7 @@ const deviceLocale = getLocales()[0]?.languageCode ?? "en";
 i18next.use(initReactI18next).init({
   lng: deviceLocale,
   fallbackLng: "en",
+  compatibilityJSON: "v3",
   resources: {
     en: { translation: en },
     es: { translation: es },

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api, clearTokens } from "../../src/lib/api";
 import { useAuthStore } from "../../src/store/auth";
 import { Ionicons } from "@expo/vector-icons";
+import { C } from "../../src/theme";
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -63,7 +64,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name={ch === "push" ? "notifications-outline" : "chatbubble-outline"}
                 size={18}
-                color={profile?.follow_up_channel === ch ? "#fff" : "#64748b"}
+                color={profile?.follow_up_channel === ch ? "#fff" : C.textMuted}
               />
               <Text style={[styles.channelBtnText, profile?.follow_up_channel === ch && styles.channelBtnActiveText]}>
                 {ch === "push" ? "Push" : "SMS"}
@@ -91,24 +92,24 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
+  container: { flex: 1, backgroundColor: C.background },
   content: { padding: 16, gap: 16 },
   avatarSection: { alignItems: "center", paddingVertical: 24 },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#3b82f6", alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.primary, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   avatarText: { fontSize: 28, fontWeight: "700", color: "#fff" },
-  name: { fontSize: 20, fontWeight: "700", color: "#0f172a" },
-  phone: { fontSize: 14, color: "#64748b", marginTop: 2 },
-  section: { backgroundColor: "#fff", borderRadius: 12, padding: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: 4 },
-  sectionHint: { fontSize: 12, color: "#94a3b8", marginBottom: 12 },
-  row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
-  rowLabel: { fontSize: 14, color: "#64748b" },
-  rowValue: { fontSize: 14, color: "#0f172a", fontWeight: "500", flex: 1, textAlign: "right" },
+  name: { fontSize: 20, fontWeight: "700", color: C.text },
+  phone: { fontSize: 14, color: C.textMuted, marginTop: 2 },
+  section: { backgroundColor: C.surface, borderRadius: 12, padding: 16 },
+  sectionTitle: { fontSize: 14, fontWeight: "600", color: C.text, marginBottom: 4 },
+  sectionHint: { fontSize: 12, color: C.textSubtle, marginBottom: 12 },
+  row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border },
+  rowLabel: { fontSize: 14, color: C.textMuted },
+  rowValue: { fontSize: 14, color: C.text, fontWeight: "500", flex: 1, textAlign: "right" },
   channelRow: { flexDirection: "row", gap: 10 },
-  channelBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0" },
-  channelBtnActive: { backgroundColor: "#3b82f6", borderColor: "#3b82f6" },
-  channelBtnText: { color: "#64748b", fontWeight: "500" },
+  channelBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: C.border },
+  channelBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
+  channelBtnText: { color: C.textMuted, fontWeight: "500" },
   channelBtnActiveText: { color: "#fff" },
-  logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#fff", borderRadius: 12, paddingVertical: 14, borderWidth: 1, borderColor: "#fecaca" },
-  logoutText: { color: "#dc2626", fontWeight: "600", fontSize: 15 },
+  logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.surface, borderRadius: 12, paddingVertical: 14, borderWidth: 1, borderColor: C.dangerBorder },
+  logoutText: { color: C.danger, fontWeight: "600", fontSize: 15 },
 });

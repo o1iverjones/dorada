@@ -24,10 +24,13 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.pulpito.app",
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -50,10 +53,12 @@
     ],
     "scheme": "pulpito",
     "extra": {
-      "apiUrl": "http://192.168.100.2:3100/api/v1",
+      "apiUrl": "http://192.168.100.21:3100/api/v1",
+      "router": {},
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "58b4f722-7db0-42da-a52c-539b63dd5184"
       }
-    }
+    },
+    "owner": "prana2026"
   }
 }
