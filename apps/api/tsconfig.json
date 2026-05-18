@@ -4,8 +4,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "paths": {
-      "@pulpito/types": ["../../packages/types/src/index.ts"],
-      "@pulpito/utils": ["../../packages/utils/src/index.ts"]
+      "@dorada/types": ["../../packages/types/src/index.ts"],
+      "@dorada/utils": ["../../packages/utils/src/index.ts"]
     }
   },
   "include": ["src"],

@@ -51,17 +51,17 @@ export async function downloadAsBuffer(gcsPath: string): Promise<Buffer> {
 }
 
 export function emailIntakePath(tenantId: string, emailId: string): string {
-  return `pulpito/email-intake/${tenantId}/${emailId}/raw.eml`;
+  return `dorada/email-intake/${tenantId}/${emailId}/raw.eml`;
 }
 
 export function followUpMediaPath(appointmentId: string, filename: string): string {
-  return `pulpito/follow-ups/${appointmentId}/${filename}`;
+  return `dorada/follow-ups/${appointmentId}/${filename}`;
 }
 
 export function confirmationScreenshotPath(logId: string): string {
-  return `pulpito/email-confirmations/${logId}/screenshot.png`;
+  return `dorada/email-confirmations/${logId}/screenshot.png`;
 }
 
 export function reportPath(reportJobId: string, format: "pdf" | "csv"): string {
-  return `pulpito/reports/${reportJobId}/report.${format}`;
+  return `dorada/reports/${reportJobId}/report.${format}`;
 }

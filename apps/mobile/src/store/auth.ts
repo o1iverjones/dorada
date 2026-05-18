@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => set({ interpreter: null }),
     }),
     {
-      name: "pulpito-auth",
+      name: "dorada-auth",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ interpreter: state.interpreter }),
       onRehydrateStorage: () => (state) => {

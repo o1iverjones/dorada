@@ -26,14 +26,14 @@ export function LoginPage() {
   const setMfaToken = useAuthStore((s) => s.setMfaToken);
 
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem("pulpito_remembered_email"));
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem("dorada_remembered_email"));
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem("pulpito_remembered_email");
+    const saved = localStorage.getItem("dorada_remembered_email");
     if (saved) setValue("email", saved);
   }, [setValue]);
 
@@ -44,9 +44,9 @@ export function LoginPage() {
       >("/auth/admin/login", data);
 
       if (rememberMe) {
-        localStorage.setItem("pulpito_remembered_email", data.email);
+        localStorage.setItem("dorada_remembered_email", data.email);
       } else {
-        localStorage.removeItem("pulpito_remembered_email");
+        localStorage.removeItem("dorada_remembered_email");
       }
 
       if ("mfa_token" in res) {
@@ -66,7 +66,7 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl">Pulpito</CardTitle>
+          <CardTitle className="text-3xl">Dorada</CardTitle>
           <CardDescription>{t("auth.sign_in_description")}</CardDescription>
         </CardHeader>
         <CardContent>

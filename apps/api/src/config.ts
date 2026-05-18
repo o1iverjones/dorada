@@ -22,11 +22,11 @@ const ConfigSchema = z.object({
 
   SENDGRID_API_KEY: z.string().optional(),
   SENDGRID_FROM_EMAIL: z.string().email().optional().or(z.literal("")),
-  SENDGRID_FROM_NAME: z.string().default("Pulpito"),
+  SENDGRID_FROM_NAME: z.string().default("Dorada"),
 
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
 
-  GCS_BUCKET: z.string().default("pulpito-media"),
+  GCS_BUCKET: z.string().default("dorada-media"),
   GCP_PROJECT_ID: z.string().optional(),
 
   ANTHROPIC_API_KEY: z.string().optional(),

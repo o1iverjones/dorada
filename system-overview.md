@@ -1,6 +1,6 @@
-# Pulpito — System Overview
+# Dorada — System Overview
 
-Pulpito is a medical interpretation management platform for scheduling and coordinating professional language interpreters at clinical appointments. It is a multi-tenant SaaS product with a web administration portal, a mobile app for interpreters, and a REST API backend.
+Dorada is a medical interpretation management platform for scheduling and coordinating professional language interpreters at clinical appointments. It is a multi-tenant SaaS product with a web administration portal, a mobile app for interpreters, and a REST API backend.
 
 ---
 
@@ -250,7 +250,7 @@ Allows admins to log in with email and password. Redirects to `/mfa` if the acco
 **Features:**
 - Email + password form with validation
 - Password visibility toggle
-- "Remember Me" checkbox — persists email to `localStorage` (`pulpito_remembered_email`) for pre-fill on next visit (password is never stored)
+- "Remember Me" checkbox — persists email to `localStorage` (`dorada_remembered_email`) for pre-fill on next visit (password is never stored)
 - Auto-fills remembered email on mount via `useEffect`
 
 **API Calls:**
@@ -860,7 +860,7 @@ Root layout wrapper rendered for all authenticated pages. Composes `Sidebar`, `T
 Left navigation rail visible on all authenticated pages.
 
 **Features:**
-- Pulpito logo and wordmark at top
+- Dorada logo and wordmark at top
 - Permission-filtered nav links (links not accessible to the current user's role are hidden entirely)
 - Unread message dot indicator on the Messages nav item (sourced from `useUnreadMessageCount` hook, polling every 30s)
 - Account link at bottom
@@ -1013,7 +1013,7 @@ Thin wrappers around Radix UI / shadcn components. Not application-specific but 
 
 ### Zustand Auth Store
 **File:** `src/store/auth.ts`  
-**Persistence:** `localStorage` key `pulpito_auth`
+**Persistence:** `localStorage` key `dorada_auth`
 
 | Field / Method | Description |
 |---|---|
@@ -1092,7 +1092,7 @@ The mobile app is for interpreters only. It uses Expo Router with a tab-based na
 **File:** `app/login.tsx`  
 **Route:** `/login`
 
-Phone number + PIN login form. Displays the Pulpito logo and wordmark.
+Phone number + PIN login form. Displays the Dorada logo and wordmark.
 
 **Features:**
 - `+` country code prefix is optional — auto-normalized before submit
@@ -1210,14 +1210,14 @@ Configures the bottom tab bar and shared header options for all tabs.
 **Features:**
 - Active tab color: `#0e402d` (forest green)
 - Green header bar with white text across all tabs
-- Pulpito logo in top-right corner of every screen (`HeaderLogo` component)
+- Dorada logo in top-right corner of every screen (`HeaderLogo` component)
 - Unread message polling every 5 seconds → shows orange notification dot on Messages tab icon
 
 ---
 
 ## Shared Packages
 
-### `@pulpito/types`
+### `@dorada/types`
 **Location:** `packages/types/`
 
 Zod schemas shared between the API and web app for request/response validation.
@@ -1236,7 +1236,7 @@ All schemas are used on the API side for `req.body` parsing and on the web side 
 
 ---
 
-### `@pulpito/i18n`
+### `@dorada/i18n`
 **Location:** `packages/i18n/`
 
 Translation files for the web admin portal in English (`en.json`) and Spanish (`es.json`).
@@ -1264,7 +1264,7 @@ Key namespaces within the single flat JSON file:
 ### JWT Token Flow (Web Admin)
 1. `POST /auth/admin/login` → returns `mfa_token` (if 2FA enabled) or `access_token` + `refresh_token`
 2. If 2FA: `POST /auth/admin/mfa` with `mfa_token` + TOTP code → returns `access_token` + `refresh_token`
-3. Tokens stored in `localStorage` (`pulpito_access_token`, `pulpito_refresh_token`)
+3. Tokens stored in `localStorage` (`dorada_access_token`, `dorada_refresh_token`)
 4. `Authorization: Bearer {access_token}` header sent with every API request
 5. On 401: API client automatically calls `POST /auth/refresh` → stores new tokens → retries original request
 6. On refresh failure: `logout()` is called, user redirected to `/login`

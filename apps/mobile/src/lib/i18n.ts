@@ -1,8 +1,8 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import { getLocales } from "expo-localization";
-import en from "@pulpito/i18n/locales/en.json";
-import es from "@pulpito/i18n/locales/es.json";
+import en from "@dorada/i18n/locales/en.json";
+import es from "@dorada/i18n/locales/es.json";
 
 const deviceLocale = getLocales()[0]?.languageCode ?? "en";
 

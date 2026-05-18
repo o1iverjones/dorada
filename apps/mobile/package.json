@@ -1,5 +1,5 @@
 {
-  "name": "@pulpito/mobile",
+  "name": "@dorada/mobile",
   "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
@@ -15,9 +15,9 @@
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.1.1",
-    "@pulpito/i18n": "workspace:*",
-    "@pulpito/types": "workspace:*",
-    "@pulpito/utils": "workspace:*",
+    "@dorada/i18n": "workspace:*",
+    "@dorada/types": "workspace:*",
+    "@dorada/utils": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/native": "^7.1.33",

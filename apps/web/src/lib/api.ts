@@ -12,7 +12,7 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("pulpito_access_token");
+  const token = localStorage.getItem("dorada_access_token");
   const isFormData = init.body instanceof FormData;
   const hasBody = init.body != null;
   const headers: Record<string, string> = {
@@ -26,7 +26,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 401) {
     const refreshed = await tryRefresh();
     if (refreshed) {
-      headers["Authorization"] = `Bearer ${localStorage.getItem("pulpito_access_token")}`;
+      headers["Authorization"] = `Bearer ${localStorage.getItem("dorada_access_token")}`;
       const retry = await fetch(`${BASE}${path}`, { ...init, headers });
       if (!retry.ok) {
         const body = await retry.json().catch(() => ({})) as { error?: { code?: string; message?: string } };
@@ -53,7 +53,7 @@ let refreshPromise: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
-    const token = localStorage.getItem("pulpito_refresh_token");
+    const token = localStorage.getItem("dorada_refresh_token");
     if (!token) return false;
     try {
       const res = await fetch(`${BASE}/auth/refresh`, {
@@ -63,8 +63,8 @@ async function tryRefresh(): Promise<boolean> {
       });
       if (!res.ok) return false;
       const data = await res.json();
-      localStorage.setItem("pulpito_access_token", data.access_token);
-      localStorage.setItem("pulpito_refresh_token", data.refresh_token);
+      localStorage.setItem("dorada_access_token", data.access_token);
+      localStorage.setItem("dorada_refresh_token", data.refresh_token);
       return true;
     } catch {
       return false;
@@ -76,13 +76,13 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 export function clearTokens() {
-  localStorage.removeItem("pulpito_access_token");
-  localStorage.removeItem("pulpito_refresh_token");
+  localStorage.removeItem("dorada_access_token");
+  localStorage.removeItem("dorada_refresh_token");
 }
 
 export function setTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem("pulpito_access_token", accessToken);
-  localStorage.setItem("pulpito_refresh_token", refreshToken);
+  localStorage.setItem("dorada_access_token", accessToken);
+  localStorage.setItem("dorada_refresh_token", refreshToken);
 }
 
 export const api = {

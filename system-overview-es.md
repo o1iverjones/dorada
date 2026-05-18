@@ -1,6 +1,6 @@
-# Pulpito — Descripción General del Sistema
+# Dorada — Descripción General del Sistema
 
-Pulpito es una plataforma de gestión de interpretación médica para programar y coordinar intérpretes de idiomas profesionales en citas clínicas. Es un producto SaaS multi-inquilino que cuenta con un portal de administración web, una aplicación móvil para intérpretes y un servidor REST API.
+Dorada es una plataforma de gestión de interpretación médica para programar y coordinar intérpretes de idiomas profesionales en citas clínicas. Es un producto SaaS multi-inquilino que cuenta con un portal de administración web, una aplicación móvil para intérpretes y un servidor REST API.
 
 ---
 
@@ -250,7 +250,7 @@ Permite a los administradores iniciar sesión con correo electrónico y contrase
 **Funcionalidades:**
 - Formulario de correo + contraseña con validación
 - Alternar visibilidad de contraseña
-- Casilla "Recordarme" — persiste el correo en `localStorage` (`pulpito_remembered_email`) para autocompletar en la siguiente visita (la contraseña nunca se almacena)
+- Casilla "Recordarme" — persiste el correo en `localStorage` (`dorada_remembered_email`) para autocompletar en la siguiente visita (la contraseña nunca se almacena)
 - Autocompleta el correo recordado al montar el componente vía `useEffect`
 
 **Llamadas a la API:**
@@ -860,7 +860,7 @@ Envoltorio de layout raíz renderizado para todas las páginas autenticadas. Com
 Barra de navegación lateral visible en todas las páginas autenticadas.
 
 **Funcionalidades:**
-- Logo y nombre de Pulpito en la parte superior
+- Logo y nombre de Dorada en la parte superior
 - Vínculos de navegación filtrados por permiso (los vínculos inaccesibles para el rol del usuario actual se ocultan completamente)
 - Indicador de punto de mensaje no leído en el elemento de navegación de Mensajes (obtenido del hook `useUnreadMessageCount`, con polling cada 30s)
 - Enlace de cuenta en la parte inferior
@@ -1013,7 +1013,7 @@ Envoltorios delgados alrededor de componentes de Radix UI / shadcn. No son espec
 
 ### Zustand Auth Store
 **Archivo:** `src/store/auth.ts`  
-**Persistencia:** clave `pulpito_auth` en `localStorage`
+**Persistencia:** clave `dorada_auth` en `localStorage`
 
 | Campo / Método | Descripción |
 |---|---|
@@ -1092,7 +1092,7 @@ La aplicación móvil es exclusiva para intérpretes. Utiliza Expo Router con na
 **Archivo:** `app/login.tsx`  
 **Ruta:** `/login`
 
-Formulario de inicio de sesión con número de teléfono + PIN. Muestra el logo y nombre de Pulpito.
+Formulario de inicio de sesión con número de teléfono + PIN. Muestra el logo y nombre de Dorada.
 
 **Funcionalidades:**
 - El prefijo `+` del código de país es opcional — se normaliza automáticamente antes de enviar
@@ -1210,14 +1210,14 @@ Configura la barra de pestañas inferior y las opciones de encabezado compartida
 **Funcionalidades:**
 - Color de pestaña activa: `#0e402d` (verde bosque)
 - Barra de encabezado verde con texto blanco en todas las pestañas
-- Logo de Pulpito en la esquina superior derecha de cada pantalla (componente `HeaderLogo`)
+- Logo de Dorada en la esquina superior derecha de cada pantalla (componente `HeaderLogo`)
 - Polling de mensajes no leídos cada 5 segundos → muestra punto de notificación naranja en el ícono de la pestaña de Mensajes
 
 ---
 
 ## Paquetes Compartidos
 
-### `@pulpito/types`
+### `@dorada/types`
 **Ubicación:** `packages/types/`
 
 Esquemas Zod compartidos entre la API y la aplicación web para validación de solicitudes/respuestas.
@@ -1236,7 +1236,7 @@ Todos los esquemas se usan en la API para el análisis de `req.body` y en la web
 
 ---
 
-### `@pulpito/i18n`
+### `@dorada/i18n`
 **Ubicación:** `packages/i18n/`
 
 Archivos de traducción para el portal de administración web en inglés (`en.json`) y español (`es.json`).
@@ -1264,7 +1264,7 @@ Espacios de nombres clave dentro del archivo JSON plano único:
 ### Flujo de Token JWT (Portal Web de Administración)
 1. `POST /auth/admin/login` → devuelve `mfa_token` (si 2FA está activado) o `access_token` + `refresh_token`
 2. Si 2FA: `POST /auth/admin/mfa` con `mfa_token` + código TOTP → devuelve `access_token` + `refresh_token`
-3. Tokens almacenados en `localStorage` (`pulpito_access_token`, `pulpito_refresh_token`)
+3. Tokens almacenados en `localStorage` (`dorada_access_token`, `dorada_refresh_token`)
 4. Encabezado `Authorization: Bearer {access_token}` enviado con cada solicitud a la API
 5. Ante 401: el cliente API llama automáticamente a `POST /auth/refresh` → almacena nuevos tokens → reintenta la solicitud original
 6. Si el refresco falla: se llama a `logout()`, el usuario es redirigido a `/login`

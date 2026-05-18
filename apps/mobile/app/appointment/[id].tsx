@@ -14,7 +14,7 @@ import { useClockIn, useClockOut, usePatientArrived, useAddShiftNotes, useSubmit
 import { Ionicons } from "@expo/vector-icons";
 import { C } from "../../src/theme";
 
-const API_BASE_URL: string = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? "https://api.pulpito.com/api/v1";
+const API_BASE_URL: string = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? "https://api.dorada.com/api/v1";
 // Strip /api/v1 to get the server root (for serving static uploads)
 const SERVER_ROOT = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
 

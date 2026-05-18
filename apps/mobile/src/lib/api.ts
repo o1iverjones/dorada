@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 
-const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? "https://api.pulpito.com/api/v1";
+const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? "https://api.dorada.com/api/v1";
 
 class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -11,7 +11,7 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = await SecureStore.getItemAsync("pulpito_access_token");
+  const token = await SecureStore.getItemAsync("dorada_access_token");
   const headers: Record<string, string> = {
     ...(init.body ? { "Content-Type": "application/json" } : {}),
     ...(init.headers as Record<string, string>),
@@ -23,7 +23,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 401) {
     const refreshed = await tryRefresh();
     if (refreshed) {
-      const newToken = await SecureStore.getItemAsync("pulpito_access_token");
+      const newToken = await SecureStore.getItemAsync("dorada_access_token");
       headers["Authorization"] = `Bearer ${newToken}`;
       const retry = await fetch(`${BASE_URL}${path}`, { ...init, headers });
       if (!retry.ok) {
@@ -46,7 +46,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 async function tryRefresh(): Promise<boolean> {
-  const token = await SecureStore.getItemAsync("pulpito_refresh_token");
+  const token = await SecureStore.getItemAsync("dorada_refresh_token");
   if (!token) return false;
   try {
     const res = await fetch(`${BASE_URL}/auth/refresh`, {
@@ -56,8 +56,8 @@ async function tryRefresh(): Promise<boolean> {
     });
     if (!res.ok) return false;
     const data = await res.json();
-    await SecureStore.setItemAsync("pulpito_access_token", data.access_token);
-    await SecureStore.setItemAsync("pulpito_refresh_token", data.refresh_token);
+    await SecureStore.setItemAsync("dorada_access_token", data.access_token);
+    await SecureStore.setItemAsync("dorada_refresh_token", data.refresh_token);
     return true;
   } catch {
     return false;
@@ -65,13 +65,13 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 export async function clearTokens() {
-  await SecureStore.deleteItemAsync("pulpito_access_token");
-  await SecureStore.deleteItemAsync("pulpito_refresh_token");
+  await SecureStore.deleteItemAsync("dorada_access_token");
+  await SecureStore.deleteItemAsync("dorada_refresh_token");
 }
 
 export async function setTokens(accessToken: string, refreshToken: string) {
-  await SecureStore.setItemAsync("pulpito_access_token", accessToken);
-  await SecureStore.setItemAsync("pulpito_refresh_token", refreshToken);
+  await SecureStore.setItemAsync("dorada_access_token", accessToken);
+  await SecureStore.setItemAsync("dorada_refresh_token", refreshToken);
 }
 
 export const api = {

@@ -5,7 +5,7 @@ import type {
   UpdateAppointmentTypeBody,
   UpdateLanguageListBody,
   UpdateLocalizationStringsBody,
-} from "@pulpito/types";
+} from "@dorada/types";
 import { NotFoundError, ConflictError } from "../../lib/errors.js";
 
 export async function getSettings(organizationId: string, prisma: PrismaClient) {

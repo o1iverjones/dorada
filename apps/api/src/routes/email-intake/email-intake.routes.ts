@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { EmailIntakeLogListQuerySchema, EmailIntakeDraftListQuerySchema, ReviewEmailIntakeDraftBodySchema } from "@pulpito/types";
+import { EmailIntakeLogListQuerySchema, EmailIntakeDraftListQuerySchema, ReviewEmailIntakeDraftBodySchema } from "@dorada/types";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";

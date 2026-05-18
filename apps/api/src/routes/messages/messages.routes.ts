@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { SendMessageBodySchema } from "@pulpito/types";
+import { SendMessageBodySchema } from "@dorada/types";
 import { z } from "zod";
 import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";

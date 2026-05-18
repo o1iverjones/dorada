@@ -1,5 +1,5 @@
 {
-  "name": "@pulpito/api",
+  "name": "@dorada/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -27,8 +27,8 @@
     "@fastify/static": "^7.0.4",
     "@google-cloud/storage": "^7.10.0",
     "@prisma/client": "^5.14.0",
-    "@pulpito/types": "workspace:*",
-    "@pulpito/utils": "workspace:*",
+    "@dorada/types": "workspace:*",
+    "@dorada/utils": "workspace:*",
     "@sendgrid/mail": "^8.1.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.8.0",

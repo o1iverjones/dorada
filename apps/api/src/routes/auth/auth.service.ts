@@ -53,7 +53,7 @@ export async function requestOtp(
   if (config.NODE_ENV === "development") {
     console.warn(`[DEV] OTP for ${normalized}: ${otp}`);
   }
-  // TODO: twilio.messages.create({ to: phone, from: config.TWILIO_FROM_NUMBER, body: `Your Pulpito code: ${otp}` })
+  // TODO: twilio.messages.create({ to: phone, from: config.TWILIO_FROM_NUMBER, body: `Your Dorada code: ${otp}` })
 }
 
 export async function verifyOtp(
@@ -248,7 +248,7 @@ export async function setupMfa(
   redis: Redis,
 ): Promise<{ qr_code: string; otpauth_uri: string }> {
   const secret = authenticator.generateSecret();
-  const uri = authenticator.keyuri(email, `Pulpito (${orgName})`, secret);
+  const uri = authenticator.keyuri(email, `Dorada (${orgName})`, secret);
   const qrCode = await QRCode.toDataURL(uri);
 
   await redis.set(`mfa:setup:${userId}`, secret, "EX", 600);

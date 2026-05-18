@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { CreateInsuranceAgencyBody, UpdateInsuranceAgencyBody, InsuranceAgencyListQuery } from "@pulpito/types";
+import type { CreateInsuranceAgencyBody, UpdateInsuranceAgencyBody, InsuranceAgencyListQuery } from "@dorada/types";
 import { NotFoundError, ConflictError } from "../../lib/errors.js";
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string) {

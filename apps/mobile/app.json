@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Pulpito",
-    "slug": "pulpito",
+    "name": "Dorada",
+    "slug": "dorada",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.pulpito.app",
+      "bundleIdentifier": "com.dorada.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Used to suggest nearby appointments."
       }
@@ -23,7 +23,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.pulpito.app",
+      "package": "com.dorada.app",
       "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "ACCESS_FINE_LOCATION",
@@ -51,7 +51,7 @@
       ],
       "expo-localization"
     ],
-    "scheme": "pulpito",
+    "scheme": "dorada",
     "extra": {
       "apiUrl": "http://192.168.100.21:3100/api/v1",
       "router": {},

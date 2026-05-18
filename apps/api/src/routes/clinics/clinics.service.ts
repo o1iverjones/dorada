@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { CreateClinicBody, UpdateClinicBody, ClinicListQuery, CreateClinicInterpreterNoteBody, UpdateClinicInterpreterNoteBody } from "@pulpito/types";
+import type { CreateClinicBody, UpdateClinicBody, ClinicListQuery, CreateClinicInterpreterNoteBody, UpdateClinicInterpreterNoteBody } from "@dorada/types";
 import { NotFoundError, ConflictError, ValidationError } from "../../lib/errors.js";
 import { geocodeAddress } from "../../lib/geo.js";
 

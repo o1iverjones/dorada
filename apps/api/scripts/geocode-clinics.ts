@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 
 async function nominatim(q: string): Promise<[number, number] | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { headers: { "User-Agent": "Pulpito/1.0 (scheduling platform)" } });
+  const res = await fetch(url, { headers: { "User-Agent": "Dorada/1.0 (scheduling platform)" } });
   if (!res.ok) return null;
   const data = (await res.json()) as Array<{ lat: string; lon: string }>;
   if (!data.length) return null;

@@ -4,7 +4,7 @@ let instance: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!instance) {
-    const token = localStorage.getItem("pulpito_access_token") ?? "";
+    const token = localStorage.getItem("dorada_access_token") ?? "";
     instance = io(window.location.origin, {
       auth: { token: `Bearer ${token}` },
       transports: ["websocket"],

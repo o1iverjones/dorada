@@ -83,8 +83,8 @@ export function useUploadAppointmentMedia(appointmentId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (file: { uri: string; name: string; mimeType: string }) => {
-      const token = await SecureStore.getItemAsync("pulpito_access_token");
-      const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? "https://api.pulpito.com/api/v1";
+      const token = await SecureStore.getItemAsync("dorada_access_token");
+      const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? "https://api.dorada.com/api/v1";
       const formData = new FormData();
       formData.append("file", { uri: file.uri, name: file.name, type: file.mimeType } as any);
       const res = await fetch(`${BASE_URL}/appointments/${appointmentId}/media`, {

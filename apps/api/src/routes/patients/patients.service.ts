@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { CreatePatientBody, UpdatePatientBody, PatientListQuery } from "@pulpito/types";
+import type { CreatePatientBody, UpdatePatientBody, PatientListQuery } from "@dorada/types";
 import { NotFoundError, ConflictError, ValidationError } from "../../lib/errors.js";
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string) {

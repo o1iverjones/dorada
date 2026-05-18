@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => set({ user: null, mfaToken: null }),
     }),
     {
-      name: "pulpito_auth",
+      name: "dorada_auth",
       partialize: (state) => ({ user: state.user }),
     },
   ),

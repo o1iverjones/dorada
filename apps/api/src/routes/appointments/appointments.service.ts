@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { localDayToUtcRange } from "../../lib/geo.js";
 import type {
   CreateAppointmentBody,
   UpdateAppointmentBody,
@@ -7,14 +8,14 @@ import type {
   SubmitFollowUpBody,
   ReviewFollowUpDraftBody,
   AppointmentListQuery,
-} from "@pulpito/types";
+} from "@dorada/types";
 import {
   NotFoundError,
   ConflictError,
   ValidationError,
   ForbiddenError,
 } from "../../lib/errors.js";
-import { addMinutes, diffMinutes } from "@pulpito/utils";
+import { addMinutes, diffMinutes } from "@dorada/utils";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { distanceMiles } from "../../lib/geo.js";
 
@@ -67,6 +68,18 @@ function assertValidTransition(from: string, to: string) {
 
 export async function listAppointments(query: AppointmentListQuery, organizationId: string, prisma: PrismaClient) {
   const statuses = query.status ? query.status.split(",") : undefined;
+
+  // Resolve org timezone so date_from/date_to are treated as local calendar dates
+  let tz = "UTC";
+  if (query.date_from || query.date_to) {
+    const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
+    tz = settings?.timezone ?? "America/Los_Angeles";
+  }
+
+  const dateFilter: { gte?: Date; lte?: Date } = {};
+  if (query.date_from) dateFilter.gte = localDayToUtcRange(query.date_from, tz).gte;
+  if (query.date_to)   dateFilter.lte = localDayToUtcRange(query.date_to, tz).lte;
+
   const where = {
     organization_id: organizationId,
     ...(statuses ? { status: { in: statuses } } : {}),
@@ -75,14 +88,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
     ...(query.insurance_agency_id ? { insurance_agency_id: query.insurance_agency_id } : {}),
     ...(query.language ? { language: query.language } : {}),
     ...(query.type_id ? { type_id: query.type_id } : {}),
-    ...(query.date_from || query.date_to
-      ? {
-          date_time: {
-            ...(query.date_from ? { gte: new Date(query.date_from) } : {}),
-            ...(query.date_to ? { lte: new Date(query.date_to + "T23:59:59Z") } : {}),
-          },
-        }
-      : {}),
+    ...((query.date_from || query.date_to) ? { date_time: dateFilter } : {}),
     ...(query.cursor ? { id: { gt: query.cursor } } : {}),
   };
 

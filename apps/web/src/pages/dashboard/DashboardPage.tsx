@@ -24,11 +24,14 @@ function useClock() {
 export function DashboardPage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const now = useClock();
+  const tz = useOrgTimezone();
 
   const { data: todayAppts, isLoading } = useQuery({
-    queryKey: ["appointments", "today"],
+    queryKey: ["appointments", "today", tz],
     queryFn: () => {
-      const today = new Date().toISOString().slice(0, 10);
+      // Use the org timezone so "today" matches the local calendar date, not UTC
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
       return api.get<{ data: unknown[] }>(`/appointments?date_from=${today}&date_to=${today}&limit=20`);
     },
   });
@@ -55,9 +58,6 @@ export function DashboardPage() {
     queryKey: ["activity-log"],
     queryFn: () => api.get<unknown[]>("/appointments/activity?limit=50"),
   });
-
-  const now = useClock();
-  const tz = useOrgTimezone();
 
   const [logTooltip, setLogTooltip] = useState<{ entry: Record<string, unknown>; x: number; y: number } | null>(null);
   const logTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -97,7 +97,7 @@ export function DashboardPage() {
           icon={<Calendar className="h-5 w-5 text-primary" />}
           label={t("dashboard.todays_appointments")}
           value={todayAppts?.data.length ?? 0}
-          href={`/appointments?date_from=${new Date().toISOString().slice(0, 10)}&status=`}
+          href={`/appointments?date_from=${new Date().toLocaleDateString("en-CA", { timeZone: tz })}&status=`}
         />
         <StatCard
           icon={<Clock className="h-5 w-5 text-yellow-500" />}
@@ -139,16 +139,16 @@ export function DashboardPage() {
             ) : (
               <>
                 {/* Column headers */}
-                <div className="flex items-center gap-3 pb-1.5 mb-1 border-b text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="flex items-center gap-3 px-[1em] pb-1.5 mb-1 border-b text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   <span className="flex-[2]">Patient / PO</span>
                   <span className="flex-[2]">Interpreter</span>
                   <span className="flex-[1.5]">Agency</span>
                   <span className="flex-1 text-center">Clock In/Out</span>
                   <span className="flex-1 text-center">Scheduled</span>
-                  <span className="w-20 invisible">flags</span>
-                  <span className="w-14 invisible">btn</span>
+                  <span className="w-20">Status</span>
+                  <span className="w-14">Approve</span>
                 </div>
-                <ul className="divide-y">
+                <ul className="space-y-[1em]">
                 {(todayAppts.data as Array<Record<string, unknown>>).map((appt) => {
                   const dt = new Date(appt.date_time as string);
                   const endDt = new Date(dt.getTime() + (appt.duration_minutes as number) * 60000);
@@ -188,7 +188,7 @@ export function DashboardPage() {
                   const isFarClockIn = distMiles != null && distMiles > 1;
 
                   return (
-                    <li key={appt.id as string} className="py-[0.5em]">
+                    <li key={appt.id as string} className="rounded-md border p-[1em]">
                       <div className="flex items-center gap-3 text-sm min-w-0">
 
                         {/* Patient */}
@@ -234,7 +234,7 @@ export function DashboardPage() {
                         </div>
 
                         {/* Flags */}
-                        <div className="flex shrink-0 items-center gap-1 flex-wrap">
+                        <div className="flex w-20 shrink-0 items-center gap-1 flex-wrap">
                           {(() => {
                             const statusColors: Record<string, string> = {
                               confirmed:     "bg-green-100 border-green-300 text-green-800",
@@ -276,7 +276,7 @@ export function DashboardPage() {
                         <Link
                           to={invoiceHref}
                           onClick={(e) => !hasClockOut && e.preventDefault()}
-                          className={`shrink-0 inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors whitespace-nowrap
+                          className={`shrink-0 w-14 inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors whitespace-nowrap
                             ${hasClockOut
                               ? "border-green-600 bg-green-50 text-green-700 hover:bg-green-100"
                               : "border-border text-muted-foreground cursor-not-allowed opacity-40 pointer-events-none"}`}

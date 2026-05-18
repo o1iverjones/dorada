@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { SendMessageBody } from "@pulpito/types";
+import type { SendMessageBody } from "@dorada/types";
 import { NotFoundError, ForbiddenError } from "../../lib/errors.js";
 
 export async function listConversations(

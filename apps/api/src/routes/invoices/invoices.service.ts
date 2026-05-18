@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { InvoiceListQuery, ApproveInvoiceBody } from "@pulpito/types";
+import type { InvoiceListQuery, ApproveInvoiceBody } from "@dorada/types";
 import { NotFoundError, ForbiddenError } from "../../lib/errors.js";
 
 const INVOICE_INCLUDE = {

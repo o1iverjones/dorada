@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { InvoiceListQuerySchema, ApproveInvoiceBodySchema } from "@pulpito/types";
+import { InvoiceListQuerySchema, ApproveInvoiceBodySchema } from "@dorada/types";
 import { authenticateAdmin, authenticateInterpreter } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";

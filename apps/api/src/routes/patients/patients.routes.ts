@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { PatientListQuerySchema, CreatePatientBodySchema, UpdatePatientBodySchema } from "@pulpito/types";
+import { PatientListQuerySchema, CreatePatientBodySchema, UpdatePatientBodySchema } from "@dorada/types";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";

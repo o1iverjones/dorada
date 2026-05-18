@@ -9,7 +9,7 @@ import {
   UpdateInterpreterBodySchema,
   UpdateSelfInterpreterBodySchema,
   CreateAvailabilityBlockBodySchema,
-} from "@pulpito/types";
+} from "@dorada/types";
 import { authenticateAdmin, authenticateInterpreter } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { InsuranceAgencyListQuerySchema, CreateInsuranceAgencyBodySchema, UpdateInsuranceAgencyBodySchema } from "@pulpito/types";
+import { InsuranceAgencyListQuerySchema, CreateInsuranceAgencyBodySchema, UpdateInsuranceAgencyBodySchema } from "@dorada/types";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";

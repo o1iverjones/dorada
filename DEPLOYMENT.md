@@ -1,28 +1,26 @@
-# Pulpito — Production Deployment Guide
+# Dorada — Production Deployment Guide
 
-> **Purpose:** This document outlines everything required to move Pulpito from a local development environment to a hosted, production-ready environment for QA and beyond. It covers hosting options, required third-party services, and a step-by-step technical migration checklist.
+> **Purpose:** This document outlines everything required to move Dorada from a local development environment to a hosted, production-ready environment for QA and beyond. It covers hosting options, required third-party services, and a step-by-step technical migration checklist.
 
 ---
 
 ## Table of Contents
 
 1. [Platform Overview](#1-platform-overview)
-2. [Hosting Options](#2-hosting-options)
-   - [Option A — Railway (Cloud, Recommended for QA)](#option-a--railway-cloud-recommended-for-qa)
-   - [Option B — Google Cloud Platform (Cloud, Recommended for Scale)](#option-b--google-cloud-platform-cloud-recommended-for-scale)
-   - [Option C — Self-Hosted VPS with Docker Compose](#option-c--self-hosted-vps-with-docker-compose)
+2. [Hosting — Railway](#2-hosting--railway)
 3. [Required Third-Party Services](#3-required-third-party-services)
 4. [Technical Migration Checklist](#4-technical-migration-checklist)
 5. [Environment Variables Reference](#5-environment-variables-reference)
 6. [Mobile App Publishing](#6-mobile-app-publishing)
 7. [Security Hardening Checklist](#7-security-hardening-checklist)
 8. [Estimated Monthly Costs](#8-estimated-monthly-costs)
+9. [Alternative Hosting Options](#9-alternative-hosting-options)
 
 ---
 
 ## 1. Platform Overview
 
-Pulpito is a multi-tenant medical interpretation management platform. The production environment must run the following components:
+Dorada is a multi-tenant medical interpretation management platform. The production environment must run the following components:
 
 | Component | Technology | Notes |
 |---|---|---|
@@ -31,196 +29,55 @@ Pulpito is a multi-tenant medical interpretation management platform. The produc
 | **Mobile app** | Expo (React Native) | Published separately via Expo EAS. Connects to the API over HTTPS. |
 | **Database** | PostgreSQL 16 | Managed by Prisma. Schema migrations must run on every deploy. |
 | **Cache / queue** | Redis 7 | Used for session management and Socket.io adapter. |
-| **File storage** | Google Cloud Storage | Local `uploads/` folder is a dev-only fallback; GCS is the production target. |
+| **File storage** | Cloudflare R2 | S3-compatible object storage. Local `uploads/` folder is a dev-only fallback; R2 is the production target. |
 | **Real-time** | Socket.io | Admin web messaging. Requires sticky sessions or Redis adapter if horizontally scaled. |
+| **Report worker** | Node.js / BullMQ | Separate long-running process (`workers/reports-worker.ts`). Must be deployed as its own service — API and worker are independent processes. |
 
 ---
 
-## 2. Hosting Options
+## 2. Hosting — Railway
 
-### Option A — Railway (Cloud, Recommended for QA)
-
-**Best for:** Fast QA setup, small teams, early users. Minimal DevOps overhead.
-
-**What it is:** Railway is a modern PaaS (Platform-as-a-Service) that deploys directly from a GitHub repository. It natively supports Node.js services, PostgreSQL, and Redis as managed add-ons — no infrastructure configuration required.
+> **Decision:** Dorada will be hosted on [Railway](https://railway.app). Railway is a modern PaaS that deploys directly from a GitHub repository with managed PostgreSQL and Redis add-ons — no infrastructure configuration required. See [§9](#9-alternative-hosting-options) for GCP and self-hosted VPS alternatives if requirements change.
 
 #### Architecture on Railway
 
 ```
-GitHub repo
+GitHub repo (auto-deploy on push to main)
     │
-    ├── API service (Dockerfile → apps/api/Dockerfile)
-    ├── Web service (Dockerfile → apps/web/Dockerfile)
-    ├── PostgreSQL plugin (managed by Railway)
-    └── Redis plugin (managed by Railway)
+    ├── API service        (apps/api/Dockerfile)
+    ├── Web service        (apps/web/Dockerfile)
+    ├── Report Worker      (apps/api/Dockerfile — different start command)
+    ├── PostgreSQL plugin  (managed by Railway, DATABASE_URL injected automatically)
+    └── Redis plugin       (managed by Railway, REDIS_URL injected automatically)
 ```
 
-#### Steps
+#### Setup Steps
 
 1. Create a Railway account at [railway.app](https://railway.app).
 2. Create a new project and connect your GitHub repository.
 3. Add a **PostgreSQL** plugin — Railway injects `DATABASE_URL` automatically.
 4. Add a **Redis** plugin — Railway injects `REDIS_URL` automatically.
-5. Create an **API service**, set root directory to `/`, and set the Dockerfile path to `apps/api/Dockerfile`.
-6. Create a **Web service**, set root directory to `/`, and set the Dockerfile path to `apps/web/Dockerfile`.
-7. Set all environment variables (see §5) in each service's settings panel.
-8. Add a custom domain (e.g. `api.pulpito.com`, `app.pulpito.com`) in Railway's domain settings.
-9. Run Prisma migrations on first deploy via a Railway start command override:
+5. Create an **API service**, set root directory to `/`, Dockerfile path to `apps/api/Dockerfile`, start command:
    ```
    npx prisma migrate deploy && node dist/main.js
    ```
-10. Point the mobile app's `apiUrl` in `app.json` to the new HTTPS API URL.
-
-#### Pros
-- Deploys in under an hour
-- Automatic TLS certificates
-- Built-in deploy previews
-- Logs and metrics included
-- Scales vertically with one click
-
-#### Cons
-- More expensive than VPS at scale
-- Less control than GCP
-- Not suitable for clients requiring on-premises data
-
----
-
-### Option B — Google Cloud Platform (Cloud, Recommended for Scale)
-
-**Best for:** Production at scale, compliance-sensitive deployments, organizations already in the Google ecosystem.
-
-#### Architecture on GCP
-
-```
-Cloud DNS / Load Balancer
-    │
-    ├── Cloud Run (API) ─────────────────────── Cloud SQL (PostgreSQL 16)
-    ├── Cloud Run (Web / Nginx)                 Memorystore (Redis)
-    ├── Cloud Storage (GCS) ← file uploads      Secret Manager (env vars)
-    └── Firebase (FCM push notifications)
-```
-
-#### Steps
-
-1. Create a GCP project at [console.cloud.google.com](https://console.cloud.google.com).
-2. Enable the following APIs: Cloud Run, Cloud SQL, Memorystore, Cloud Storage, Secret Manager, Artifact Registry, Cloud Build.
-3. **Database:** Create a Cloud SQL instance (PostgreSQL 16). Note the connection string and store it in Secret Manager.
-4. **Redis:** Create a Memorystore for Redis (Basic tier is sufficient for QA).
-5. **File storage:** Create a GCS bucket named `pulpito-media`. Set the bucket to private; generate a service account key with `Storage Object Admin` role.
-6. **Container registry:** Push Docker images to Artifact Registry:
-   ```bash
-   gcloud builds submit --tag gcr.io/YOUR_PROJECT/pulpito-api ./apps/api
-   gcloud builds submit --tag gcr.io/YOUR_PROJECT/pulpito-web ./apps/web
+6. Create a **Web service**, set root directory to `/`, Dockerfile path to `apps/web/Dockerfile`.
+7. Create a **Report Worker service**, set root directory to `/`, Dockerfile path to `apps/api/Dockerfile`, start command:
    ```
-7. **Cloud Run — API:** Deploy the API image, attach the Cloud SQL connector, and inject secrets from Secret Manager.
-8. **Cloud Run — Web:** Deploy the Nginx web image. Set the `VITE_API_URL` build arg or configure the Nginx proxy to forward `/api/` to the API Cloud Run URL.
-9. **Migrations:** Add a Cloud Build step or Cloud Run Job that runs `npx prisma migrate deploy` before the API starts.
-10. **DNS:** Map `api.pulpito.com` and `app.pulpito.com` via Cloud DNS or your existing DNS registrar.
-11. **Load balancer:** Set up a GCP HTTPS Load Balancer with managed SSL certificates for both services.
-
-#### Pros
-- GCS is already wired into the codebase — zero additional integration work for file storage
-- Firebase (FCM) is already used for push notifications
-- Scales horizontally and globally
-- Strong compliance tooling (VPC, IAM, audit logs, CMEK)
-- Cloud SQL point-in-time recovery for the database
-
-#### Cons
-- Higher setup complexity
-- GCP has a steeper learning curve
-- More expensive than Railway for low-traffic QA
-
----
-
-### Option C — Self-Hosted VPS with Docker Compose
-
-**Best for:** Clients requiring full data sovereignty, on-premises installations, HIPAA BAA scenarios, or air-gapped environments.
-
-**What it is:** A single Linux VPS (or on-premises server) running all services via Docker Compose. This is also how you would package Pulpito for a white-label client who wants to run their own instance.
-
-#### Minimum Server Specs (QA / Small Production)
-
-| Resource | Minimum | Recommended |
-|---|---|---|
-| CPU | 2 vCPU | 4 vCPU |
-| RAM | 4 GB | 8 GB |
-| Storage | 40 GB SSD | 100 GB SSD |
-| OS | Ubuntu 22.04 LTS | Ubuntu 22.04 LTS |
-
-**Suitable VPS providers:** DigitalOcean, Hetzner (most cost-effective), Vultr, Linode, or a client's own hardware.
-
-#### Architecture on a VPS
-
-```
-VPS (Ubuntu 22.04)
-└── Docker Compose
-    ├── pulpito-api    (port 3000, internal)
-    ├── pulpito-web    (port 80/443, public via Nginx + Certbot)
-    ├── postgres       (port 5432, internal only)
-    └── redis          (port 6379, internal only)
-```
-
-#### Steps
-
-1. **Provision the server.** Create a VPS with your chosen provider, assign a static IP.
-2. **Point DNS.** Create `A` records for `api.yourdomain.com` and `app.yourdomain.com` pointing to the server IP.
-3. **Install Docker and Docker Compose:**
-   ```bash
-   curl -fsSL https://get.docker.com | sh
-   sudo usermod -aG docker $USER
+   node dist/workers/reports-worker.js
    ```
-4. **Clone the repository** onto the server (or use a deployment pipeline such as GitHub Actions with SSH).
-5. **Create a production `docker-compose.prod.yml`** that adds the web and API services to the existing `docker-compose.yml`:
-   ```yaml
-   services:
-     pulpito-api:
-       build:
-         context: .
-         dockerfile: apps/api/Dockerfile
-       env_file: .env.production
-       depends_on: [postgres, redis]
-       restart: unless-stopped
+   > ⚠️ The report worker does **not** need a public port. It connects outbound to Redis and the database only. If this service is not running, report generation will silently hang.
+8. Set all environment variables (see §5) in each service's settings panel. The worker needs the same vars as the API.
+9. Add custom domains (e.g. `api.dorada.com`, `app.dorada.com`) in Railway's domain settings.
+10. Point the mobile app's `EXPO_PUBLIC_API_URL` in `eas.json` to the production HTTPS API URL.
 
-     pulpito-web:
-       build:
-         context: .
-         dockerfile: apps/web/Dockerfile
-       ports:
-         - "80:80"
-         - "443:443"
-       depends_on: [pulpito-api]
-       restart: unless-stopped
-   ```
-6. **Install Certbot** for free TLS certificates via Let's Encrypt:
-   ```bash
-   sudo apt install certbot python3-certbot-nginx
-   sudo certbot --nginx -d app.yourdomain.com -d api.yourdomain.com
-   ```
-7. **Create `.env.production`** with all production secrets (see §5). Never commit this file.
-8. **Run migrations and start services:**
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-   docker exec pulpito-api npx prisma migrate deploy
-   ```
-9. **Set up automated backups** for the PostgreSQL volume:
-   ```bash
-   # Example: daily pg_dump to S3-compatible storage
-   docker exec postgres pg_dump -U pulpito pulpito_prod | gzip > backup_$(date +%F).sql.gz
-   ```
-10. **For file storage:** Either mount a local volume (simplest, data stays on server) or configure GCS credentials. For full data sovereignty, use [MinIO](https://min.io/) — an S3-compatible object store that runs locally in Docker.
-
-#### Pros
-- Full data sovereignty — all data stays on client infrastructure
-- No ongoing cloud provider costs beyond the VPS fee
-- Suitable for HIPAA, SOC 2, or other compliance frameworks requiring on-premises data
-- Portable — can be packaged as a white-label installer
-- Hetzner VPS from ~$5–$20/month
-
-#### Cons
-- Requires manual SSL renewal (mitigated by Certbot auto-renewal)
-- No automatic horizontal scaling
-- Client or implementation partner responsible for uptime and patching
-- File storage is local by default (no built-in geo-redundancy without MinIO + replication)
+#### Why Railway
+- Deploys in under an hour from a fresh account
+- Automatic TLS certificates on all services
+- GitHub push-to-deploy with built-in deploy previews
+- Logs, metrics, and resource usage visible per-service in the dashboard
+- Managed PostgreSQL with automatic daily backups and point-in-time restore
+- Scales vertically with one click; horizontal scaling available on higher plans
 
 ---
 
@@ -233,7 +90,7 @@ The following services need accounts created and API keys configured before goin
 | Service | Purpose | Status | Link |
 |---|---|---|---|
 | **Twilio** | SMS OTP for interpreter login, SMS follow-up prompts | Already integrated — needs keys | [twilio.com](https://www.twilio.com) |
-| **SendGrid** | Transactional email (admin password resets, notifications) | Already integrated — needs keys | [sendgrid.com](https://sendgrid.com) |
+| **Resend** | Transactional email (admin password resets, notifications) | Needs integration + API key | [resend.com](https://resend.com) |
 
 ### Push Notifications
 
@@ -246,8 +103,7 @@ The following services need accounts created and API keys configured before goin
 
 | Service | Purpose | Status | Link |
 |---|---|---|---|
-| **Google Cloud Storage** | Appointment media photos uploaded by interpreters | Already integrated — needs bucket + credentials | [cloud.google.com/storage](https://cloud.google.com/storage) |
-| **MinIO** *(self-hosted only)* | S3-compatible local object store for on-premises deployments | Not yet integrated — drop-in replacement for GCS | [min.io](https://min.io) |
+| **Cloudflare R2** | Appointment media, generated reports, email intake screenshots | Needs integration — replaces GCS | [cloudflare.com/r2](https://www.cloudflare.com/developer-platform/r2/) |
 
 ### AI / Automation
 
@@ -255,13 +111,11 @@ The following services need accounts created and API keys configured before goin
 |---|---|---|---|
 | **Anthropic (Claude API)** | Email intake parsing and appointment data extraction | Already integrated — needs API key | [anthropic.com](https://www.anthropic.com) |
 
-### Infrastructure (Cloud options)
+### Infrastructure
 
 | Service | Purpose | Link |
 |---|---|---|
-| **Railway** | PaaS hosting (Option A) | [railway.app](https://railway.app) |
-| **Google Cloud Platform** | Managed cloud hosting (Option B) | [cloud.google.com](https://cloud.google.com) |
-| **Hetzner / DigitalOcean / Linode** | VPS for self-hosted option (Option C) | [hetzner.com](https://hetzner.com) |
+| **Railway** | PaaS hosting — selected platform | [railway.app](https://railway.app) |
 
 ### Domain & Security
 
@@ -297,14 +151,14 @@ Work through this list in order. Each section builds on the previous.
 - [ ] Add `.env.production` to `.gitignore`
 - [ ] Rotate all secrets that currently use the dev placeholder values (`change-me-*`)
 - [ ] Create a Twilio account, verify a sender number, fill `TWILIO_*` vars
-- [ ] Create a SendGrid account, verify sender domain, fill `SENDGRID_*` vars
+- [ ] Create a Resend account at [resend.com](https://resend.com), verify your sending domain, generate an API key, fill `RESEND_API_KEY` and `RESEND_FROM_EMAIL`
 - [ ] Create a Firebase project, download service account JSON, fill `FIREBASE_SERVICE_ACCOUNT_JSON`
-- [ ] Create a GCS bucket (`pulpito-media`), create a service account with `Storage Object Admin`, fill `GCS_BUCKET` / `GCP_PROJECT_ID` / `GOOGLE_APPLICATION_CREDENTIALS`
+- [ ] Create a Cloudflare R2 bucket, generate an API token with read/write access, fill `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`
 - [ ] Add Anthropic API key for email intake
 
 ### Phase 2 — Database
 
-- [ ] Provision a managed PostgreSQL 16 instance (Railway plugin, Cloud SQL, or Docker on VPS)
+- [ ] Add the PostgreSQL plugin in Railway — `DATABASE_URL` is injected automatically
 - [ ] Set `DATABASE_URL` in production environment
 - [ ] Run `npx prisma migrate deploy` (applies all existing migrations — do **not** use `migrate dev` in production)
 - [ ] Seed a first Super Admin user:
@@ -317,10 +171,12 @@ Work through this list in order. Each section builds on the previous.
 
 ### Phase 3 — File Storage
 
-- [ ] Verify GCS bucket exists and the service account key has write access
-- [ ] Test a photo upload from the mobile app and confirm the file appears in GCS
-- [ ] Remove or restrict access to the local `uploads/` directory in production (it is the dev fallback only)
-- [ ] Set GCS bucket lifecycle rules to control storage costs (e.g. delete files older than 1 year, or move to Coldline storage)
+- [ ] Create a Cloudflare R2 bucket in the Cloudflare dashboard (free tier: 10 GB storage, 1M reads/mo)
+- [ ] Generate an R2 API token with `Object Read & Write` permissions
+- [ ] Set all `R2_*` environment variables in Railway (see §5)
+- [ ] Test a photo upload from the mobile app and confirm the file appears in R2
+- [ ] Remove or restrict access to the local `uploads/` directory in production (dev fallback only)
+- [ ] Optionally enable a custom domain on the R2 bucket (e.g. `media.dorada.app`) via Cloudflare DNS
 
 ### Phase 4 — API Deployment
 
@@ -334,6 +190,26 @@ Work through this list in order. Each section builds on the previous.
 - [ ] Confirm the `/api/v1/health` endpoint (or equivalent) returns 200
 - [ ] Confirm Socket.io connects from the web client over WSS (WebSocket Secure)
 - [ ] Point the Nginx `/uploads/` proxy to GCS if needed, or ensure the GCS `public_url` is absolute
+
+### Phase 4b — Report Worker Deployment
+
+> ⚠️ **Critical:** The report worker is a separate long-running process from the API. If it is not deployed, report generation will silently hang — jobs will be queued but never processed.
+
+The report worker (`apps/api/src/workers/reports-worker.ts`) consumes the BullMQ `report-generation` queue and handles all PDF/CSV report generation. It must run as its own Railway service alongside the API.
+
+#### On Railway
+- Create a third Railway service in the same project, pointing to the same repository
+- Use the same Dockerfile as the API (`apps/api/Dockerfile`) with start command:
+  ```
+  node dist/workers/reports-worker.js
+  ```
+- Share the same environment variables as the API service — it needs `DATABASE_URL`, `REDIS_URL`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` at minimum
+- Disable the public networking port for this service — it only connects outbound to Redis and the database
+
+#### Verification
+- [ ] Worker service is running and connected to Redis
+- [ ] Generate a test report from the admin portal and confirm it transitions from `pending` → `processing` → `completed`
+- [ ] Confirm the download URL resolves and the file is present in GCS (or local temp dir in dev)
 
 ### Phase 5 — Web App Deployment
 
@@ -359,12 +235,13 @@ Work through this list in order. Each section builds on the previous.
 
 ### Phase 7 — DNS & TLS
 
-- [ ] Register or transfer your domain to Cloudflare (recommended) or your existing registrar
-- [ ] Create DNS `A` records:
-  - `api.yourdomain.com` → API server IP / Railway URL
-  - `app.yourdomain.com` → Web server IP / Railway URL
-- [ ] Enable HTTPS / TLS (automatic on Railway and GCP; use Certbot on VPS)
-- [ ] Verify that `http://` redirects to `https://` for both subdomains
+- [ ] Point `dorada.app` nameservers to Cloudflare (log in to Porkbun → update nameservers to Cloudflare's)
+- [ ] In Cloudflare DNS, add CNAME records for the Railway services:
+  - `api.dorada.app` → Railway API service URL
+  - `app.dorada.app` → Railway web service URL
+  - `media.dorada.app` → R2 bucket public URL (optional custom domain for file storage)
+- [ ] Add the custom domains in Railway's service settings — Railway will provision TLS automatically
+- [ ] Verify `https://app.dorada.app` loads and `https://api.dorada.app/api/v1/health` returns 200
 
 ### Phase 8 — Monitoring
 
@@ -388,7 +265,7 @@ All of the following must be set in production. Dev placeholder values must be r
 
 ```env
 # Database
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/pulpito_prod
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/dorada_prod
 
 # Redis
 REDIS_URL=redis://HOST:6379
@@ -407,18 +284,20 @@ TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=...
 TWILIO_FROM_NUMBER=+1xxxxxxxxxx
 
-# SendGrid
-SENDGRID_API_KEY=SG.xxxxx
-SENDGRID_FROM_EMAIL=no-reply@yourdomain.com
-SENDGRID_FROM_NAME=Pulpito
+# Resend
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+RESEND_FROM_EMAIL=no-reply@yourdomain.com
+RESEND_FROM_NAME=Dorada
 
 # Firebase FCM
 FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 
-# Google Cloud Storage
-GCS_BUCKET=pulpito-media
-GCP_PROJECT_ID=your-gcp-project
-GOOGLE_APPLICATION_CREDENTIALS=/app/gcs-key.json
+# Cloudflare R2
+R2_ACCOUNT_ID=your-cloudflare-account-id
+R2_ACCESS_KEY_ID=your-r2-access-key
+R2_SECRET_ACCESS_KEY=your-r2-secret-key
+R2_BUCKET=dorada-media
+R2_PUBLIC_URL=https://media.dorada.app
 
 # Anthropic
 ANTHROPIC_API_KEY=sk-ant-...
@@ -504,52 +383,71 @@ Before any real users access the system:
 
 Approximate costs at QA / early production scale (~10 concurrent admin users, ~50 interpreters).
 
-### Option A — Railway
+### Railway (Infrastructure)
 
 | Resource | Est. Cost/mo |
 |---|---|
 | API service (512 MB RAM) | $5–$10 |
 | Web service (256 MB RAM) | $5 |
+| Report Worker service (256 MB RAM) | $5 |
 | PostgreSQL (1 GB storage) | $5 |
 | Redis (512 MB) | $3 |
-| **Total** | **~$18–$23/mo** |
+| **Total** | **~$23–$28/mo** |
 
-### Option B — Google Cloud Platform
-
-| Resource | Est. Cost/mo |
-|---|---|
-| Cloud Run — API (1 vCPU, 512 MB) | $10–$20 |
-| Cloud Run — Web | $5–$10 |
-| Cloud SQL (db-f1-micro, 10 GB) | $15–$25 |
-| Memorystore Redis (1 GB) | $35 |
-| Cloud Storage (10 GB) | ~$0.23 |
-| **Total** | **~$65–$90/mo** |
-
-> GCP costs reduce significantly with committed-use discounts or when moving to a custom instance size.
-
-### Option C — Self-Hosted VPS (Hetzner)
-
-| Resource | Est. Cost/mo |
-|---|---|
-| Hetzner CX31 (2 vCPU, 8 GB RAM, 80 GB SSD) | ~$8–$12 |
-| Domain name | ~$1–$2 |
-| Backups (Hetzner snapshot) | ~$2 |
-| **Total** | **~$11–$16/mo** |
-
-> Client-hosted deployments may use their existing server infrastructure at no additional cloud cost.
-
-### Third-Party Services (All Options)
+### Third-Party Services
 
 | Service | Free Tier | Paid Starts At |
 |---|---|---|
 | Twilio | $15 credit | Pay-as-you-go (~$0.0079/SMS) |
-| SendGrid | 100 emails/day free | $19.95/mo (Essentials) |
+| Resend | 3,000 emails/mo free | $20/mo (50K emails) |
 | Firebase FCM | Free | Free (up to very high volume) |
+| Cloudflare R2 | 10 GB free, 1M reads/mo free | ~$0.015/GB/mo (no egress fees) |
 | Anthropic API | — | Pay-as-you-go (~$3/M tokens) |
 | Sentry | 5K errors/mo free | $26/mo |
 | UptimeRobot | 50 monitors free | Free for basic use |
 | Apple Developer | — | $99/yr |
 | Google Play Console | — | $25 one-time |
+
+---
+
+## 9. Alternative Hosting Options
+
+These options are documented for reference if requirements change (e.g. compliance mandates on-premises data, or scale requires GCP).
+
+### Google Cloud Platform
+
+**Best for:** Production at scale, compliance-sensitive deployments, organizations already in the Google ecosystem.
+
+```
+Cloud DNS / Load Balancer
+    │
+    ├── Cloud Run (API) ─────────────────────── Cloud SQL (PostgreSQL 16)
+    ├── Cloud Run (Web / Nginx)                 Memorystore (Redis)
+    ├── Cloud Run (Report Worker)               Secret Manager (env vars)
+    ├── Cloud Storage (GCS) ← file uploads
+    └── Firebase (FCM push notifications)
+```
+
+Key steps: Enable Cloud Run, Cloud SQL, Memorystore, GCS, Secret Manager, Artifact Registry, Cloud Build. Deploy API and worker as separate Cloud Run services with `MIN_INSTANCES=1` on the worker. Use Cloud Build to run `prisma migrate deploy` before each API deploy.
+
+Est. cost: ~$65–$90/mo at QA scale.
+
+---
+
+### Self-Hosted VPS (Docker Compose)
+
+**Best for:** Full data sovereignty, on-premises installations, HIPAA BAA scenarios, white-label clients.
+
+```
+VPS (Ubuntu 22.04) — Docker Compose
+    ├── dorada-api      (port 3000, internal)
+    ├── dorada-web      (port 80/443, Nginx + Certbot)
+    ├── dorada-worker   (no port, internal only)
+    ├── postgres         (port 5432, internal only)
+    └── redis            (port 6379, internal only)
+```
+
+Suitable providers: Hetzner (most cost-effective), DigitalOcean, Vultr, Linode, or client hardware. Est. cost: ~$11–$16/mo on Hetzner.
 
 ---
 

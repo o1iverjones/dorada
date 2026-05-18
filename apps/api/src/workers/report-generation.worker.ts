@@ -13,7 +13,7 @@ function isGcsAvailable(): boolean {
   return !!(process.env["GOOGLE_APPLICATION_CREDENTIALS"] || process.env["GCP_SERVICE_ACCOUNT_JSON"]);
 }
 
-const LOCAL_REPORTS_DIR = path.join(os.tmpdir(), "pulpito-reports");
+const LOCAL_REPORTS_DIR = path.join(os.tmpdir(), "dorada-reports");
 
 /** Save buffer to local disk and return the API-prefixed download path. */
 function saveLocally(reportJobId: string, format: "pdf" | "csv", buffer: Buffer): string {
@@ -405,7 +405,7 @@ async function generatePdf(
     // ── Footer ───────────────────────────────────────────────────────────────
     const footerY = doc.page.height - 24;
     doc.fontSize(7).font("Helvetica").fillColor("#94a3b8")
-      .text(`${rows.length} record${rows.length === 1 ? "" : "s"}  •  Pulpito`, marginL, footerY, { width: contentW, align: "center" });
+      .text(`${rows.length} record${rows.length === 1 ? "" : "s"}  •  Dorada`, marginL, footerY, { width: contentW, align: "center" });
 
     doc.end();
   });

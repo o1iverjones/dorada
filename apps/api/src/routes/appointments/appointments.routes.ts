@@ -12,7 +12,7 @@ import {
   ShiftNotesBodySchema,
   SubmitFollowUpBodySchema,
   ReviewFollowUpDraftBodySchema,
-} from "@pulpito/types";
+} from "@dorada/types";
 import { z } from "zod";
 import { authenticate, authenticateAdmin, authenticateInterpreter } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";

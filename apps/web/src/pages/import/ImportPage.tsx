@@ -57,7 +57,7 @@ export function ImportPage() {
       const res = await fetch(`/api/v1/import/${selected}`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("pulpito_access_token")}`,
+          Authorization: `Bearer ${localStorage.getItem("dorada_access_token")}`,
         },
         body: formData,
       });

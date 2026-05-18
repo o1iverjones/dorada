@@ -5,7 +5,7 @@ import type {
   UpdateSelfInterpreterBody,
   CreateAvailabilityBlockBody,
   InterpreterListQuery,
-} from "@pulpito/types";
+} from "@dorada/types";
 import { NotFoundError, ConflictError, ValidationError } from "../../lib/errors.js";
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string, code: string) {

@@ -36,9 +36,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: pulpito
-          POSTGRES_PASSWORD: pulpito
-          POSTGRES_DB: pulpito_test
+          POSTGRES_USER: dorada
+          POSTGRES_PASSWORD: dorada
+          POSTGRES_DB: dorada_test
         ports:
           - 5432:5432
         options: >-
@@ -68,17 +68,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: pnpm --filter @pulpito/api db:generate
+        run: pnpm --filter @dorada/api db:generate
 
       - name: Run database migrations
         working-directory: apps/api
         env:
-          DATABASE_URL: postgresql://pulpito:pulpito@localhost:5432/pulpito_test
+          DATABASE_URL: postgresql://dorada:dorada@localhost:5432/dorada_test
         run: pnpm db:migrate:deploy
 
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://pulpito:pulpito@localhost:5432/pulpito_test
+          DATABASE_URL: postgresql://dorada:dorada@localhost:5432/dorada_test
           REDIS_URL: redis://localhost:6379
           REDIS_HOST: localhost
           REDIS_PORT: "6379"

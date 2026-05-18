@@ -8,7 +8,7 @@ import { api, setTokens } from "../src/lib/api";
 import { useAuthStore } from "../src/store/auth";
 import { registerForPushNotifications, syncFcmToken } from "../src/lib/notifications";
 
-const SAVED_PHONE_KEY = "pulpito_saved_phone";
+const SAVED_PHONE_KEY = "dorada_saved_phone";
 
 function normalizePhone(raw: string): string {
   const trimmed = raw.trim();
@@ -76,7 +76,7 @@ export default function LoginScreen() {
       <View style={styles.inner}>
         <View style={styles.logoRow}>
           <Image source={require("../assets/logo.jpeg")} style={styles.logoImage} />
-          <Text style={styles.logo}>Pulpito</Text>
+          <Text style={styles.logo}>Dorada</Text>
         </View>
         <Text style={styles.subtitle}>
           {step === "phone" ? t("auth.enter_phone") : t("auth.enter_otp")}

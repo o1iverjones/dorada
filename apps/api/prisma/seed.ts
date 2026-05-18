@@ -34,6 +34,7 @@ async function main() {
           { permission: "view_reports" },
           { permission: "manage_appointments" },
           { permission: "manage_system_settings" },
+          { permission: "manage_invoices" },
         ],
       },
     },
@@ -42,7 +43,7 @@ async function main() {
   console.log(`Role: ${superAdminRole.name} (${superAdminRole.id})`);
 
   // ── Admin role ─────────────────────────────────────────────────────────────
-  const adminRolePerms = ["manage_interpreters", "manage_clinics", "manage_admin_users", "view_reports", "manage_appointments"];
+  const adminRolePerms = ["manage_interpreters", "manage_clinics", "manage_admin_users", "view_reports", "manage_appointments", "manage_invoices"];
   const adminRole = await prisma.role.upsert({
     where: { organization_id_name: { organization_id: org.id, name: "Admin" } },
     update: { is_system: true },

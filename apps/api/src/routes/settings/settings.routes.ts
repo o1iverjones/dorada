@@ -5,7 +5,7 @@ import {
   UpdateAppointmentTypeBodySchema,
   UpdateLanguageListBodySchema,
   UpdateLocalizationStringsBodySchema,
-} from "@pulpito/types";
+} from "@dorada/types";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";

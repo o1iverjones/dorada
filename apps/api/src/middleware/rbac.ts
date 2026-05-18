@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import type { Permission } from "@pulpito/types";
+import type { Permission } from "@dorada/types";
 import { ForbiddenError } from "../lib/errors.js";
 import type { JwtPayload } from "./auth.js";
 

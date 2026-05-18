@@ -79,7 +79,7 @@ export async function downloadReport(downloadUrl: string, filename: string): Pro
   let blob: Blob;
 
   if (isLocal) {
-    const token = localStorage.getItem("pulpito_access_token");
+    const token = localStorage.getItem("dorada_access_token");
     const res = await fetch(downloadUrl, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { ReviewEmailIntakeDraftBody, EmailIntakeLogListQuery, EmailIntakeDraftListQuery } from "@pulpito/types";
+import type { ReviewEmailIntakeDraftBody, EmailIntakeLogListQuery, EmailIntakeDraftListQuery } from "@dorada/types";
 import { NotFoundError, ConflictError } from "../../lib/errors.js";
 import type { Queue } from "bullmq";
 

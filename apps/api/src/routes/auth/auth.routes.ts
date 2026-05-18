@@ -8,7 +8,7 @@ import {
   RefreshTokenBodySchema,
   PasswordResetRequestBodySchema,
   PasswordResetConfirmBodySchema,
-} from "@pulpito/types";
+} from "@dorada/types";
 import {
   requestOtp,
   verifyOtp,

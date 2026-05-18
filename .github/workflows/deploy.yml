@@ -1,0 +1,42 @@
+name: Deploy
+
+# Railway deploys automatically when CI passes on pushes to main.
+# This workflow runs a final type-check and build validation as a gate
+# before Railway picks up the commit.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate before deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck all packages
+        run: pnpm typecheck
+
+      - name: Build API
+        run: pnpm --filter @dorada/api build
+
+      - name: Build web app
+        run: pnpm --filter @dorada/web build
+
+      # Railway is connected to this repo and will deploy automatically
+      # once this workflow passes. No additional deploy step needed.
+      # Configure "Wait for CI checks" in Railway project settings to enforce this gate.

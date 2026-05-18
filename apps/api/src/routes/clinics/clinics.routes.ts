@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ClinicListQuerySchema, CreateClinicBodySchema, UpdateClinicBodySchema, CreateClinicInterpreterNoteBodySchema, UpdateClinicInterpreterNoteBodySchema } from "@pulpito/types";
+import { ClinicListQuerySchema, CreateClinicBodySchema, UpdateClinicBodySchema, CreateClinicInterpreterNoteBodySchema, UpdateClinicInterpreterNoteBodySchema } from "@dorada/types";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
