@@ -8,7 +8,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/types/package.json ./packages/types/
 COPY packages/utils/package.json ./packages/utils/
-RUN pnpm install --frozen-lockfile --filter @pulpito/api...
+RUN pnpm install --frozen-lockfile --filter @dorada/api...
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 FROM deps AS builder
@@ -16,10 +16,10 @@ WORKDIR /app
 COPY tsconfig.base.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
-RUN pnpm --filter @pulpito/types build
-RUN pnpm --filter @pulpito/utils build
-RUN pnpm --filter @pulpito/api build
-RUN pnpm --filter @pulpito/api exec prisma generate
+RUN pnpm --filter @dorada/types build
+RUN pnpm --filter @dorada/utils build
+RUN pnpm --filter @dorada/api build
+RUN pnpm --filter @dorada/api exec prisma generate
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner

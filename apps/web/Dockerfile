@@ -18,9 +18,9 @@ COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
 COPY --from=deps /app/packages/utils/node_modules ./packages/utils/node_modules
 COPY --from=deps /app/packages/i18n/node_modules ./packages/i18n/node_modules
 COPY . .
-RUN pnpm --filter @pulpito/types build
-RUN pnpm --filter @pulpito/utils build
-RUN pnpm --filter @pulpito/web build
+RUN pnpm --filter @dorada/types build
+RUN pnpm --filter @dorada/utils build
+RUN pnpm --filter @dorada/web build
 
 FROM nginx:alpine AS runner
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
