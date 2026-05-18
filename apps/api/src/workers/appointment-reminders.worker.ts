@@ -1,6 +1,8 @@
 import { Worker, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
-import admin from "firebase-admin";
+// firebase-admin is an optional runtime dependency; use `any` to avoid compile-time errors
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FirebaseApp = any;
 import { config } from "../config.js";
 
 interface ReminderJobData {
@@ -11,7 +13,7 @@ interface ReminderJobData {
 
 export function createAppointmentRemindersWorker(
   prisma: PrismaClient,
-  fcmApp: admin.app.App,
+  fcmApp: FirebaseApp,
 ) {
   return new Worker<ReminderJobData>(
     "appointment-reminders",

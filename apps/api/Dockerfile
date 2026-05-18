@@ -18,8 +18,8 @@ COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 RUN pnpm --filter @dorada/types build
 RUN pnpm --filter @dorada/utils build
-RUN pnpm --filter @dorada/api build
 RUN pnpm --filter @dorada/api exec prisma generate
+RUN pnpm --filter @dorada/api build
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner

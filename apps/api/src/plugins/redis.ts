@@ -1,11 +1,12 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
-import Redis from "ioredis";
+import IORedis from "ioredis";
+import type { Redis as RedisType } from "ioredis";
 import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
 
 export default fp(async (fastify: FastifyInstance) => {
-  const redis = new Redis(config.REDIS_URL, { lazyConnect: true });
+  const redis = new IORedis(config.REDIS_URL, { lazyConnect: true });
 
   redis.on("error", (err) => logger.error({ err }, "redis error"));
 
@@ -20,6 +21,6 @@ export default fp(async (fastify: FastifyInstance) => {
 
 declare module "fastify" {
   interface FastifyInstance {
-    redis: Redis;
+    redis: RedisType;
   }
 }

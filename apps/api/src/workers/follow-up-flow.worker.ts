@@ -1,7 +1,10 @@
 import { Worker, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
-import admin from "firebase-admin";
-import twilio from "twilio";
+// firebase-admin and twilio are optional runtime dependencies; use `any` to avoid compile-time errors
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FirebaseApp = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TwilioClient = any;
 import { config } from "../config.js";
 
 interface FollowUpPromptJobData {
@@ -14,8 +17,8 @@ interface FollowUpPromptJobData {
 
 export function createFollowUpFlowWorker(
   prisma: PrismaClient,
-  fcmApp: admin.app.App,
-  twilioClient: ReturnType<typeof twilio>,
+  fcmApp: FirebaseApp,
+  twilioClient: TwilioClient,
 ) {
   return new Worker<FollowUpPromptJobData>(
     "follow-up-flow",

@@ -2,7 +2,9 @@ import { Worker, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
 import Imap from "imap";
 import { simpleParser } from "mailparser";
-import admin from "firebase-admin";
+// firebase-admin is an optional runtime dependency; use `any` to avoid compile-time errors
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FirebaseApp = any;
 import sgMail from "@sendgrid/mail";
 import { config } from "../config.js";
 import { extractAppointmentFromEmail } from "../integrations/claude.js";
@@ -30,7 +32,7 @@ interface ConfirmationRetryJobData {
 
 export function createEmailIntakeWorker(
   prisma: PrismaClient,
-  fcmApp: admin.app.App,
+  fcmApp: FirebaseApp,
 ) {
   return new Worker<EmailPollJobData | EmailProcessJobData | ConfirmationRetryJobData>(
     "email-intake",
@@ -92,7 +94,7 @@ async function handlePollInbox(job: Job<EmailPollJobData>, prisma: PrismaClient)
 async function handleProcessEmail(
   job: Job<EmailProcessJobData>,
   prisma: PrismaClient,
-  fcmApp: admin.app.App,
+  fcmApp: FirebaseApp,
 ) {
   const { emailLogId, organizationId } = job.data;
 
@@ -186,7 +188,7 @@ async function handleProcessEmail(
 async function handleRetryConfirmation(
   job: Job<ConfirmationRetryJobData>,
   prisma: PrismaClient,
-  _fcmApp: admin.app.App,
+  _fcmApp: FirebaseApp,
 ) {
   const { logId, organizationId } = job.data;
   const log = await prisma.emailIntakeLog.findUnique({
@@ -255,7 +257,7 @@ async function notifyAdmins(
   eventType: string,
   relatedId: string,
   prisma: PrismaClient,
-  fcmApp: admin.app.App,
+  fcmApp: FirebaseApp,
 ) {
   const users = await prisma.user.findMany({
     where: { organization_id: organizationId, is_active: true },

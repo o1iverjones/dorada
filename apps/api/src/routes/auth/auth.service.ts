@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
 import type { PrismaClient } from "@prisma/client";
-import type Redis from "ioredis";
+import type { Redis } from "ioredis";
 import type { FastifyInstance } from "fastify";
 import {
   UnauthorizedError,
