@@ -1,4 +1,4 @@
-import { Worker, type Job } from "bullmq";
+import { Worker, Queue, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
 // firebase-admin and twilio are optional runtime dependencies; use `any` to avoid compile-time errors
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,6 +14,10 @@ interface FollowUpPromptJobData {
   interpreterId: string;
   attempt: number;
 }
+
+const followUpQueue = new Queue("follow-up-flow", {
+  connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+});
 
 export function createFollowUpFlowWorker(
   prisma: PrismaClient,
@@ -78,7 +82,7 @@ export function createFollowUpFlowWorker(
       // Schedule next reminder if within limit
       if (attempt < maxReminders) {
         const reminderWindowMs = (settings?.follow_up_reminder_window_minutes ?? 60) * 60 * 1000;
-        await job.queue.add(
+        await followUpQueue.add(
           "follow-up-prompt",
           {
             type: "reminder",

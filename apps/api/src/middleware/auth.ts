@@ -51,8 +51,4 @@ export async function authenticateAdmin(
   }
 }
 
-declare module "fastify" {
-  interface FastifyRequest {
-    user: JwtPayload;
-  }
-}
+// FastifyRequest.user is typed by @fastify/jwt; no re-augmentation needed here.

@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
-import IORedis from "ioredis";
+import { Redis as IORedis } from "ioredis";
 import type { Redis as RedisType } from "ioredis";
 import { config } from "../config.js";
 import { logger } from "../lib/logger.js";

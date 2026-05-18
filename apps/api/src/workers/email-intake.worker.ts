@@ -1,4 +1,4 @@
-import { Worker, type Job } from "bullmq";
+import { Worker, Queue, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
 import Imap from "imap";
 import { simpleParser } from "mailparser";
@@ -29,6 +29,10 @@ interface ConfirmationRetryJobData {
   logId: string;
   organizationId: string;
 }
+
+const emailIntakeQueue = new Queue("email-intake", {
+  connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+});
 
 export function createEmailIntakeWorker(
   prisma: PrismaClient,
@@ -84,7 +88,7 @@ async function handlePollInbox(job: Job<EmailPollJobData>, prisma: PrismaClient)
       },
     });
 
-    await job.queue.add(
+    await emailIntakeQueue.add(
       "process-email",
       { organizationId, emailLogId: "" } as EmailProcessJobData,
     );

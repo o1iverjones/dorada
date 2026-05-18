@@ -6,7 +6,8 @@
     "exactOptionalPropertyTypes": false,
     "noImplicitAny": false,
     "noUncheckedIndexedAccess": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+    "noEmitOnError": false
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
