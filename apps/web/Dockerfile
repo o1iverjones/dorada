@@ -12,12 +12,16 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS build
 WORKDIR /app
+# Copy installed node_modules from deps stage (workspace root only — pnpm hoists)
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+# Copy package-level node_modules only if they exist (some packages are fully hoisted)
 COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
 COPY --from=deps /app/packages/utils/node_modules ./packages/utils/node_modules
-COPY --from=deps /app/packages/i18n/node_modules ./packages/i18n/node_modules
-COPY . .
+# Copy all source files
+COPY tsconfig.base.json ./
+COPY packages/ ./packages/
+COPY apps/web/ ./apps/web/
 RUN pnpm --filter @dorada/types build
 RUN pnpm --filter @dorada/utils build
 RUN pnpm --filter @dorada/web build
