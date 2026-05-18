@@ -5,7 +5,7 @@ import { stringify } from "csv-stringify/sync";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { config } from "../config.js";
+import { config, redisConnection } from "../config.js";
 import { uploadBuffer, reportPath, getSignedUrl } from "../integrations/gcs.js";
 
 /** True when GCS credentials are configured (production). */
@@ -88,7 +88,7 @@ export function createReportGenerationWorker(prisma: PrismaClient) {
       }
     },
     {
-      connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+      connection: redisConnection,
       concurrency: 3,
     },
   );

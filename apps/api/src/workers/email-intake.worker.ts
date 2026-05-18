@@ -6,7 +6,7 @@ import { simpleParser } from "mailparser";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FirebaseApp = any;
 import sgMail from "@sendgrid/mail";
-import { config } from "../config.js";
+import { config, redisConnection } from "../config.js";
 import { extractAppointmentFromEmail } from "../integrations/claude.js";
 import {
   uploadString,
@@ -31,7 +31,7 @@ interface ConfirmationRetryJobData {
 }
 
 const emailIntakeQueue = new Queue("email-intake", {
-  connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+  connection: redisConnection,
 });
 
 export function createEmailIntakeWorker(
@@ -50,7 +50,7 @@ export function createEmailIntakeWorker(
       }
     },
     {
-      connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+      connection: redisConnection,
       concurrency: 2,
     },
   );

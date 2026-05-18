@@ -45,3 +45,21 @@ function loadConfig(): Config {
 }
 
 export const config = loadConfig();
+
+/** Parsed Redis connection options derived from REDIS_URL, for use with BullMQ. */
+function parseRedisConnection() {
+  try {
+    const url = new URL(config.REDIS_URL);
+    return {
+      host: url.hostname,
+      port: Number(url.port) || 6379,
+      password: url.password || undefined,
+      username: url.username && url.username !== "default" ? url.username : undefined,
+      tls: url.protocol === "rediss:" ? {} : undefined,
+    };
+  } catch {
+    return { host: config.REDIS_HOST, port: config.REDIS_PORT };
+  }
+}
+
+export const redisConnection = parseRedisConnection();

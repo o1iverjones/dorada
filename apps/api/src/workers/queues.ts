@@ -1,11 +1,10 @@
 import { Queue } from "bullmq";
-import type { RedisOptions } from "ioredis";
-import { config } from "../config.js";
+import { redisConnection } from "../config.js";
 
 let queues: ReturnType<typeof createQueues> | null = null;
 
 function createQueues() {
-  const connection: RedisOptions = { host: config.REDIS_HOST, port: config.REDIS_PORT };
+  const connection = redisConnection;
 
   return {
     appointmentRemindersQueue: new Queue("appointment-reminders", { connection }),

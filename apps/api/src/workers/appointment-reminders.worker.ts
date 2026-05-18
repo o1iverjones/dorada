@@ -3,7 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 // firebase-admin is an optional runtime dependency; use `any` to avoid compile-time errors
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FirebaseApp = any;
-import { config } from "../config.js";
+import { redisConnection } from "../config.js";
 
 interface ReminderJobData {
   appointmentId: string;
@@ -51,7 +51,7 @@ export function createAppointmentRemindersWorker(
       });
     },
     {
-      connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+      connection: redisConnection,
       concurrency: 10,
     },
   );

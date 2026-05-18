@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { Queue } from "bullmq";
-import { config } from "../config.js";
+import { config, redisConnection } from "../config.js";
 import { createAppointmentRemindersWorker } from "./appointment-reminders.worker.js";
 import { createFollowUpFlowWorker } from "./follow-up-flow.worker.js";
 import { createReportGenerationWorker } from "./report-generation.worker.js";
@@ -54,8 +54,7 @@ const followUpWorker = createFollowUpFlowWorker(prisma, fcmApp, twilioClient);
 const reportWorker = createReportGenerationWorker(prisma);
 const emailIntakeWorker = createEmailIntakeWorker(prisma, fcmApp);
 
-const connection = { host: config.REDIS_HOST, port: config.REDIS_PORT };
-const emailIntakeQueue = new Queue("email-intake", { connection });
+const emailIntakeQueue = new Queue("email-intake", { connection: redisConnection });
 
 // Kick off repeatable inbox-poll jobs for all active orgs at startup
 async function scheduleEmailPolling() {

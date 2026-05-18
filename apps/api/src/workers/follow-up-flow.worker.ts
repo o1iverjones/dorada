@@ -5,7 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 type FirebaseApp = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TwilioClient = any;
-import { config } from "../config.js";
+import { config, redisConnection } from "../config.js";
 
 interface FollowUpPromptJobData {
   type: "initial_prompt" | "reminder";
@@ -16,7 +16,7 @@ interface FollowUpPromptJobData {
 }
 
 const followUpQueue = new Queue("follow-up-flow", {
-  connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+  connection: redisConnection,
 });
 
 export function createFollowUpFlowWorker(
@@ -99,7 +99,7 @@ export function createFollowUpFlowWorker(
       }
     },
     {
-      connection: { host: config.REDIS_HOST, port: config.REDIS_PORT },
+      connection: redisConnection,
       concurrency: 5,
     },
   );
