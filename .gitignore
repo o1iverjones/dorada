@@ -54,7 +54,7 @@ infrastructure/.terraform.lock.hcl
 infrastructure/terraform.tfvars
 
 # Generated reports (local dev only)
-reports/
+/reports/
 
 # Local font files
 apps/web/public/*.ttf
