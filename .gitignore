@@ -56,6 +56,9 @@ infrastructure/terraform.tfvars
 # Generated reports (local dev only)
 reports/
 
+# Local font files
+apps/web/public/*.ttf
+
 # Local uploads (dev fallback — never commit real media)
 apps/api/uploads/
 
