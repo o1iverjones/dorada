@@ -1,4 +1,4 @@
-const BASE = "/api/v1";
+const BASE = `${(import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? ""}/api/v1`;
 
 class ApiError extends Error {
   constructor(
