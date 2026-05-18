@@ -23,6 +23,7 @@ RUN pnpm --filter @dorada/api build
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 
 # Preserve the full pnpm workspace layout so all symlinks resolve correctly.
