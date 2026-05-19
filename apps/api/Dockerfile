@@ -35,11 +35,14 @@ COPY --from=builder /app/apps/api/dist /app/apps/api/dist
 COPY --from=builder /app/apps/api/prisma /app/apps/api/prisma
 COPY --from=builder /app/apps/api/package.json /app/apps/api/package.json
 
-# Workspace packages imported at runtime
+# Workspace packages imported at runtime — need their node_modules too
+# so pnpm symlinks (e.g. zod inside @dorada/types) resolve correctly
 COPY --from=builder /app/packages/types/package.json /app/packages/types/package.json
 COPY --from=builder /app/packages/types/dist /app/packages/types/dist
+COPY --from=builder /app/packages/types/node_modules /app/packages/types/node_modules
 COPY --from=builder /app/packages/utils/package.json /app/packages/utils/package.json
 COPY --from=builder /app/packages/utils/dist /app/packages/utils/dist
+COPY --from=builder /app/packages/utils/node_modules /app/packages/utils/node_modules
 
 WORKDIR /app/apps/api
 # fastify-static requires the uploads dir to exist at startup
