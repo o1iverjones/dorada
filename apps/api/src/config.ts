@@ -40,7 +40,7 @@ export type Config = z.infer<typeof ConfigSchema>;
 function loadConfig(): Config {
   const result = ConfigSchema.safeParse(process.env);
   if (!result.success) {
-    console.error("Invalid environment configuration:", result.error.format());
+    process.stdout.write(`[config] FATAL - missing or invalid env vars:\n${JSON.stringify(result.error.format(), null, 2)}\n`);
     process.exit(1);
   }
   return result.data;
