@@ -44,5 +44,7 @@ COPY --from=builder /app/packages/utils/dist /app/packages/utils/dist
 WORKDIR /app/apps/api
 # fastify-static requires the uploads dir to exist at startup
 RUN mkdir -p /app/apps/api/uploads
+COPY --from=builder /app/apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+CMD ["./docker-entrypoint.sh"]
