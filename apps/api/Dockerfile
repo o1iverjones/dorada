@@ -42,5 +42,7 @@ COPY --from=builder /app/packages/utils/package.json /app/packages/utils/package
 COPY --from=builder /app/packages/utils/dist /app/packages/utils/dist
 
 WORKDIR /app/apps/api
+# fastify-static requires the uploads dir to exist at startup
+RUN mkdir -p /app/apps/api/uploads
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

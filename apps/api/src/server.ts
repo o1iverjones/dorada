@@ -25,7 +25,7 @@ export async function buildServer() {
 
   await fastify.register(fastifyHelmet);
   await fastify.register(fastifyCors, {
-    origin: config.NODE_ENV === "production" ? false : true,
+    origin: config.CORS_ORIGIN ? config.CORS_ORIGIN.split(",").map((o) => o.trim()) : true,
     credentials: true,
   });
   await fastify.register(fastifyRateLimit, {

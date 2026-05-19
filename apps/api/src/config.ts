@@ -10,6 +10,8 @@ const ConfigSchema = z.object({
   REDIS_HOST: z.string().default("localhost"),
   REDIS_PORT: z.coerce.number().default(6379),
 
+  CORS_ORIGIN: z.string().optional(),
+
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default("15m"),
   JWT_REFRESH_TTL_DAYS: z.coerce.number().default(30),
