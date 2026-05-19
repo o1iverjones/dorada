@@ -6,7 +6,7 @@ import { config } from "../config.js";
 import { logger } from "../lib/logger.js";
 
 export default fp(async (fastify: FastifyInstance) => {
-  const redis = new IORedis(config.REDIS_URL, { lazyConnect: true });
+  const redis = new IORedis(config.REDIS_URL, { lazyConnect: true, connectTimeout: 10000, maxRetriesPerRequest: null });
 
   redis.on("error", (err) => logger.error({ err }, "redis error"));
 
