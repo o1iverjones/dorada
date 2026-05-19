@@ -8,4 +8,4 @@ echo "[entrypoint] seeding database..."
 node_modules/.bin/tsx prisma/seed.ts || echo "[entrypoint] seed skipped or already done"
 
 echo "[entrypoint] starting server..."
-exec node dist/main.js
+exec node dist/main.js 2>&1
