@@ -7,14 +7,15 @@
 ## Table of Contents
 
 1. [Platform Overview](#1-platform-overview)
-2. [Hosting — Railway](#2-hosting--railway)
-3. [Required Third-Party Services](#3-required-third-party-services)
-4. [Technical Migration Checklist](#4-technical-migration-checklist)
-5. [Environment Variables Reference](#5-environment-variables-reference)
-6. [Mobile App Publishing](#6-mobile-app-publishing)
-7. [Security Hardening Checklist](#7-security-hardening-checklist)
-8. [Estimated Monthly Costs](#8-estimated-monthly-costs)
-9. [Alternative Hosting Options](#9-alternative-hosting-options)
+2. [Branching & Release Strategy](#2-branching--release-strategy)
+3. [Hosting — Railway](#3-hosting--railway)
+4. [Required Third-Party Services](#4-required-third-party-services)
+5. [Technical Migration Checklist](#5-technical-migration-checklist)
+6. [Environment Variables Reference](#6-environment-variables-reference)
+7. [Mobile App Publishing](#7-mobile-app-publishing)
+8. [Security Hardening Checklist](#8-security-hardening-checklist)
+9. [Estimated Monthly Costs](#9-estimated-monthly-costs)
+10. [Alternative Hosting Options](#10-alternative-hosting-options)
 
 ---
 
@@ -32,6 +33,36 @@ Dorada is a multi-tenant medical interpretation management platform. The product
 | **File storage** | Cloudflare R2 | S3-compatible object storage. Local `uploads/` folder is a dev-only fallback; R2 is the production target. |
 | **Real-time** | Socket.io | Admin web messaging. Requires sticky sessions or Redis adapter if horizontally scaled. |
 | **Report worker** | Node.js / BullMQ | Separate long-running process (`workers/reports-worker.ts`). Must be deployed as its own service — API and worker are independent processes. |
+
+---
+
+## 2. Branching & Release Strategy
+
+Dorada uses a two-branch model:
+
+| Branch | Environment | Purpose |
+|---|---|---|
+| `dev` | Development (Railway) | Active development — push freely and often |
+| `main` | Production (Railway) | Stable releases only — never push directly |
+
+All three Railway services (API, worker, web) must point to the same branch. Verify this in Railway's service settings whenever a new service is created.
+
+### Day-to-day development
+- Work on `dev` (or feature branches merged into `dev`)
+- Push to `dev` as frequently as needed — this is the live dev environment
+- Break things here, not in `main`
+
+### Releasing to production
+1. Test thoroughly on `dev`
+2. Open a **pull request** from `dev` → `main` on GitHub
+3. Review the diff — use this as a final sanity check of everything going to prod
+4. Merge the PR
+5. Railway auto-deploys `main` to all production services
+
+### Before going live with real clients
+- [ ] Enable **branch protection on `main`** in GitHub (Settings → Branches) — require PRs, block direct pushes
+- [ ] Confirm all Railway production services are pointing to `main`
+- [ ] Consider adding a basic CI check (e.g. typecheck) to run on PRs before merge
 
 ---
 
