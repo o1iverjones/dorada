@@ -66,6 +66,9 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-2">
+            <img src="/dorada-logo-trans2.png" alt="Dorada" className="h-16 w-16 rounded-full object-cover" />
+          </div>
           <CardTitle className="text-3xl">Dorada</CardTitle>
           <CardDescription>{t("auth.sign_in_description")}</CardDescription>
         </CardHeader>

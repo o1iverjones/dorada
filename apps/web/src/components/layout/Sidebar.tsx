@@ -50,7 +50,7 @@ export function Sidebar() {
     <aside className="flex w-64 flex-col bg-sidebar-bg">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5 border-b border-white/10">
-        <img src="/dorada-logo-trans.jpeg" alt="Dorada" className="h-9 w-9 rounded-full object-cover" />
+        <img src="/dorada-logo-trans2.png" alt="Dorada" className="h-9 w-9 rounded-full object-cover" />
         <span style={{ fontFamily: "PlanetComic, sans-serif", fontSize: "1.75rem" }} className="text-white">DORADA</span>
       </div>
 
