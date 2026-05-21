@@ -54,22 +54,7 @@ export function ImportPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`/api/v1/import/${selected}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("dorada_access_token")}`,
-        },
-        body: formData,
-      });
-
-      const text = await res.text();
-      if (!res.ok) {
-        let message = `Server error (${res.status})`;
-        try { message = (JSON.parse(text) as { error?: { message?: string } })?.error?.message ?? message; } catch {}
-        throw new Error(message);
-      }
-
-      const data = JSON.parse(text) as ImportResult;
+      const data = await api.uploadFile<ImportResult>(`/import/${selected}`, formData);
       setResult(data);
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
