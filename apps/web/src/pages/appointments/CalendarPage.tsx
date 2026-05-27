@@ -200,7 +200,11 @@ export function CalendarPage() {
 
   function apptColorClass(a: Record<string, unknown>) {
     const hasInterpreter = !!(a.interpreter as Record<string, unknown> | null)?.id;
-    if (!hasInterpreter) return "bg-gray-100 border-gray-300 text-gray-500";
+    if (!hasInterpreter) {
+      const hasPendingOffer = ((a.offers as Array<unknown>) ?? []).length > 0;
+      if (hasPendingOffer) return "bg-orange-100 border-orange-300 text-orange-900";
+      return "bg-gray-100 border-gray-300 text-gray-500";
+    }
     return STATUS_COLORS[a.status as string] ?? "bg-muted border-gray-300";
   }
 
