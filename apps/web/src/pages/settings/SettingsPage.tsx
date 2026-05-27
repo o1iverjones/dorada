@@ -59,13 +59,17 @@ function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => 
             <option value="hourly">{t("settings.hourly")}</option>
             <option value="flat_rate">{t("settings.flat_rate")}</option>
           </select>
-          <Input
-            type="number"
-            min={0.5}
-            step={0.5}
-            value={form.minimum_billable_hours}
-            onChange={(e) => setForm(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))}
-          />
+          <div className="relative">
+            <Input
+              type="number"
+              min={0.5}
+              step={0.5}
+              value={form.minimum_billable_hours}
+              onChange={(e) => setForm(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))}
+              className="pr-10"
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">hrs</span>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={save} disabled={!form.name || update.isPending}>
@@ -84,7 +88,7 @@ function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => 
       <span className="font-medium">{ty.name}</span>
       <div className="flex items-center gap-4 text-muted-foreground">
         <span>{ty.pay_model}</span>
-        <span>{(ty.minimum_billable_minutes / 60).toFixed(1)}h min</span>
+        <span>{(ty.minimum_billable_minutes / 60).toFixed(1)} hrs min</span>
         <button type="button" onClick={startEdit} className="hover:text-foreground transition-colors">
           <Pencil className="h-4 w-4" />
         </button>
@@ -382,7 +386,10 @@ export function SettingsPage() {
               <option value="hourly">{t("settings.hourly")}</option>
               <option value="flat_rate">{t("settings.flat_rate")}</option>
             </select>
-            <Input type="number" min={0.5} step={0.5} value={newType.minimum_billable_hours} onChange={(e) => setNewType(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))} />
+            <div className="relative">
+              <Input type="number" min={0.5} step={0.5} value={newType.minimum_billable_hours} onChange={(e) => setNewType(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))} className="pr-10" />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">hrs</span>
+            </div>
           </div>
           <Button onClick={addType} disabled={!newType.name || createType.isPending}>{t("settings.add_type")}</Button>
         </CardContent>
