@@ -55,7 +55,15 @@ export function PatientsPage() {
       },
     },
     {
-      key: "claims",
+      key: "claims_case",
+      header: t("patients.case_numbers"),
+      render: (r: Record<string, unknown>) => {
+        const claims = r.claims as Array<{ case_number: string }> | undefined;
+        return claims?.length ? claims.map((c) => c.case_number).join(", ") : "—";
+      },
+    },
+    {
+      key: "claims_injury",
       header: t("patients.injury"),
       render: (r: Record<string, unknown>) => {
         const claims = r.claims as Array<{ injury: string | null }> | undefined;
