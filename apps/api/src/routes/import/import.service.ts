@@ -99,18 +99,18 @@ function normalizePhone(raw: string): string | null {
   return `+${digits}`;
 }
 
-function extractTypeFromTags(row: Record<string, string>): "Certified" | "Qualified" {
+function extractTypeFromTags(row: Record<string, string>): "certified" | "qualified" {
   for (let t = 1; t <= 27; t++) {
     const val = row[`Tag ${t}`]?.trim().toLowerCase();
-    if (val === "certified") return "Certified";
-    if (val === "qualified") return "Qualified";
+    if (val === "certified") return "certified";
+    if (val === "qualified") return "qualified";
   }
-  return "Qualified";
+  return "qualified";
 }
 
-function extractPayRate(row: Record<string, string>, type: "Certified" | "Qualified"): number | null {
+function extractPayRate(row: Record<string, string>, type: "certified" | "qualified"): number | null {
   const preferredPositions =
-    type === "Certified"
+    type === "certified"
       ? ["interpreter - certified", "new rate", "interpreter normal"]
       : ["interpreter normal", "interpreter - certified"];
 
@@ -164,7 +164,7 @@ export async function importInterpreters(
     const row = rows[i]!;
     const rowNum = i + 2;
 
-    let name: string, phone: string | null, type: "Certified" | "Qualified",
+    let name: string, phone: string | null, type: "certified" | "qualified",
       email: string | null, address: string | null, payRate: number | null,
       paymentMethod: string | null, emergencyContactName: string | null,
       emergencyContactPhone: string | null, notes: string | null,
@@ -187,12 +187,12 @@ export async function importInterpreters(
     } else {
       name = row["name"]?.trim() ?? "";
       phone = row["phone"]?.trim() || null;
-      const rawType = row["type"]?.trim();
-      if (!rawType || !["Certified", "Qualified"].includes(rawType)) {
-        result.errors.push({ row: rowNum, message: "type must be 'Certified' or 'Qualified'" });
+      const rawType = row["type"]?.trim().toLowerCase();
+      if (!rawType || !["certified", "qualified"].includes(rawType)) {
+        result.errors.push({ row: rowNum, message: "type must be 'certified' or 'qualified'" });
         continue;
       }
-      type = rawType as "Certified" | "Qualified";
+      type = rawType as "certified" | "qualified";
       email = row["email"]?.trim() || null;
       address = row["address"]?.trim() || null;
       payRate = row["pay_rate"] ? parseFloat(row["pay_rate"]) : null;
@@ -428,7 +428,7 @@ export async function importAppointments(
     const durationStr = row["duration_minutes"]?.trim();
     const appointmentTypeName = row["appointment_type"]?.trim();
     const language = row["language"]?.trim();
-    const interpreterTypeRequired = row["interpreter_type_required"]?.trim();
+    const interpreterTypeRequired = row["interpreter_type_required"]?.trim().toLowerCase();
     const patientName = row["patient_name"]?.trim();
     const clinicName = row["clinic_name"]?.trim();
     const insuranceAgencyName = row["insurance_agency_name"]?.trim();
