@@ -56,7 +56,7 @@
     "appointments": "Citas",
     "interpreters": "Intérpretes",
     "clinics": "Clínicas",
-    "insuranceAgencies": "Agencias de seguros",
+    "insuranceAgencies": "Agencias",
     "patients": "Pacientes",
     "reports": "Reportes",
     "messages": "Mensajes",
@@ -69,7 +69,7 @@
     "calendar": "Calendario",
     "dashboard": "Panel principal",
     "email_intake": "Correos entrantes",
-    "insurance_agencies": "Agencias de seguros",
+    "insurance_agencies": "Agencias",
     "availability": "Horario",
     "profile": "Perfil",
     "invoices": "Facturas"
@@ -131,7 +131,7 @@
     "fields.interpreterType": "Tipo de intérprete",
     "fields.interpreter": "Intérprete",
     "fields.clinic": "Clínica",
-    "fields.insuranceAgency": "Agencia de seguros",
+    "fields.insuranceAgency": "Agencia",
     "fields.patient": "Paciente",
     "fields.physician": "Médico referente",
     "fields.department": "Departamento",
@@ -205,8 +205,8 @@
     "emailIntake.confirmationMethod": "Método de confirmación",
     "emailIntake.replyTemplate": "Plantilla de respuesta",
     "emailIntake.replyFrom": "Responder desde",
-    "create.title": "Agregar agencia de seguros",
-    "edit.title": "Editar agencia de seguros"
+    "create.title": "Agregar agencia",
+    "edit.title": "Editar agencia"
   },
   "patient": {
     "fields.name": "Nombre del paciente",
@@ -219,7 +219,7 @@
   },
   "report": {
     "type.interpreter_compensation": "Compensación de intérpretes",
-    "type.insurance_agency_billing": "Facturación de agencias de seguros",
+    "type.insurance_agency_billing": "Facturación de agencias",
     "type.appointment_history": "Historial de citas",
     "type.interpreter_performance": "Desempeño y asistencia de intérpretes",
     "format.pdf": "PDF",
@@ -365,7 +365,7 @@
     "interpreter_type": "Tipo de intérprete",
     "interpreter": "Intérprete",
     "clinic": "Clínica",
-    "insurance_agency": "Agencia de seguros",
+    "insurance_agency": "Agencia",
     "patient": "Paciente",
     "referring_physician": "Médico referente",
     "po_number": "Número de PO",
@@ -518,7 +518,7 @@
     "subject": "Asunto",
     "from": "De",
     "received_at": "Recibido",
-    "agency": "Agencia de seguros",
+    "agency": "Agencia",
     "confirmation": "Confirmación",
     "extracted_patient": "Paciente",
     "extracted_clinic": "Clínica",
@@ -531,11 +531,11 @@
     "draft_dismissed": "Borrador descartado."
   },
   "insurance_agencies": {
-    "title": "Agencias de seguros",
+    "title": "Agencias",
     "new": "Nueva agencia",
     "name": "Nombre de la agencia",
     "details": "Detalles de la agencia",
-    "empty": "No se encontraron agencias de seguros.",
+    "empty": "No se encontraron agencias.",
     "confirmation_method": "Método de confirmación",
     "reply_template": "Plantilla de respuesta",
     "reply_from_name": "Nombre de respuesta",
