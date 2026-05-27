@@ -46,16 +46,31 @@ export function PatientsPage() {
 
   const columns = [
     { key: "name", header: t("patients.name") },
-    { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => r.phone as string ?? "—" },
     {
-      key: "claims",
-      header: t("patients.case_numbers"),
+      key: "date_of_birth",
+      header: t("patients.date_of_birth"),
       render: (r: Record<string, unknown>) => {
-        const claims = r.claims as Array<{ case_number: string }> | undefined;
-        return claims?.length ? claims.map((c) => c.case_number).join(", ") : "—";
+        const dob = r.date_of_birth as string | null;
+        return dob ? new Date(dob).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }) : "—";
       },
     },
-    { key: "preferred_language", header: t("patients.preferred_language"), render: (r: Record<string, unknown>) => r.preferred_language as string ?? "—" },
+    {
+      key: "claims",
+      header: t("patients.injury"),
+      render: (r: Record<string, unknown>) => {
+        const claims = r.claims as Array<{ injury: string | null }> | undefined;
+        const injuries = claims?.map((c) => c.injury).filter(Boolean) as string[] | undefined;
+        return injuries?.length ? injuries.join(", ") : "—";
+      },
+    },
+    {
+      key: "preferred_interpreter",
+      header: t("patients.preferred_interpreter"),
+      render: (r: Record<string, unknown>) => {
+        const interp = r.preferred_interpreter as { name: string } | null;
+        return interp?.name ?? "—";
+      },
+    },
   ];
 
   return (
