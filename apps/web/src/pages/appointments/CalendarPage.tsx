@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -34,9 +34,6 @@ const BLOCK_COLORS = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-
 function startOfWeek(d: Date): Date {
   const s = new Date(d);
   s.setHours(0, 0, 0, 0);
@@ -52,6 +49,13 @@ export function CalendarPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
+  // Derive "today" on every render using the org timezone so it's never stale
+  // and matches the correct local date even if the browser is in a different zone.
+  const today = useMemo(() => {
+    const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+    const [y, m, d] = todayStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }, [tz]);
   const [view, setView] = useState<View>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [interpreterFilter, setInterpreterFilter] = useState("");
