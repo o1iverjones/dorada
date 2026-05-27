@@ -22,7 +22,10 @@ export const CreatePatientBodySchema = z.object({
   preferred_language: z.string().min(2).max(10).optional(),
 });
 
-export const UpdatePatientBodySchema = CreatePatientBodySchema.partial();
+export const UpdatePatientBodySchema = CreatePatientBodySchema.partial().extend({
+  // Allow null to clear the date of birth
+  date_of_birth: z.string().date().nullable().optional(),
+});
 
 export const PatientListQuerySchema = z.object({
   search: z.string().optional(),
