@@ -71,6 +71,8 @@ export function CalendarPage() {
   // Date picker popover
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(currentDate.getFullYear());
+  const [pickerLevel, setPickerLevel] = useState<"month" | "day">("month");
+  const [pickerDrillMonth, setPickerDrillMonth] = useState(currentDate.getMonth());
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
 
@@ -340,9 +342,14 @@ export function CalendarPage() {
           <Button variant="outline" size="icon" onClick={prev}><ChevronLeft className="h-4 w-4" /></Button>
           <div className="relative">
             <button
-              onClick={() => { setPickerYear(currentDate.getFullYear()); setDatePickerOpen((v) => !v); }}
+              onClick={() => {
+                setPickerYear(currentDate.getFullYear());
+                setPickerLevel("month");
+                setPickerDrillMonth(currentDate.getMonth());
+                setDatePickerOpen((v) => !v);
+              }}
               className="min-w-44 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-semibold hover:bg-muted transition-colors"
-              title="Jump to month"
+              title="Jump to date"
             >
               {rangeLabel}
               <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -353,6 +360,10 @@ export function CalendarPage() {
                 selectedYear={currentDate.getFullYear()}
                 selectedMonth={currentDate.getMonth()}
                 selectedDay={currentDate.getDate()}
+                level={pickerLevel}
+                drillMonth={pickerDrillMonth}
+                onLevelChange={setPickerLevel}
+                onDrillMonthChange={setPickerDrillMonth}
                 onYearChange={setPickerYear}
                 onSelect={(y, m, d) => {
                   setCurrentDate(new Date(y, m, d));
@@ -538,6 +549,10 @@ function JumpToDatePicker({
   selectedYear,
   selectedMonth,
   selectedDay,
+  level,
+  drillMonth,
+  onLevelChange,
+  onDrillMonthChange,
   onYearChange,
   onSelect,
   onClose,
@@ -546,13 +561,15 @@ function JumpToDatePicker({
   selectedYear: number;
   selectedMonth: number;
   selectedDay: number;
+  level: "month" | "day";
+  drillMonth: number;
+  onLevelChange: (l: "month" | "day") => void;
+  onDrillMonthChange: (m: number) => void;
   onYearChange: (y: number) => void;
   onSelect: (year: number, month: number, day: number) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [level, setLevel] = useState<"month" | "day">("month");
-  const [drillMonth, setDrillMonth] = useState(selectedMonth);
 
   useEffect(() => {
     function handleDown(e: MouseEvent) {
@@ -582,8 +599,9 @@ function JumpToDatePicker({
     <div
       ref={ref}
       className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 rounded-lg border bg-popover shadow-xl"
-      style={{ width: level === "day" ? "224px" : "224px" }}
+      style={{ width: "224px" }}
       onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
       {level === "month" ? (
         <>
@@ -605,7 +623,7 @@ function JumpToDatePicker({
               return (
                 <button
                   key={abbr}
-                  onClick={() => { setDrillMonth(idx); setLevel("day"); }}
+                  onClick={() => { onDrillMonthChange(idx); onLevelChange("day"); }}
                   className={[
                     "rounded-md py-1.5 text-xs font-medium transition-colors",
                     isSelected ? "bg-primary text-primary-foreground"
@@ -623,19 +641,19 @@ function JumpToDatePicker({
         <>
           {/* Day-level header: back + prev/next month */}
           <div className="flex items-center justify-between px-2 py-2 border-b">
-            <button onClick={() => setLevel("month")} className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors" title="Back to months">
+            <button onClick={() => onLevelChange("month")} className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors" title="Back to months">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setLevel("month")}
+              onClick={() => onLevelChange("month")}
               className="text-xs font-bold hover:underline"
             >
               {MONTH_NAMES[drillMonth]} {pickerYear}
             </button>
             <button
               onClick={() => {
-                if (drillMonth === 11) { onYearChange(pickerYear + 1); setDrillMonth(0); }
-                else setDrillMonth((m) => m + 1);
+                if (drillMonth === 11) { onYearChange(pickerYear + 1); onDrillMonthChange(0); }
+                else onDrillMonthChange(drillMonth + 1);
               }}
               className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors"
             >
