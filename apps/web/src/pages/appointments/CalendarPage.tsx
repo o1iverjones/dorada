@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js"
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Button } from "../../components/ui/button.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
-import { ChevronLeft, ChevronRight, Plus, CalendarOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, CalendarOff, CalendarDays } from "lucide-react";
 import { api } from "../../lib/api.js";
 
 type View = "month" | "week";
@@ -63,6 +63,12 @@ export function CalendarPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showBlocks, setShowBlocks] = useState(false);
   const [tooltip, setTooltip] = useState<{ appt: Record<string, unknown>; x: number; y: number } | null>(null);
+
+  // Date picker popover
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(currentDate.getFullYear());
+  // The currently-displayed month in the picker (for highlighting); derived from currentDate.
+  const pickerMonth = currentDate.getMonth();
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
 
@@ -278,7 +284,29 @@ export function CalendarPage() {
         {/* Navigation */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={prev}><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="min-w-44 text-center font-semibold text-sm">{rangeLabel}</span>
+          <div className="relative">
+            <button
+              onClick={() => { setPickerYear(currentDate.getFullYear()); setDatePickerOpen((v) => !v); }}
+              className="min-w-44 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-semibold hover:bg-muted transition-colors"
+              title="Jump to month"
+            >
+              {rangeLabel}
+              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </button>
+            {datePickerOpen && (
+              <JumpToDatePicker
+                pickerYear={pickerYear}
+                selectedYear={currentDate.getFullYear()}
+                selectedMonth={pickerMonth}
+                onYearChange={setPickerYear}
+                onSelect={(y, m) => {
+                  setCurrentDate(new Date(y, m, 1));
+                  setDatePickerOpen(false);
+                }}
+                onClose={() => setDatePickerOpen(false)}
+              />
+            )}
+          </div>
           <Button variant="outline" size="icon" onClick={next}><ChevronRight className="h-4 w-4" /></Button>
         </div>
 
@@ -405,6 +433,89 @@ export function CalendarPage() {
       )}
 
       {tooltip && <ApptTooltip appt={tooltip.appt} x={tooltip.x} y={tooltip.y} />}
+    </div>
+  );
+}
+
+// ─── Jump-to-date picker popover ──────────────────────────────────────────────
+
+const MONTH_ABBRS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function JumpToDatePicker({
+  pickerYear,
+  selectedYear,
+  selectedMonth,
+  onYearChange,
+  onSelect,
+  onClose,
+}: {
+  pickerYear: number;       // year currently shown inside the picker (navigable)
+  selectedYear: number;     // year the calendar is currently on (for highlighting)
+  selectedMonth: number;    // month the calendar is currently on (for highlighting)
+  onYearChange: (y: number) => void;
+  onSelect: (year: number, month: number) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on click-outside
+  useEffect(() => {
+    function handleDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handleDown);
+    return () => document.removeEventListener("mousedown", handleDown);
+  }, [onClose]);
+
+  const todayYear = new Date().getFullYear();
+  const todayMonth = new Date().getMonth();
+
+  return (
+    <div
+      ref={ref}
+      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-56 rounded-lg border bg-popover shadow-xl"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {/* Year navigation */}
+      <div className="flex items-center justify-between px-3 py-2 border-b">
+        <button
+          onClick={() => onYearChange(pickerYear - 1)}
+          className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-bold">{pickerYear}</span>
+        <button
+          onClick={() => onYearChange(pickerYear + 1)}
+          className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Month grid — 4 cols × 3 rows */}
+      <div className="grid grid-cols-4 gap-1 p-2">
+        {MONTH_ABBRS.map((abbr, idx) => {
+          const isSelected = idx === selectedMonth && pickerYear === selectedYear;
+          const isCurrentMonth = idx === todayMonth && pickerYear === todayYear;
+          return (
+            <button
+              key={abbr}
+              onClick={() => onSelect(pickerYear, idx)}
+              className={[
+                "rounded-md py-1.5 text-xs font-medium transition-colors",
+                isSelected
+                  ? "bg-primary text-primary-foreground"
+                  : isCurrentMonth
+                  ? "ring-1 ring-primary text-primary hover:bg-muted"
+                  : "hover:bg-muted text-foreground",
+              ].join(" ")}
+            >
+              {abbr}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
