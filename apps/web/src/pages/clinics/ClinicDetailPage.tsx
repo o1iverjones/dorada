@@ -42,6 +42,7 @@ export function ClinicDetailPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [pendingBlockIds, setPendingBlockIds] = useState<string[]>([]);
   const [noteText, setNoteText] = useState("");
@@ -415,20 +416,15 @@ export function ClinicDetailPage() {
                 <span className="text-sm font-medium text-destructive">{t("clinics.deactivate_label")}</span>
               </label>
             ) : (
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    await update.mutateAsync({ is_active: true });
-                    toast({ title: t("clinics.reactivated") });
-                  } catch {
-                    toast({ title: t("common.error"), variant: "destructive" });
-                  }
-                }}
-                disabled={update.isPending}
-              >
-                {t("clinics.reactivate")}
-              </Button>
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-green-300 bg-green-50 p-3 hover:bg-green-100 transition-colors dark:border-green-800 dark:bg-green-950/30 dark:hover:bg-green-950/50">
+                <input
+                  type="checkbox"
+                  checked={false}
+                  onChange={() => setReactivateDialogOpen(true)}
+                  className="h-4 w-4 accent-green-600"
+                />
+                <span className="text-sm font-medium text-green-700 dark:text-green-400">{t("clinics.reactivate_label")}</span>
+              </label>
             )}
           </CardContent>
         </Card>
@@ -459,6 +455,33 @@ export function ClinicDetailPage() {
               }}
             >
               {t("clinics.deactivate_confirm_button")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivate Confirmation Dialog */}
+      <Dialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("clinics.reactivate_confirm_title")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("clinics.reactivate_confirm_body")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              disabled={update.isPending}
+              onClick={async () => {
+                try {
+                  await update.mutateAsync({ is_active: true });
+                  setReactivateDialogOpen(false);
+                  toast({ title: t("clinics.reactivated") });
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("clinics.reactivate_confirm_button")}
             </Button>
           </DialogFooter>
         </DialogContent>
