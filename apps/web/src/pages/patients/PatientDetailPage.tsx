@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { usePatient, useUpdatePatient } from "../../hooks/usePatients.js";
+import { usePatient, useUpdatePatient, useCreateClaim, useUpdateClaim, useDeleteClaim } from "../../hooks/usePatients.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
+import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
@@ -18,6 +19,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "../../hooks/use-toast.js";
 import { Pencil, Plus, X } from "lucide-react";
 
+interface Claim {
+  id: string;
+  case_number: string;
+  injury: string | null;
+  date_of_injury: string | null;
+  insurance_agency: { id: string; name: string } | null;
+  adjuster: string | null;
+}
+
+const emptyClaimForm = {
+  case_number: "",
+  injury: "",
+  date_of_injury: "",
+  insurance_agency_id: "",
+  adjuster: "",
+};
+
 export function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -27,23 +45,32 @@ export function PatientDetailPage() {
   const { data: appts } = useAppointments({ patient_id: id!, limit: "20" });
   const update = useUpdatePatient(id!);
   const { data: interpretersData } = useInterpreters({ limit: "200" });
+  const { data: agenciesData } = useInsuranceAgencies({ limit: "200" });
+
+  const createClaim = useCreateClaim(id!);
+  const deleteClaim = useDeleteClaim(id!);
 
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState({ name: "", date_of_birth: "", phone: "", email: "", preferred_language: "" });
   const [preferredInterpreterId, setPreferredInterpreterId] = useState<string>("");
 
-  // Case number editing state
-  const [newCaseNumber, setNewCaseNumber] = useState("");
-  const [savingCase, setSavingCase] = useState(false);
+  // Claim dialog state
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [editingClaimId, setEditingClaimId] = useState<string | null>(null);
+  const [claimForm, setClaimForm] = useState(emptyClaimForm);
+  const updateClaim = useUpdateClaim(id!, editingClaimId ?? "");
 
   const interpreterOptions = ((interpretersData?.data ?? []) as Array<{ id: string; name: string }>)
     .map((i) => ({ value: i.id, label: i.name }));
+
+  const agencyOptions = ((agenciesData?.data ?? []) as Array<{ id: string; name: string }>)
+    .map((a) => ({ value: a.id, label: a.name }));
 
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
 
   const p = data as Record<string, unknown>;
-  const caseNumbers = (p.case_numbers as string[]) ?? [];
+  const claims = (p.claims as Claim[]) ?? [];
   const preferredInterpreter = p.preferred_interpreter as { id: string; name: string } | null | undefined;
 
   function openEdit() {
@@ -71,23 +98,48 @@ export function PatientDetailPage() {
     }
   }
 
-  async function addCaseNumber() {
-    const num = newCaseNumber.trim();
-    if (!num || caseNumbers.includes(num)) return;
-    setSavingCase(true);
+  function openAddClaim() {
+    setEditingClaimId(null);
+    setClaimForm(emptyClaimForm);
+    setClaimDialogOpen(true);
+  }
+
+  function openEditClaim(claim: Claim) {
+    setEditingClaimId(claim.id);
+    setClaimForm({
+      case_number: claim.case_number,
+      injury: claim.injury ?? "",
+      date_of_injury: claim.date_of_injury ? claim.date_of_injury.slice(0, 10) : "",
+      insurance_agency_id: claim.insurance_agency?.id ?? "",
+      adjuster: claim.adjuster ?? "",
+    });
+    setClaimDialogOpen(true);
+  }
+
+  async function handleClaimSave() {
     try {
-      await update.mutateAsync({ case_numbers: [...caseNumbers, num] });
-      setNewCaseNumber("");
+      const payload: Record<string, unknown> = {
+        case_number: claimForm.case_number,
+        injury: claimForm.injury || null,
+        date_of_injury: claimForm.date_of_injury || null,
+        insurance_agency_id: claimForm.insurance_agency_id || null,
+        adjuster: claimForm.adjuster || null,
+      };
+      if (editingClaimId) {
+        await updateClaim.mutateAsync(payload);
+      } else {
+        await createClaim.mutateAsync(payload);
+      }
+      toast({ title: t("common.saved") });
+      setClaimDialogOpen(false);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
-    } finally {
-      setSavingCase(false);
     }
   }
 
-  async function removeCaseNumber(num: string) {
+  async function handleDeleteClaim(claimId: string) {
     try {
-      await update.mutateAsync({ case_numbers: caseNumbers.filter((n) => n !== num) });
+      await deleteClaim.mutateAsync(claimId);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     }
@@ -124,47 +176,58 @@ export function PatientDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Case numbers */}
+        {/* Claims */}
         <Card>
-          <CardHeader><CardTitle>{t("patients.case_numbers")}</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {caseNumbers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("patients.no_case_numbers")}</p>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle>{t("patients.claims")}</CardTitle>
+            <Button type="button" size="sm" variant="outline" onClick={openAddClaim}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> {t("patients.add_claim")}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {claims.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("patients.no_claims")}</p>
             ) : (
-              <ul className="space-y-1.5">
-                {caseNumbers.map((num) => (
-                  <li key={num} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <span className="font-mono font-medium">{num}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeCaseNumber(num)}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
-                      title={t("common.remove")}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+              <ul className="space-y-2">
+                {claims.map((claim) => (
+                  <li key={claim.id} className="rounded-md border p-3 text-sm space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-mono font-semibold">{claim.case_number}</span>
+                      <div className="flex gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => openEditClaim(claim)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          title={t("common.edit")}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteClaim(claim.id)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          title={t("common.remove")}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    {claim.injury && (
+                      <div className="text-muted-foreground">{t("patients.injury")}: <span className="text-foreground">{claim.injury}</span></div>
+                    )}
+                    {claim.date_of_injury && (
+                      <div className="text-muted-foreground">{t("patients.date_of_injury")}: <span className="text-foreground">{new Date(claim.date_of_injury).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</span></div>
+                    )}
+                    {claim.insurance_agency && (
+                      <div className="text-muted-foreground">{t("patients.insurance_agency")}: <span className="text-foreground">{claim.insurance_agency.name}</span></div>
+                    )}
+                    {claim.adjuster && (
+                      <div className="text-muted-foreground">{t("patients.adjuster")}: <span className="text-foreground">{claim.adjuster}</span></div>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
-            <div className="flex gap-2 pt-1">
-              <Input
-                value={newCaseNumber}
-                onChange={(e) => setNewCaseNumber(e.target.value)}
-                placeholder={t("patients.case_number")}
-                className="flex-1"
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCaseNumber(); } }}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={addCaseNumber}
-                disabled={!newCaseNumber.trim() || savingCase}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -196,7 +259,7 @@ export function PatientDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Edit dialog */}
+      {/* Edit patient dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
@@ -227,6 +290,67 @@ export function PatientDetailPage() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={update.isPending || !form.name}>{t("common.save_changes")}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit claim dialog */}
+      <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
+        <DialogContent>
+          <form onSubmit={(e) => { e.preventDefault(); handleClaimSave(); }}>
+            <DialogHeader>
+              <DialogTitle>{editingClaimId ? t("patients.edit_claim") : t("patients.add_claim")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-4">
+              <div className="space-y-1">
+                <Label>{t("patients.case_number")}</Label>
+                <Input
+                  value={claimForm.case_number}
+                  onChange={(e) => setClaimForm(s => ({ ...s, case_number: e.target.value }))}
+                  placeholder="e.g. CLM-00123"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("patients.injury")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <Input
+                  value={claimForm.injury}
+                  onChange={(e) => setClaimForm(s => ({ ...s, injury: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("patients.date_of_injury")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <Input
+                  type="date"
+                  value={claimForm.date_of_injury}
+                  onChange={(e) => setClaimForm(s => ({ ...s, date_of_injury: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("patients.insurance_agency")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <AutocompleteInput
+                  options={agencyOptions}
+                  value={claimForm.insurance_agency_id}
+                  onChange={(val) => setClaimForm(s => ({ ...s, insurance_agency_id: val }))}
+                  placeholder={t("common.search")}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("patients.adjuster")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <Input
+                  value={claimForm.adjuster}
+                  onChange={(e) => setClaimForm(s => ({ ...s, adjuster: e.target.value }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setClaimDialogOpen(false)}>{t("common.cancel")}</Button>
+              <Button
+                type="submit"
+                disabled={!claimForm.case_number.trim() || createClaim.isPending || updateClaim.isPending}
+              >
+                {editingClaimId ? t("common.save_changes") : t("common.create")}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

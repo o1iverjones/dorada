@@ -49,7 +49,8 @@
     "select": "Select",
     "status": "Status",
     "optional": "Optional",
-    "uploading": "Uploading…"
+    "uploading": "Uploading…",
+    "remove": "Remove"
   },
   "nav": {
     "appointments": "Appointments",
@@ -587,8 +588,14 @@
     "name": "Patient name",
     "case_numbers": "Case Numbers",
     "case_number": "Case Number",
-    "add_case_number": "Add case number",
-    "no_case_numbers": "No case numbers on file.",
+    "claims": "Claims",
+    "add_claim": "Add claim",
+    "edit_claim": "Edit claim",
+    "no_claims": "No claims on file.",
+    "injury": "Injury",
+    "date_of_injury": "Date of injury",
+    "insurance_agency": "Insurance company",
+    "adjuster": "Adjuster",
     "preferred_interpreter": "Preferred Interpreter",
     "phone": "Phone",
     "email": "Email",

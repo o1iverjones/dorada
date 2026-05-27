@@ -48,11 +48,11 @@ export function PatientsPage() {
     { key: "name", header: t("patients.name") },
     { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => r.phone as string ?? "—" },
     {
-      key: "case_numbers",
+      key: "claims",
       header: t("patients.case_numbers"),
       render: (r: Record<string, unknown>) => {
-        const nums = r.case_numbers as string[] | undefined;
-        return nums?.length ? nums.join(", ") : "—";
+        const claims = r.claims as Array<{ case_number: string }> | undefined;
+        return claims?.length ? claims.map((c) => c.case_number).join(", ") : "—";
       },
     },
     { key: "preferred_language", header: t("patients.preferred_language"), render: (r: Record<string, unknown>) => r.preferred_language as string ?? "—" },

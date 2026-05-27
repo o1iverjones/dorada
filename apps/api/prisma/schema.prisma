@@ -27,6 +27,7 @@ model Organization {
   clinics              Clinic[]
   insurance_agencies   InsuranceAgency[]
   patients             Patient[]
+  claims               Claim[]
   appointments         Appointment[]
   appointment_activities AppointmentActivity[]
   activity_logs          ActivityLog[]
@@ -258,6 +259,7 @@ model InsuranceAgency {
   organization Organization     @relation(fields: [organization_id], references: [id])
   appointments Appointment[]
   email_logs   EmailIntakeLog[]
+  claims       Claim[]
 
   @@map("insurance_agencies")
 }
@@ -265,23 +267,42 @@ model InsuranceAgency {
 // ─── Patients ─────────────────────────────────────────────────────────────────
 
 model Patient {
-  id                       String   @id @default(uuid())
+  id                       String    @id @default(uuid())
   organization_id          String
   name                     String
   date_of_birth            DateTime? @db.Date
-  case_numbers             String[]
   preferred_interpreter_id String?
   phone                    String?
   email                    String?
   preferred_language       String?
-  created_at               DateTime @default(now())
-  updated_at               DateTime @updatedAt
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
 
   organization          Organization  @relation(fields: [organization_id], references: [id])
   appointments          Appointment[]
   preferred_interpreter Interpreter?  @relation("PreferredInterpreter", fields: [preferred_interpreter_id], references: [id], onDelete: SetNull)
+  claims                Claim[]
 
   @@map("patients")
+}
+
+model Claim {
+  id                  String    @id @default(uuid())
+  organization_id     String
+  patient_id          String
+  case_number         String
+  injury              String?
+  date_of_injury      DateTime? @db.Date
+  insurance_agency_id String?
+  adjuster            String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  organization     Organization     @relation(fields: [organization_id], references: [id])
+  patient          Patient          @relation(fields: [patient_id], references: [id], onDelete: Cascade)
+  insurance_agency InsuranceAgency? @relation(fields: [insurance_agency_id], references: [id], onDelete: SetNull)
+
+  @@map("claims")
 }
 
 // ─── Appointments ─────────────────────────────────────────────────────────────

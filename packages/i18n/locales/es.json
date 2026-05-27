@@ -49,7 +49,8 @@
     "select": "Seleccionar",
     "status": "Estado",
     "optional": "Opcional",
-    "uploading": "Subiendo…"
+    "uploading": "Subiendo…",
+    "remove": "Eliminar"
   },
   "nav": {
     "appointments": "Citas",
@@ -587,8 +588,14 @@
     "name": "Nombre del paciente",
     "case_numbers": "Números de caso",
     "case_number": "Número de caso",
-    "add_case_number": "Agregar número de caso",
-    "no_case_numbers": "No hay números de caso registrados.",
+    "claims": "Reclamaciones",
+    "add_claim": "Agregar reclamación",
+    "edit_claim": "Editar reclamación",
+    "no_claims": "No hay reclamaciones registradas.",
+    "injury": "Lesión",
+    "date_of_injury": "Fecha de la lesión",
+    "insurance_agency": "Compañía de seguros",
+    "adjuster": "Ajustador",
     "preferred_interpreter": "Intérprete preferido",
     "phone": "Teléfono",
     "email": "Correo electrónico",

@@ -1,11 +1,40 @@
 import { z } from "zod";
 import { UuidSchema } from "./common.js";
 
+// ─── Claim ────────────────────────────────────────────────────────────────────
+
+export const ClaimSchema = z.object({
+  id: UuidSchema,
+  patient_id: UuidSchema,
+  case_number: z.string(),
+  injury: z.string().nullable(),
+  date_of_injury: z.string().nullable(),
+  insurance_agency: z.object({ id: UuidSchema, name: z.string() }).nullable().optional(),
+  adjuster: z.string().nullable(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+
+export const CreateClaimBodySchema = z.object({
+  case_number: z.string().min(1).max(100),
+  injury: z.string().max(255).optional(),
+  date_of_injury: z.string().date().nullable().optional(),
+  insurance_agency_id: UuidSchema.nullable().optional(),
+  adjuster: z.string().max(255).optional(),
+});
+
+export const UpdateClaimBodySchema = CreateClaimBodySchema.partial().extend({
+  date_of_injury: z.string().date().nullable().optional(),
+  insurance_agency_id: UuidSchema.nullable().optional(),
+});
+
+// ─── Patient ──────────────────────────────────────────────────────────────────
+
 export const PatientSchema = z.object({
   id: UuidSchema,
   name: z.string(),
   date_of_birth: z.string().nullable(),
-  case_numbers: z.array(z.string()),
+  claims: z.array(ClaimSchema),
   preferred_interpreter: z.object({ id: UuidSchema, name: z.string() }).nullable().optional(),
   phone: z.string().nullable(),
   email: z.string().email().nullable(),
@@ -17,7 +46,6 @@ export const PatientSchema = z.object({
 export const CreatePatientBodySchema = z.object({
   name: z.string().min(1).max(255),
   date_of_birth: z.string().date().optional(),
-  case_numbers: z.array(z.string().min(1).max(100)).optional(),
   preferred_interpreter_id: UuidSchema.nullable().optional(),
   phone: z.string().max(20).optional(),
   email: z.string().email().optional(),
@@ -37,6 +65,9 @@ export const PatientListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(25),
 });
 
+export type Claim = z.infer<typeof ClaimSchema>;
+export type CreateClaimBody = z.infer<typeof CreateClaimBodySchema>;
+export type UpdateClaimBody = z.infer<typeof UpdateClaimBodySchema>;
 export type Patient = z.infer<typeof PatientSchema>;
 export type CreatePatientBody = z.infer<typeof CreatePatientBodySchema>;
 export type UpdatePatientBody = z.infer<typeof UpdatePatientBodySchema>;
