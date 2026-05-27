@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useClinics, useCreateClinic } from "../../hooks/useClinics.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
+import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
@@ -19,6 +20,27 @@ export function ClinicsPage() {
   const create = useCreateClinic();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", address: "", phone: "", contact_name: "", contact_email: "" });
+  const [search, setSearch] = useState("");
+
+  const allClinics = (data?.data ?? []) as Array<{ id: string; name: string; address?: string } & Record<string, unknown>>;
+
+  const searchOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { value: string; label: string }[] = [];
+    for (const c of allClinics) {
+      if (c.name && !seen.has(c.name)) { seen.add(c.name); opts.push({ value: c.name, label: c.name }); }
+      if (c.address && !seen.has(c.address)) { seen.add(c.address); opts.push({ value: c.address, label: c.address }); }
+    }
+    return opts;
+  }, [allClinics]);
+
+  const filteredClinics = useMemo(() => {
+    if (!search.trim()) return allClinics;
+    const q = search.toLowerCase();
+    return allClinics.filter((c) =>
+      c.name?.toLowerCase().includes(q) || c.address?.toLowerCase().includes(q)
+    );
+  }, [allClinics, search]);
 
   async function handleCreate() {
     try {
@@ -59,12 +81,21 @@ export function ClinicsPage() {
           </Button>
         }
       />
+      <div className="mb-4 max-w-sm">
+        <AutocompleteInput
+          options={searchOptions}
+          value={search}
+          onChange={setSearch}
+          placeholder={t("clinics.search")}
+          freeText
+        />
+      </div>
       {isLoading ? (
         <LoadingSpinner />
       ) : (
         <DataTable
           columns={columns as never}
-          data={(data?.data ?? []) as Array<{ id: string } & Record<string, unknown>>}
+          data={filteredClinics}
           onRowClick={(row) => navigate(`/clinics/${row.id}`)}
           emptyMessage={t("clinics.empty")}
         />

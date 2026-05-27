@@ -462,6 +462,7 @@
   },
   "clinics": {
     "title": "Clínicas",
+    "search": "Buscar por nombre o dirección…",
     "new": "Nueva clínica",
     "name": "Nombre de la clínica",
     "address": "Dirección",
