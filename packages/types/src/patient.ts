@@ -12,6 +12,8 @@ export const ClaimSchema = z.object({
   insurance_agency: z.object({ id: UuidSchema, name: z.string() }).nullable().optional(),
   insurance_company: z.object({ id: UuidSchema, name: z.string() }).nullable().optional(),
   adjuster: z.string().nullable(),
+  adjuster_phone: z.string().nullable(),
+  adjuster_email: z.string().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -23,6 +25,8 @@ export const CreateClaimBodySchema = z.object({
   insurance_agency_id: UuidSchema.nullish(),
   insurance_company_id: UuidSchema.nullish(),
   adjuster: z.string().max(255).nullish(),
+  adjuster_phone: z.string().max(30).nullish(),
+  adjuster_email: z.string().email().max(255).nullish(),
 });
 
 export const UpdateClaimBodySchema = CreateClaimBodySchema.partial();

@@ -626,6 +626,8 @@
     "insurance_company": "Insurance company",
     "insurance_agency": "Agency",
     "adjuster": "Adjuster",
+    "adjuster_phone": "Adjuster phone",
+    "adjuster_email": "Adjuster email",
     "preferred_interpreter": "Preferred Interpreter",
     "phone": "Phone",
     "email": "Email",

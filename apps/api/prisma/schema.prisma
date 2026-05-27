@@ -297,6 +297,8 @@ model Claim {
   insurance_agency_id  String?
   insurance_company_id String?
   adjuster             String?
+  adjuster_phone       String?
+  adjuster_email       String?
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 

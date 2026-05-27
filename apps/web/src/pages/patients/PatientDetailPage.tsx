@@ -28,6 +28,8 @@ interface Claim {
   insurance_agency: { id: string; name: string } | null;
   insurance_company: { id: string; name: string } | null;
   adjuster: string | null;
+  adjuster_phone: string | null;
+  adjuster_email: string | null;
 }
 
 const emptyClaimForm = {
@@ -37,6 +39,8 @@ const emptyClaimForm = {
   insurance_agency_id: "",
   insurance_company_id: "",
   adjuster: "",
+  adjuster_phone: "",
+  adjuster_email: "",
 };
 
 export function PatientDetailPage() {
@@ -119,6 +123,8 @@ export function PatientDetailPage() {
       insurance_agency_id: claim.insurance_agency?.id ?? "",
       insurance_company_id: claim.insurance_company?.id ?? "",
       adjuster: claim.adjuster ?? "",
+      adjuster_phone: claim.adjuster_phone ?? "",
+      adjuster_email: claim.adjuster_email ?? "",
     });
     setClaimDialogOpen(true);
   }
@@ -132,6 +138,8 @@ export function PatientDetailPage() {
         insurance_agency_id: claimForm.insurance_agency_id || null,
         insurance_company_id: claimForm.insurance_company_id || null,
         adjuster: claimForm.adjuster || null,
+        adjuster_phone: claimForm.adjuster_phone || null,
+        adjuster_email: claimForm.adjuster_email || null,
       };
       if (editingClaimId) {
         await updateClaim.mutateAsync(payload);
@@ -234,6 +242,12 @@ export function PatientDetailPage() {
                     )}
                     {claim.adjuster && (
                       <div className="text-muted-foreground">{t("patients.adjuster")}: <span className="text-foreground">{claim.adjuster}</span></div>
+                    )}
+                    {claim.adjuster_phone && (
+                      <div className="text-muted-foreground">{t("patients.adjuster_phone")}: <span className="text-foreground">{claim.adjuster_phone}</span></div>
+                    )}
+                    {claim.adjuster_email && (
+                      <div className="text-muted-foreground">{t("patients.adjuster_email")}: <span className="text-foreground">{claim.adjuster_email}</span></div>
                     )}
                   </li>
                 ))}
@@ -360,6 +374,22 @@ export function PatientDetailPage() {
                 <Input
                   value={claimForm.adjuster}
                   onChange={(e) => setClaimForm(s => ({ ...s, adjuster: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("patients.adjuster_phone")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <Input
+                  type="tel"
+                  value={claimForm.adjuster_phone}
+                  onChange={(e) => setClaimForm(s => ({ ...s, adjuster_phone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("patients.adjuster_email")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <Input
+                  type="email"
+                  value={claimForm.adjuster_email}
+                  onChange={(e) => setClaimForm(s => ({ ...s, adjuster_email: e.target.value }))}
                 />
               </div>
             </div>
