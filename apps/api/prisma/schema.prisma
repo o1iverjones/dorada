@@ -288,20 +288,22 @@ model Patient {
 }
 
 model Claim {
-  id                  String    @id @default(uuid())
-  organization_id     String
-  patient_id          String
-  case_number         String
-  injury              String?
-  date_of_injury      DateTime? @db.Date
-  insurance_agency_id String?
-  adjuster            String?
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  organization_id      String
+  patient_id           String
+  case_number          String
+  injury               String?
+  date_of_injury       DateTime? @db.Date
+  insurance_agency_id  String?
+  insurance_company_id String?
+  adjuster             String?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
 
-  organization     Organization     @relation(fields: [organization_id], references: [id])
-  patient          Patient          @relation(fields: [patient_id], references: [id], onDelete: Cascade)
-  insurance_agency InsuranceAgency? @relation(fields: [insurance_agency_id], references: [id], onDelete: SetNull)
+  organization      Organization      @relation(fields: [organization_id], references: [id])
+  patient           Patient           @relation(fields: [patient_id], references: [id], onDelete: Cascade)
+  insurance_agency  InsuranceAgency?  @relation(fields: [insurance_agency_id], references: [id], onDelete: SetNull)
+  insurance_company InsuranceCompany? @relation(fields: [insurance_company_id], references: [id], onDelete: SetNull)
 
   @@map("claims")
 }
@@ -317,6 +319,7 @@ model InsuranceCompany {
   updated_at      DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
+  claims       Claim[]
 
   @@map("insurance_companies")
 }

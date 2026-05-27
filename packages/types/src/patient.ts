@@ -10,6 +10,7 @@ export const ClaimSchema = z.object({
   injury: z.string().nullable(),
   date_of_injury: z.string().nullable(),
   insurance_agency: z.object({ id: UuidSchema, name: z.string() }).nullable().optional(),
+  insurance_company: z.object({ id: UuidSchema, name: z.string() }).nullable().optional(),
   adjuster: z.string().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
@@ -17,16 +18,14 @@ export const ClaimSchema = z.object({
 
 export const CreateClaimBodySchema = z.object({
   case_number: z.string().min(1).max(100),
-  injury: z.string().max(255).optional(),
-  date_of_injury: z.string().date().nullable().optional(),
-  insurance_agency_id: UuidSchema.nullable().optional(),
-  adjuster: z.string().max(255).optional(),
+  injury: z.string().max(255).nullish(),
+  date_of_injury: z.string().date().nullish(),
+  insurance_agency_id: UuidSchema.nullish(),
+  insurance_company_id: UuidSchema.nullish(),
+  adjuster: z.string().max(255).nullish(),
 });
 
-export const UpdateClaimBodySchema = CreateClaimBodySchema.partial().extend({
-  date_of_injury: z.string().date().nullable().optional(),
-  insurance_agency_id: UuidSchema.nullable().optional(),
-});
+export const UpdateClaimBodySchema = CreateClaimBodySchema.partial();
 
 // ─── Patient ──────────────────────────────────────────────────────────────────
 

@@ -10,6 +10,7 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
 
 const claimInclude = {
   insurance_agency: { select: { id: true, name: true } },
+  insurance_company: { select: { id: true, name: true } },
 } as const;
 
 const patientInclude = {
@@ -108,6 +109,7 @@ export async function createClaim(patientId: string, body: CreateClaimBody, orga
       injury: body.injury ?? null,
       date_of_injury: body.date_of_injury ? new Date(body.date_of_injury) : null,
       insurance_agency_id: body.insurance_agency_id ?? null,
+      insurance_company_id: body.insurance_company_id ?? null,
       adjuster: body.adjuster ?? null,
     },
     include: claimInclude,
@@ -133,6 +135,7 @@ export async function updateClaim(
       ...(body.injury !== undefined ? { injury: body.injury } : {}),
       ...(body.date_of_injury !== undefined ? { date_of_injury: body.date_of_injury ? new Date(body.date_of_injury) : null } : {}),
       ...(body.insurance_agency_id !== undefined ? { insurance_agency_id: body.insurance_agency_id } : {}),
+      ...(body.insurance_company_id !== undefined ? { insurance_company_id: body.insurance_company_id } : {}),
       ...(body.adjuster !== undefined ? { adjuster: body.adjuster } : {}),
     },
     include: claimInclude,

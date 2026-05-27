@@ -620,6 +620,7 @@
     "no_claims": "No claims on file.",
     "injury": "Injury",
     "date_of_injury": "Date of injury",
+    "insurance_company": "Insurance company",
     "insurance_agency": "Agency",
     "adjuster": "Adjuster",
     "preferred_interpreter": "Preferred Interpreter",

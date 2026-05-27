@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { usePatient, useUpdatePatient, useCreateClaim, useUpdateClaim, useDeleteClaim } from "../../hooks/usePatients.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useInsuranceCompanies } from "../../hooks/useInsuranceCompanies.js";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
@@ -25,6 +26,7 @@ interface Claim {
   injury: string | null;
   date_of_injury: string | null;
   insurance_agency: { id: string; name: string } | null;
+  insurance_company: { id: string; name: string } | null;
   adjuster: string | null;
 }
 
@@ -33,6 +35,7 @@ const emptyClaimForm = {
   injury: "",
   date_of_injury: "",
   insurance_agency_id: "",
+  insurance_company_id: "",
   adjuster: "",
 };
 
@@ -46,6 +49,7 @@ export function PatientDetailPage() {
   const update = useUpdatePatient(id!);
   const { data: interpretersData } = useInterpreters({ limit: "200" });
   const { data: agenciesData } = useInsuranceAgencies({ limit: "200" });
+  const { data: companiesData } = useInsuranceCompanies({ limit: "200" });
 
   const createClaim = useCreateClaim(id!);
   const deleteClaim = useDeleteClaim(id!);
@@ -65,6 +69,8 @@ export function PatientDetailPage() {
 
   const agencyOptions = ((agenciesData?.data ?? []) as Array<{ id: string; name: string }>)
     .map((a) => ({ value: a.id, label: a.name }));
+  const companyOptions = ((companiesData?.data ?? []) as Array<{ id: string; name: string }>)
+    .map((c) => ({ value: c.id, label: c.name }));
 
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
@@ -111,6 +117,7 @@ export function PatientDetailPage() {
       injury: claim.injury ?? "",
       date_of_injury: claim.date_of_injury ? claim.date_of_injury.slice(0, 10) : "",
       insurance_agency_id: claim.insurance_agency?.id ?? "",
+      insurance_company_id: claim.insurance_company?.id ?? "",
       adjuster: claim.adjuster ?? "",
     });
     setClaimDialogOpen(true);
@@ -123,6 +130,7 @@ export function PatientDetailPage() {
         injury: claimForm.injury || null,
         date_of_injury: claimForm.date_of_injury || null,
         insurance_agency_id: claimForm.insurance_agency_id || null,
+        insurance_company_id: claimForm.insurance_company_id || null,
         adjuster: claimForm.adjuster || null,
       };
       if (editingClaimId) {
@@ -217,6 +225,9 @@ export function PatientDetailPage() {
                     )}
                     {claim.date_of_injury && (
                       <div className="text-muted-foreground">{t("patients.date_of_injury")}: <span className="text-foreground">{new Date(claim.date_of_injury).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</span></div>
+                    )}
+                    {claim.insurance_company && (
+                      <div className="text-muted-foreground">{t("patients.insurance_company")}: <span className="text-foreground">{claim.insurance_company.name}</span></div>
                     )}
                     {claim.insurance_agency && (
                       <div className="text-muted-foreground">{t("patients.insurance_agency")}: <span className="text-foreground">{claim.insurance_agency.name}</span></div>
@@ -324,6 +335,15 @@ export function PatientDetailPage() {
                   type="date"
                   value={claimForm.date_of_injury}
                   onChange={(e) => setClaimForm(s => ({ ...s, date_of_injury: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("patients.insurance_company")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <AutocompleteInput
+                  options={companyOptions}
+                  value={claimForm.insurance_company_id}
+                  onChange={(val) => setClaimForm(s => ({ ...s, insurance_company_id: val }))}
+                  placeholder={t("common.search")}
                 />
               </div>
               <div className="space-y-1">
