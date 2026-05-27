@@ -441,6 +441,8 @@
     "status_cancelled": "Cancelada",
     "month": "Mes",
     "week": "Semana",
+    "day": "Día",
+    "no_appointments": "No hay citas programadas.",
     "show_blocks": "Mostrar bloqueos",
     "hide_blocks": "Ocultar bloqueos"
   },

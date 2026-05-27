@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { ChevronLeft, ChevronRight, Plus, CalendarOff, CalendarDays } from "lucide-react";
 import { api } from "../../lib/api.js";
 
-type View = "month" | "week";
+type View = "month" | "week" | "day";
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-green-100 border-green-300 text-green-800",
@@ -105,8 +105,10 @@ export function CalendarPage() {
     return d;
   });
 
-  const dateFrom = view === "month" ? monthStart : toDateStr(weekStart);
-  const dateTo   = view === "month" ? monthEnd   : toDateStr(weekEnd);
+  const dayStr = toDateStr(currentDate);
+
+  const dateFrom = view === "month" ? monthStart : view === "week" ? toDateStr(weekStart) : dayStr;
+  const dateTo   = view === "month" ? monthEnd   : view === "week" ? toDateStr(weekEnd)   : dayStr;
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -164,18 +166,22 @@ export function CalendarPage() {
 
   function prev() {
     if (view === "month") setCurrentDate(new Date(year, month - 1, 1));
-    else { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }
+    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }
+    else { const d = new Date(currentDate); d.setDate(d.getDate() - 1); setCurrentDate(d); }
   }
   function next() {
     if (view === "month") setCurrentDate(new Date(year, month + 1, 1));
-    else { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }
+    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }
+    else { const d = new Date(currentDate); d.setDate(d.getDate() + 1); setCurrentDate(d); }
   }
 
   const rangeLabel = view === "month"
     ? formatInTz(currentDate, { month: "long", year: "numeric" }, tz)
-    : formatInTz(weekStart, { month: "short", day: "numeric" }, tz) +
+    : view === "week"
+    ? formatInTz(weekStart, { month: "short", day: "numeric" }, tz) +
       " – " +
-      formatInTz(weekEnd, { month: "short", day: "numeric", year: "numeric" }, tz);
+      formatInTz(weekEnd, { month: "short", day: "numeric", year: "numeric" }, tz)
+    : formatInTz(currentDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, tz);
 
   // ── Month grid ─────────────────────────────────────────────────────────────
 
@@ -240,6 +246,50 @@ export function CalendarPage() {
     );
   }
 
+  function DayApptCard({ a }: { a: Record<string, unknown> }) {
+    const dt = new Date(a.date_time as string);
+    const endDt = new Date(dt.getTime() + (a.duration_minutes as number) * 60000);
+    const timeStr =
+      formatInTz(dt, { hour: "2-digit", minute: "2-digit" }, tz) +
+      " – " +
+      formatInTz(endDt, { hour: "2-digit", minute: "2-digit" }, tz);
+    const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
+    const clinicName = (a.clinic as Record<string, unknown>)?.name as string | null ?? null;
+    const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string | null ?? null;
+    const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
+    const physician = a.referring_physician as string | null;
+    const poNumber = a.po_number as string | null;
+    const status = String(a.status).replace(/_/g, " ");
+    const language = a.language as string | null;
+    const interpType = a.interpreter_type_required as string | null;
+    const colorClass = apptColorClass(a);
+    return (
+      <button
+        onClick={() => navigate(`/appointments/${a.id}`)}
+        className={`w-full rounded-lg border-2 px-4 py-3 text-left transition-opacity hover:opacity-90 ${colorClass}`}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold leading-tight">{patientName}</p>
+            <p className="text-sm font-medium mt-0.5">{timeStr} · {a.duration_minutes} min</p>
+          </div>
+          <span className="shrink-0 text-xs font-semibold capitalize px-2 py-0.5 rounded-full border border-current/30 bg-white/40">
+            {status}
+          </span>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+          {language && <DayRow label={t("appointments.language")} value={language} />}
+          {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
+          <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} />
+          {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
+          {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} />}
+          {physician && <DayRow label={t("appointments.referring_physician")} value={physician} />}
+          {poNumber && <DayRow label={t("appointments.po_number")} value={poNumber} />}
+        </div>
+      </button>
+    );
+  }
+
   function BlockPill({ b }: { b: Record<string, unknown> }) {
     return (
       <div
@@ -267,18 +317,20 @@ export function CalendarPage() {
       <div className="flex flex-wrap items-center gap-3">
         {/* View toggle */}
         <div className="flex rounded-md border">
-          <button
-            onClick={() => setView("month")}
-            className={`px-3 py-1.5 text-sm font-medium rounded-l-md transition-colors ${view === "month" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-          >
-            {t("calendar.month")}
-          </button>
-          <button
-            onClick={() => setView("week")}
-            className={`px-3 py-1.5 text-sm font-medium rounded-r-md border-l transition-colors ${view === "week" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-          >
-            {t("calendar.week")}
-          </button>
+          {(["month", "week", "day"] as View[]).map((v, i, arr) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={[
+                "px-3 py-1.5 text-sm font-medium transition-colors",
+                i === 0 ? "rounded-l-md" : i === arr.length - 1 ? "rounded-r-md" : "",
+                i > 0 ? "border-l" : "",
+                view === v ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+              ].join(" ")}
+            >
+              {t(`calendar.${v}`)}
+            </button>
+          ))}
         </div>
 
         {/* Navigation */}
@@ -432,6 +484,41 @@ export function CalendarPage() {
         </div>
       )}
 
+      {/* ── Day view ── */}
+      {view === "day" && (
+        <div className="rounded-md border">
+          <div className={`px-4 py-3 border-b ${isSameDay(currentDate, today) ? "bg-blue-50" : "bg-muted/50"}`}>
+            <p className={`text-sm font-semibold ${isSameDay(currentDate, today) ? "text-blue-700" : "text-muted-foreground"}`}>
+              {formatInTz(currentDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, tz)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {appointmentsForDate(currentDate).length} appointment{appointmentsForDate(currentDate).length !== 1 ? "s" : ""}
+              {blocksForDate(currentDate).length > 0 && ` · ${blocksForDate(currentDate).length} block${blocksForDate(currentDate).length !== 1 ? "s" : ""}`}
+            </p>
+          </div>
+          <div className="p-4 space-y-3">
+            {blocksForDate(currentDate).map((b) => (
+              <div
+                key={b.id as string}
+                className={`rounded-lg border px-4 py-3 flex items-center gap-3 ${interpreterColorMap.get(b.interpreter_id as string) ?? "bg-gray-100"}`}
+              >
+                <span className="text-lg">🚫</span>
+                <div>
+                  <p className="text-sm font-semibold">{(b.interpreter as Record<string, unknown>)?.name as string}</p>
+                  {b.reason && <p className="text-xs opacity-75">{b.reason as string}</p>}
+                </div>
+              </div>
+            ))}
+            {appointmentsForDate(currentDate).map((a) => (
+              <DayApptCard key={a.id as string} a={a} />
+            ))}
+            {appointmentsForDate(currentDate).length === 0 && blocksForDate(currentDate).length === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("calendar.no_appointments")}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {tooltip && <ApptTooltip appt={tooltip.appt} x={tooltip.x} y={tooltip.y} />}
     </div>
   );
@@ -572,6 +659,15 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex justify-between gap-2 text-xs">
       <span className="text-muted-foreground shrink-0">{label}</span>
       <span className="text-right font-medium">{value}</span>
+    </div>
+  );
+}
+
+function DayRow({ label, value, italic }: { label: string; value: string; italic?: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-current/60 font-normal">{label}</span>
+      <span className={`font-medium truncate ${italic ? "italic opacity-70" : ""}`}>{value}</span>
     </div>
   );
 }

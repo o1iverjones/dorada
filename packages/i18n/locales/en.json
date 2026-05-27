@@ -441,6 +441,8 @@
     "status_cancelled": "Cancelled",
     "month": "Month",
     "week": "Week",
+    "day": "Day",
+    "no_appointments": "No appointments scheduled.",
     "show_blocks": "Show schedule blocks",
     "hide_blocks": "Hide schedule blocks"
   },
