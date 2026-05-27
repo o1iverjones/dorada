@@ -37,7 +37,9 @@ export const CreateClinicBodySchema = z.object({
   billing: ClinicBillingSchema,
 });
 
-export const UpdateClinicBodySchema = CreateClinicBodySchema.partial();
+export const UpdateClinicBodySchema = CreateClinicBodySchema.partial().extend({
+  is_active: z.boolean().optional(),
+});
 
 export const ClinicListQuerySchema = z.object({
   search: z.string().optional(),

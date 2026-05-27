@@ -122,6 +122,7 @@ export async function updateClinic(id: string, body: UpdateClinicBody, organizat
         ? { primary_contact_name: body.primary_contact.name, primary_contact_phone: body.primary_contact.phone ?? null, primary_contact_email: body.primary_contact.email ?? null }
         : {}),
       ...(body.billing ? { billing_model: body.billing.model, billing_hourly_rate: body.billing.hourly_rate ?? null, billing_flat_rate: body.billing.flat_rate ?? null, billing_invoice_cycle: body.billing.invoice_cycle } : {}),
+      ...(body.is_active !== undefined ? { is_active: body.is_active } : {}),
     },
   });
 }

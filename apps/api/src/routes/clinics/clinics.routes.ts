@@ -53,6 +53,9 @@ export default async function clinicRoutes(fastify: FastifyInstance) {
       if (body.billing.hourly_rate != null && Number(body.billing.hourly_rate) !== Number(before?.billing_hourly_rate)) changed.push("Hourly rate");
       if (body.billing.flat_rate != null && Number(body.billing.flat_rate) !== Number(before?.billing_flat_rate)) changed.push("Flat rate");
     }
+    if (body.is_active !== undefined && body.is_active !== before?.is_active) {
+      changed.push(body.is_active ? "Reactivated" : "Deactivated");
+    }
 
     await writeActivityLog(fastify.prisma, {
       organizationId: payload.organization_id,
