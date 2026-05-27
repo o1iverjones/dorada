@@ -32,21 +32,43 @@ export function InterpreterDetailPage() {
   const interp = data as Record<string, unknown>;
 
   function startEdit() {
+    const ec = interp.emergency_contact as Record<string, unknown> | null;
     setEditForm({
       name: interp.name,
       phone: interp.phone,
-      email: interp.email,
+      email: interp.email ?? "",
       pay_rate: interp.pay_rate,
-      notes: interp.notes,
+      notes: interp.notes ?? "",
+      emergency_contact_name: ec?.name ?? "",
+      emergency_contact_phone: ec?.phone ?? "",
+      certificate_number: interp.certificate_number ?? "",
+      zip_code: interp.zip_code ?? "",
+      coverage_range_miles: interp.coverage_range_miles ?? "",
     });
     setEditing(true);
   }
 
   async function saveEdit() {
     try {
-      const payload = Object.fromEntries(
-        Object.entries(editForm).filter(([, v]) => v !== null && v !== undefined && v !== "")
-      );
+      const f = editForm as Record<string, unknown>;
+      const payload: Record<string, unknown> = {};
+      if (f.name) payload.name = f.name;
+      if (f.phone) payload.phone = f.phone;
+      if (f.email !== undefined) payload.email = f.email || null;
+      if (f.pay_rate !== undefined && f.pay_rate !== "") payload.pay_rate = Number(f.pay_rate);
+      if (f.notes !== undefined) payload.notes = f.notes || null;
+      if (f.certificate_number !== undefined) payload.certificate_number = f.certificate_number || null;
+      if (f.zip_code !== undefined) payload.zip_code = f.zip_code || null;
+      if (f.coverage_range_miles !== undefined && f.coverage_range_miles !== "") {
+        payload.coverage_range_miles = Number(f.coverage_range_miles);
+      } else {
+        payload.coverage_range_miles = null;
+      }
+      const ecName = String(f.emergency_contact_name ?? "").trim();
+      const ecPhone = String(f.emergency_contact_phone ?? "").trim();
+      if (ecName || ecPhone) {
+        payload.emergency_contact = { name: ecName, phone: ecPhone };
+      }
       await update.mutateAsync(payload);
       toast({ title: t("common.saved") });
       setEditing(false);
@@ -178,12 +200,85 @@ export function InterpreterDetailPage() {
         <Card>
           <CardHeader><CardTitle>{t("interpreters.emergency_contact")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label={t("interpreters.emergency_name")} value={(interp.emergency_contact as Record<string, unknown>)?.name as string ?? "—"} />
-            <Field label={t("interpreters.emergency_phone")} value={(interp.emergency_contact as Record<string, unknown>)?.phone as string ?? "—"} />
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("interpreters.emergency_name")}</Label>
+                  <Input
+                    value={editForm.emergency_contact_name as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, emergency_contact_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.emergency_phone")}</Label>
+                  <Input
+                    value={editForm.emergency_contact_phone as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, emergency_contact_phone: e.target.value }))}
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Field label={t("interpreters.emergency_name")} value={(interp.emergency_contact as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("interpreters.emergency_phone")} value={(interp.emergency_contact as Record<string, unknown>)?.phone as string ?? "—"} />
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {interp.notes && (
+        <Card>
+          <CardHeader><CardTitle>{t("interpreters.coverage")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("interpreters.zip_code")}</Label>
+                  <Input
+                    value={editForm.zip_code as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, zip_code: e.target.value }))}
+                    placeholder="e.g. 90210"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.coverage_range_miles")}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={editForm.coverage_range_miles as number ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, coverage_range_miles: e.target.value }))}
+                    placeholder="e.g. 25"
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Field label={t("interpreters.zip_code")} value={interp.zip_code as string ?? "—"} />
+                <Field label={t("interpreters.coverage_range_miles")} value={interp.coverage_range_miles != null ? `${interp.coverage_range_miles} mi` : "—"} />
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>{t("interpreters.certification")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-1">
+                <Label>{t("interpreters.certificate_number")}</Label>
+                <Input
+                  value={editForm.certificate_number as string ?? ""}
+                  onChange={(e) => setEditForm(s => ({ ...s, certificate_number: e.target.value }))}
+                  placeholder={t("common.optional")}
+                />
+              </div>
+            ) : (
+              <Field label={t("interpreters.certificate_number")} value={interp.certificate_number as string ?? "—"} />
+            )}
+          </CardContent>
+        </Card>
+
+        {(editing || interp.notes) && (
           <Card>
             <CardHeader><CardTitle>{t("interpreters.notes")}</CardTitle></CardHeader>
             <CardContent>

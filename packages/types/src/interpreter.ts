@@ -36,6 +36,9 @@ export const InterpreterSchema = z.object({
   address: z.string().nullable().optional(),
   emergency_contact: EmergencyContactSchema.nullable().optional(),
   notes: z.string().nullable().optional(),
+  certificate_number: z.string().nullable().optional(),
+  zip_code: z.string().nullable().optional(),
+  coverage_range_miles: z.number().nonnegative().nullable().optional(),
   availability_blocks: z.array(AvailabilityBlockSchema).optional(),
 });
 
@@ -52,6 +55,9 @@ export const CreateInterpreterBodySchema = z.object({
   emergency_contact: EmergencyContactSchema.optional(),
   clinics_not_allowed: z.array(UuidSchema).optional(),
   notes: z.string().max(5000).optional(),
+  certificate_number: z.string().max(100).optional(),
+  zip_code: z.string().max(10).optional(),
+  coverage_range_miles: z.number().nonnegative().optional(),
 });
 
 export const UpdateInterpreterBodySchema = CreateInterpreterBodySchema.partial();

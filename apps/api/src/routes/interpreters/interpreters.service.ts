@@ -67,7 +67,7 @@ function formatInterpreter(i: {
   created_at: Date; updated_at: Date;
   clinics_not_allowed: { clinic: { id: string; name: string } }[];
   address?: string | null; emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
-  notes?: string | null;
+  notes?: string | null; certificate_number?: string | null; zip_code?: string | null; coverage_range_miles?: unknown;
 }) {
   return {
     id: i.id,
@@ -89,6 +89,9 @@ function formatInterpreter(i: {
       ? { emergency_contact: { name: i.emergency_contact_name, phone: i.emergency_contact_phone } }
       : {}),
     ...(i.notes !== undefined ? { notes: i.notes } : {}),
+    ...(i.certificate_number !== undefined ? { certificate_number: i.certificate_number } : {}),
+    ...(i.zip_code !== undefined ? { zip_code: i.zip_code } : {}),
+    ...(i.coverage_range_miles !== undefined ? { coverage_range_miles: i.coverage_range_miles != null ? Number(i.coverage_range_miles) : null } : {}),
   };
 }
 
@@ -101,7 +104,7 @@ export async function getInterpreter(id: string, organizationId: string, prisma:
     },
   });
   ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
-  return formatInterpreter({ ...interpreter!, address: interpreter!.address, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes });
+  return formatInterpreter({ ...interpreter!, address: interpreter!.address, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, zip_code: interpreter!.zip_code, coverage_range_miles: interpreter!.coverage_range_miles });
 }
 
 function normalizePhone(phone: string): string {
@@ -134,6 +137,9 @@ export async function createInterpreter(body: CreateInterpreterBody, organizatio
       emergency_contact_name: body.emergency_contact?.name ?? null,
       emergency_contact_phone: body.emergency_contact?.phone ?? null,
       notes: body.notes ?? null,
+      certificate_number: body.certificate_number ?? null,
+      zip_code: body.zip_code ?? null,
+      coverage_range_miles: body.coverage_range_miles ?? null,
       ...(body.clinics_not_allowed?.length
         ? { clinics_not_allowed: { create: body.clinics_not_allowed.map((id) => ({ clinic_id: id })) } }
         : {}),
@@ -176,6 +182,9 @@ export async function updateInterpreter(
         ? { emergency_contact_name: body.emergency_contact.name, emergency_contact_phone: body.emergency_contact.phone }
         : {}),
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      ...(body.certificate_number !== undefined ? { certificate_number: body.certificate_number } : {}),
+      ...(body.zip_code !== undefined ? { zip_code: body.zip_code } : {}),
+      ...(body.coverage_range_miles !== undefined ? { coverage_range_miles: body.coverage_range_miles } : {}),
     },
     include: { clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } } },
   });

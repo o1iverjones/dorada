@@ -153,6 +153,9 @@ model Interpreter {
   address                 String?
   emergency_contact_name  String?
   emergency_contact_phone String?
+  certificate_number      String?
+  zip_code                String?
+  coverage_range_miles    Decimal?  @db.Decimal(8, 2)
   // "push" | "sms"
   follow_up_channel       String    @default("push")
   fcm_token               String?
