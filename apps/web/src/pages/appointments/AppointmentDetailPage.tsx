@@ -414,130 +414,6 @@ export function AppointmentDetailPage() {
 
         <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("appointments.time_tracking")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            {/* Clock in row */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t("appointments.clock_in")}</span>
-                {editingClockIn ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" disabled={patchClock.isPending} onClick={async () => {
-                      try {
-                        await patchClock.mutateAsync({ clock_in_time: clockInForm ? fromTzDateTimeInput(clockInForm, tz) : undefined });
-                        await refetch();
-                        toast({ title: t("common.saved") });
-                        setEditingClockIn(false);
-                      } catch {
-                        toast({ title: t("common.error"), variant: "destructive" });
-                      }
-                    }}>{t("common.save")}</Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingClockIn(false)}>{t("common.cancel")}</Button>
-                  </div>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => {
-                    setClockInForm(a.clock_in_time ? toTzDateTimeInput(a.clock_in_time as string, tz) : "");
-                    setEditingClockIn(true);
-                  }}>
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("common.edit")}
-                  </Button>
-                )}
-              </div>
-              {editingClockIn ? (
-                <DateTimePicker value={clockInForm} onChange={setClockInForm} />
-              ) : (
-                <span className="font-medium">{a.clock_in_time ? formatInTz(a.clock_in_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) : "—"}</span>
-              )}
-            </div>
-
-            <div className="border-t" />
-
-            {/* Clock out row */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t("appointments.clock_out")}</span>
-                {editingClockOut ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" disabled={patchClock.isPending} onClick={async () => {
-                      try {
-                        await patchClock.mutateAsync({ clock_out_time: clockOutForm ? fromTzDateTimeInput(clockOutForm, tz) : undefined });
-                        await refetch();
-                        toast({ title: t("common.saved") });
-                        setEditingClockOut(false);
-                      } catch {
-                        toast({ title: t("common.error"), variant: "destructive" });
-                      }
-                    }}>{t("common.save")}</Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingClockOut(false)}>{t("common.cancel")}</Button>
-                  </div>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => {
-                    setClockOutForm(a.clock_out_time ? toTzDateTimeInput(a.clock_out_time as string, tz) : "");
-                    setEditingClockOut(true);
-                  }}>
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("common.edit")}
-                  </Button>
-                )}
-              </div>
-              {editingClockOut ? (
-                <DateTimePicker value={clockOutForm} onChange={setClockOutForm} />
-              ) : (
-                <span className="font-medium">{a.clock_out_time ? formatInTz(a.clock_out_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) : "—"}</span>
-              )}
-            </div>
-
-            {a.clock_in_lat != null && (
-              <>
-                <div className="border-t" />
-                <div className="space-y-1">
-                  <span className="text-muted-foreground text-sm">{t("appointments.clock_in_location")}</span>
-                  {(() => {
-                    const distMi = a.clock_in_distance_miles as number | null;
-                    const lat = a.clock_in_lat as number;
-                    const lng = a.clock_in_lng as number;
-                    const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-                    const isFar = distMi != null && distMi > 1;
-                    return (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <a
-                          href={mapsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-medium text-primary hover:underline tabular-nums"
-                        >
-                          {lat.toFixed(5)}, {lng.toFixed(5)}
-                        </a>
-                        {distMi != null && (
-                          <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full border px-2 py-0.5 ${
-                            isFar
-                              ? "bg-red-50 border-red-300 text-red-700"
-                              : "bg-green-50 border-green-300 text-green-700"
-                          }`}>
-                            {isFar && <AlertTriangle className="h-3 w-3" />}
-                            {distMi.toFixed(2)} mi from clinic
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </>
-            )}
-            {(a.actual_duration_minutes || a.billable_duration_minutes) && (
-              <>
-                <div className="border-t" />
-                <div className="space-y-2">
-                  {a.actual_duration_minutes && <Field label={t("appointments.actual_duration")} value={`${a.actual_duration_minutes} min`} />}
-                  {a.billable_duration_minutes && <Field label={t("appointments.billable_duration")} value={`${a.billable_duration_minutes} min`} />}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
         {a.shift_notes && (
           <Card>
             <CardHeader><CardTitle>{t("appointments.shift_notes")}</CardTitle></CardHeader>
@@ -621,6 +497,130 @@ export function AppointmentDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("appointments.time_tracking")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {/* Clock in row */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t("appointments.clock_in")}</span>
+              {editingClockIn ? (
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={patchClock.isPending} onClick={async () => {
+                    try {
+                      await patchClock.mutateAsync({ clock_in_time: clockInForm ? fromTzDateTimeInput(clockInForm, tz) : undefined });
+                      await refetch();
+                      toast({ title: t("common.saved") });
+                      setEditingClockIn(false);
+                    } catch {
+                      toast({ title: t("common.error"), variant: "destructive" });
+                    }
+                  }}>{t("common.save")}</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingClockIn(false)}>{t("common.cancel")}</Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => {
+                  setClockInForm(a.clock_in_time ? toTzDateTimeInput(a.clock_in_time as string, tz) : "");
+                  setEditingClockIn(true);
+                }}>
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("common.edit")}
+                </Button>
+              )}
+            </div>
+            {editingClockIn ? (
+              <DateTimePicker value={clockInForm} onChange={setClockInForm} />
+            ) : (
+              <span className="font-medium">{a.clock_in_time ? formatInTz(a.clock_in_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) : "—"}</span>
+            )}
+          </div>
+
+          <div className="border-t" />
+
+          {/* Clock out row */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t("appointments.clock_out")}</span>
+              {editingClockOut ? (
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={patchClock.isPending} onClick={async () => {
+                    try {
+                      await patchClock.mutateAsync({ clock_out_time: clockOutForm ? fromTzDateTimeInput(clockOutForm, tz) : undefined });
+                      await refetch();
+                      toast({ title: t("common.saved") });
+                      setEditingClockOut(false);
+                    } catch {
+                      toast({ title: t("common.error"), variant: "destructive" });
+                    }
+                  }}>{t("common.save")}</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingClockOut(false)}>{t("common.cancel")}</Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => {
+                  setClockOutForm(a.clock_out_time ? toTzDateTimeInput(a.clock_out_time as string, tz) : "");
+                  setEditingClockOut(true);
+                }}>
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("common.edit")}
+                </Button>
+              )}
+            </div>
+            {editingClockOut ? (
+              <DateTimePicker value={clockOutForm} onChange={setClockOutForm} />
+            ) : (
+              <span className="font-medium">{a.clock_out_time ? formatInTz(a.clock_out_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) : "—"}</span>
+            )}
+          </div>
+
+          {a.clock_in_lat != null && (
+            <>
+              <div className="border-t" />
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-sm">{t("appointments.clock_in_location")}</span>
+                {(() => {
+                  const distMi = a.clock_in_distance_miles as number | null;
+                  const lat = a.clock_in_lat as number;
+                  const lng = a.clock_in_lng as number;
+                  const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+                  const isFar = distMi != null && distMi > 1;
+                  return (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-primary hover:underline tabular-nums"
+                      >
+                        {lat.toFixed(5)}, {lng.toFixed(5)}
+                      </a>
+                      {distMi != null && (
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium rounded-full border px-2 py-0.5 ${
+                          isFar
+                            ? "bg-red-50 border-red-300 text-red-700"
+                            : "bg-green-50 border-green-300 text-green-700"
+                        }`}>
+                          {isFar && <AlertTriangle className="h-3 w-3" />}
+                          {distMi.toFixed(2)} mi from clinic
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </>
+          )}
+          {(a.actual_duration_minutes || a.billable_duration_minutes) && (
+            <>
+              <div className="border-t" />
+              <div className="space-y-2">
+                {a.actual_duration_minutes && <Field label={t("appointments.actual_duration")} value={`${a.actual_duration_minutes} min`} />}
+                {a.billable_duration_minutes && <Field label={t("appointments.billable_duration")} value={`${a.billable_duration_minutes} min`} />}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {((mediaData as Array<Record<string, unknown>>) ?? []).length > 0 && (
         <Card>
