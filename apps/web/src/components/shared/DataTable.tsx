@@ -13,6 +13,7 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
   className?: string;
+  rowClassName?: (row: T) => string;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -21,6 +22,7 @@ export function DataTable<T extends { id: string }>({
   onRowClick,
   emptyMessage = "No results.",
   className,
+  rowClassName,
 }: DataTableProps<T>) {
   return (
     <div className={cn("rounded-md border", className)}>
@@ -49,6 +51,7 @@ export function DataTable<T extends { id: string }>({
                 className={cn(
                   "border-b last:border-0 transition-colors",
                   onRowClick && "cursor-pointer hover:bg-muted/50",
+                  rowClassName?.(row),
                 )}
               >
                 {columns.map((col) => (

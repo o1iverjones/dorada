@@ -59,7 +59,8 @@ export function NewAppointmentPage() {
   const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
   const interpreterRates = ratesData?.data ?? [];
 
-  const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string }>)
+  const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string; is_active?: boolean }>)
+    .filter((c) => c.is_active !== false)
     .map((c) => ({ value: c.id, label: c.name }));
   const agencyOptions = ((agencies?.data ?? []) as Array<{ id: string; name: string }>)
     .map((a) => ({ value: a.id, label: a.name }));

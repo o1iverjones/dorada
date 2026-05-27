@@ -17,7 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../../components/ui/badge.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus } from "lucide-react";
+import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus, AlertTriangle } from "lucide-react";
+import { useAuthStore } from "../../store/auth.js";
 
 export function ClinicDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,8 +36,12 @@ export function ClinicDetailPage() {
   const updateInterpreterNote = useUpdateClinicInterpreterNote(id!);
   const deleteInterpreterNote = useDeleteClinicInterpreterNote(id!);
 
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const canManageClinics = hasPermission("manage_clinics");
+
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, unknown>>({});
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [pendingBlockIds, setPendingBlockIds] = useState<string[]>([]);
   const [noteText, setNoteText] = useState("");
@@ -48,6 +53,7 @@ export function ClinicDetailPage() {
   if (!data) return <p>{t("common.not_found")}</p>;
 
   const clinic = data as Record<string, unknown>;
+  const isActive = (clinic.is_active as boolean) !== false;
   const contact = clinic.primary_contact as { name?: string; email?: string; phone?: string } | null;
   const excludedInterpreters = (clinic.interpreters_not_allowed ?? []) as Array<{ id: string; name: string }>;
 
@@ -156,7 +162,16 @@ export function ClinicDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={clinic.name as string}
+        title={
+          <span className="flex items-center gap-3">
+            {clinic.name as string}
+            {!isActive && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                <AlertTriangle className="h-3 w-3" /> {t("clinics.deactivated")}
+              </span>
+            )}
+          </span>
+        }
         actions={
           editing ? (
             <div className="flex gap-2">
@@ -375,6 +390,79 @@ export function ClinicDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Clinic Status */}
+      {canManageClinics && (
+        <Card className={!isActive ? "border-red-200 dark:border-red-900" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {!isActive && <AlertTriangle className="h-4 w-4 text-red-500" />}
+              {t("clinics.status")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {isActive ? t("clinics.status_active_description") : t("clinics.status_inactive_description")}
+            </p>
+            {isActive ? (
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 hover:bg-destructive/10 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={false}
+                  onChange={() => setDeactivateDialogOpen(true)}
+                  className="h-4 w-4 accent-destructive"
+                />
+                <span className="text-sm font-medium text-destructive">{t("clinics.deactivate_label")}</span>
+              </label>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await update.mutateAsync({ is_active: true });
+                    toast({ title: t("clinics.reactivated") });
+                  } catch {
+                    toast({ title: t("common.error"), variant: "destructive" });
+                  }
+                }}
+                disabled={update.isPending}
+              >
+                {t("clinics.reactivate")}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Deactivate Confirmation Dialog */}
+      <Dialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> {t("clinics.deactivate_confirm_title")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("clinics.deactivate_confirm_body")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              variant="destructive"
+              disabled={update.isPending}
+              onClick={async () => {
+                try {
+                  await update.mutateAsync({ is_active: false });
+                  setDeactivateDialogOpen(false);
+                  toast({ title: t("clinics.deactivated_toast") });
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("clinics.deactivate_confirm_button")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Interpreter Note Dialog */}
       <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>

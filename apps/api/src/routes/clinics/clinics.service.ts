@@ -13,7 +13,7 @@ export async function listClinics(query: ClinicListQuery, organizationId: string
   const items = await prisma.clinic.findMany({
     where: {
       organization_id: organizationId,
-      is_active: true,
+      // include both active and inactive so the list can shade deactivated rows
       ...(query.search ? { name: { contains: query.search, mode: "insensitive" as const } } : {}),
       ...(query.cursor ? { id: { gt: query.cursor } } : {}),
     },

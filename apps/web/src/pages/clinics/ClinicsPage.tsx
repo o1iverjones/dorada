@@ -22,7 +22,7 @@ export function ClinicsPage() {
   const [form, setForm] = useState({ name: "", address: "", phone: "", contact_name: "", contact_email: "" });
   const [search, setSearch] = useState("");
 
-  const allClinics = (data?.data ?? []) as Array<{ id: string; name: string; address?: string } & Record<string, unknown>>;
+  const allClinics = (data?.data ?? []) as Array<{ id: string; name: string; address?: string; is_active?: boolean } & Record<string, unknown>>;
 
   const searchOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -98,6 +98,7 @@ export function ClinicsPage() {
           data={filteredClinics}
           onRowClick={(row) => navigate(`/clinics/${row.id}`)}
           emptyMessage={t("clinics.empty")}
+          rowClassName={(row) => row.is_active === false ? "bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30" : ""}
         />
       )}
 
