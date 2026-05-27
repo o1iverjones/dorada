@@ -172,8 +172,9 @@ export function AppointmentDetailPage() {
       toast({ title: t("appointments.offered") });
       setSelectedInterpreters([]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("common.error");
-      toast({ title: message, variant: "destructive" });
+      const message = (err instanceof Error && err.message) ? err.message : t("common.error");
+      const code = (err as Record<string, unknown>)?.code as string | undefined;
+      toast({ title: message, description: code ?? undefined, variant: "destructive" });
     }
   }
 

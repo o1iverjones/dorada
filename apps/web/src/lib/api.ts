@@ -29,8 +29,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       headers["Authorization"] = `Bearer ${localStorage.getItem("dorada_access_token")}`;
       const retry = await fetch(`${BASE}${path}`, { ...init, headers });
       if (!retry.ok) {
-        const body = await retry.json().catch(() => ({})) as { error?: { code?: string; message?: string } };
-        throw new ApiError(retry.status, body.error?.code ?? "UNKNOWN", body.error?.message ?? retry.statusText);
+        const body = await retry.json().catch(() => ({})) as Record<string, unknown>;
+        const errorObj = body.error;
+        const code =
+          typeof errorObj === "object" && errorObj !== null
+            ? ((errorObj as Record<string, unknown>).code as string | undefined)
+            : undefined;
+        const message =
+          typeof errorObj === "object" && errorObj !== null
+            ? ((errorObj as Record<string, unknown>).message as string | undefined)
+            : (body.message as string | undefined);
+        throw new ApiError(retry.status, code ?? "UNKNOWN", message || retry.statusText || `HTTP ${retry.status}`);
       }
       return retry.json() as Promise<T>;
     }
@@ -40,8 +49,19 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: { code?: string; message?: string } };
-    throw new ApiError(res.status, body.error?.code ?? "UNKNOWN", body.error?.message ?? res.statusText);
+    const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+    // Handle both our custom format { error: { code, message } }
+    // and Fastify's native format { statusCode, error: "Bad Request", message: "..." }
+    const errorObj = body.error;
+    const code =
+      typeof errorObj === "object" && errorObj !== null
+        ? ((errorObj as Record<string, unknown>).code as string | undefined)
+        : undefined;
+    const message =
+      typeof errorObj === "object" && errorObj !== null
+        ? ((errorObj as Record<string, unknown>).message as string | undefined)
+        : (body.message as string | undefined);
+    throw new ApiError(res.status, code ?? "UNKNOWN", message || res.statusText || `HTTP ${res.status}`);
   }
 
   if (res.status === 204) return undefined as unknown as T;
