@@ -56,7 +56,11 @@ export function CalendarPage() {
     const [y, m, d] = todayStr.split("-").map(Number);
     return new Date(y, m - 1, d);
   }, [tz]);
-  const [view, setView] = useState<View>("week");
+  const [view, setView] = useState<View>(() => {
+    const stored = localStorage.getItem("dorada_calendar_view");
+    return (stored === "month" || stored === "week" || stored === "day") ? stored : "week";
+  });
+  function changeView(v: View) { localStorage.setItem("dorada_calendar_view", v); setView(v); }
   const [currentDate, setCurrentDate] = useState(new Date());
   const [interpreterFilter, setInterpreterFilter] = useState("");
   const [clinicFilter, setClinicFilter] = useState("all");
@@ -67,8 +71,6 @@ export function CalendarPage() {
   // Date picker popover
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(currentDate.getFullYear());
-  // The currently-displayed month in the picker (for highlighting); derived from currentDate.
-  const pickerMonth = currentDate.getMonth();
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
 
@@ -320,7 +322,7 @@ export function CalendarPage() {
           {(["month", "week", "day"] as View[]).map((v, i, arr) => (
             <button
               key={v}
-              onClick={() => setView(v)}
+              onClick={() => changeView(v)}
               className={[
                 "px-3 py-1.5 text-sm font-medium transition-colors",
                 i === 0 ? "rounded-l-md" : i === arr.length - 1 ? "rounded-r-md" : "",
@@ -349,10 +351,11 @@ export function CalendarPage() {
               <JumpToDatePicker
                 pickerYear={pickerYear}
                 selectedYear={currentDate.getFullYear()}
-                selectedMonth={pickerMonth}
+                selectedMonth={currentDate.getMonth()}
+                selectedDay={currentDate.getDate()}
                 onYearChange={setPickerYear}
-                onSelect={(y, m) => {
-                  setCurrentDate(new Date(y, m, 1));
+                onSelect={(y, m, d) => {
+                  setCurrentDate(new Date(y, m, d));
                   setDatePickerOpen(false);
                 }}
                 onClose={() => setDatePickerOpen(false)}
@@ -527,25 +530,30 @@ export function CalendarPage() {
 // ─── Jump-to-date picker popover ──────────────────────────────────────────────
 
 const MONTH_ABBRS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DAY_HEADERS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 function JumpToDatePicker({
   pickerYear,
   selectedYear,
   selectedMonth,
+  selectedDay,
   onYearChange,
   onSelect,
   onClose,
 }: {
-  pickerYear: number;       // year currently shown inside the picker (navigable)
-  selectedYear: number;     // year the calendar is currently on (for highlighting)
-  selectedMonth: number;    // month the calendar is currently on (for highlighting)
+  pickerYear: number;
+  selectedYear: number;
+  selectedMonth: number;
+  selectedDay: number;
   onYearChange: (y: number) => void;
-  onSelect: (year: number, month: number) => void;
+  onSelect: (year: number, month: number, day: number) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [level, setLevel] = useState<"month" | "day">("month");
+  const [drillMonth, setDrillMonth] = useState(selectedMonth);
 
-  // Close on click-outside
   useEffect(() => {
     function handleDown(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
@@ -556,53 +564,114 @@ function JumpToDatePicker({
 
   const todayYear = new Date().getFullYear();
   const todayMonth = new Date().getMonth();
+  const todayDay = new Date().getDate();
+
+  // Build day grid cells for the drill-down month
+  function buildDayCells(year: number, month: number): Array<number | null> {
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: Array<number | null> = [...Array(firstDow).fill(null)];
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }
+
+  const dayCells = level === "day" ? buildDayCells(pickerYear, drillMonth) : [];
 
   return (
     <div
       ref={ref}
-      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-56 rounded-lg border bg-popover shadow-xl"
+      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 rounded-lg border bg-popover shadow-xl"
+      style={{ width: level === "day" ? "224px" : "224px" }}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Year navigation */}
-      <div className="flex items-center justify-between px-3 py-2 border-b">
-        <button
-          onClick={() => onYearChange(pickerYear - 1)}
-          className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="text-sm font-bold">{pickerYear}</span>
-        <button
-          onClick={() => onYearChange(pickerYear + 1)}
-          className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Month grid — 4 cols × 3 rows */}
-      <div className="grid grid-cols-4 gap-1 p-2">
-        {MONTH_ABBRS.map((abbr, idx) => {
-          const isSelected = idx === selectedMonth && pickerYear === selectedYear;
-          const isCurrentMonth = idx === todayMonth && pickerYear === todayYear;
-          return (
-            <button
-              key={abbr}
-              onClick={() => onSelect(pickerYear, idx)}
-              className={[
-                "rounded-md py-1.5 text-xs font-medium transition-colors",
-                isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : isCurrentMonth
-                  ? "ring-1 ring-primary text-primary hover:bg-muted"
-                  : "hover:bg-muted text-foreground",
-              ].join(" ")}
-            >
-              {abbr}
+      {level === "month" ? (
+        <>
+          {/* Year navigation */}
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <button onClick={() => onYearChange(pickerYear - 1)} className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors">
+              <ChevronLeft className="h-4 w-4" />
             </button>
-          );
-        })}
-      </div>
+            <span className="text-sm font-bold">{pickerYear}</span>
+            <button onClick={() => onYearChange(pickerYear + 1)} className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          {/* Month grid */}
+          <div className="grid grid-cols-4 gap-1 p-2">
+            {MONTH_ABBRS.map((abbr, idx) => {
+              const isSelected = idx === selectedMonth && pickerYear === selectedYear;
+              const isToday = idx === todayMonth && pickerYear === todayYear;
+              return (
+                <button
+                  key={abbr}
+                  onClick={() => { setDrillMonth(idx); setLevel("day"); }}
+                  className={[
+                    "rounded-md py-1.5 text-xs font-medium transition-colors",
+                    isSelected ? "bg-primary text-primary-foreground"
+                      : isToday ? "ring-1 ring-primary text-primary hover:bg-muted"
+                      : "hover:bg-muted text-foreground",
+                  ].join(" ")}
+                >
+                  {abbr}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Day-level header: back + prev/next month */}
+          <div className="flex items-center justify-between px-2 py-2 border-b">
+            <button onClick={() => setLevel("month")} className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors" title="Back to months">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setLevel("month")}
+              className="text-xs font-bold hover:underline"
+            >
+              {MONTH_NAMES[drillMonth]} {pickerYear}
+            </button>
+            <button
+              onClick={() => {
+                if (drillMonth === 11) { onYearChange(pickerYear + 1); setDrillMonth(0); }
+                else setDrillMonth((m) => m + 1);
+              }}
+              className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          {/* Day-of-week headers */}
+          <div className="grid grid-cols-7 px-1 pt-1">
+            {DAY_HEADERS.map((h) => (
+              <div key={h} className="text-center text-[10px] font-medium text-muted-foreground py-0.5">{h}</div>
+            ))}
+          </div>
+          {/* Day grid */}
+          <div className="grid grid-cols-7 px-1 pb-2 gap-y-0.5">
+            {dayCells.map((day, i) => {
+              if (!day) return <div key={i} />;
+              const isSelected = day === selectedDay && drillMonth === selectedMonth && pickerYear === selectedYear;
+              const isToday = day === todayDay && drillMonth === todayMonth && pickerYear === todayYear;
+              return (
+                <button
+                  key={day}
+                  onClick={() => onSelect(pickerYear, drillMonth, day)}
+                  className={[
+                    "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-colors",
+                    isSelected ? "bg-primary text-primary-foreground"
+                      : isToday ? "ring-1 ring-primary text-primary hover:bg-muted"
+                      : "hover:bg-muted text-foreground",
+                  ].join(" ")}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
