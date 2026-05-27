@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates, useUpdateAppointmentType } from "../../hooks/useSettings.js";
+import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates, useUpdateAppointmentType, useDeleteAppointmentType } from "../../hooks/useSettings.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -21,6 +21,7 @@ function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", pay_model: "hourly", minimum_billable_hours: 1 });
   const update = useUpdateAppointmentType(ty.id);
+  const remove = useDeleteAppointmentType(ty.id);
 
   function startEdit() {
     setForm({ name: ty.name, pay_model: ty.pay_model, minimum_billable_hours: ty.minimum_billable_minutes / 60 });
@@ -86,6 +87,16 @@ function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => 
         <span>{(ty.minimum_billable_minutes / 60).toFixed(1)}h min</span>
         <button type="button" onClick={startEdit} className="hover:text-foreground transition-colors">
           <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(t("settings.confirm_delete_type"))) remove.mutate();
+          }}
+          disabled={remove.isPending}
+          className="text-destructive hover:text-destructive/80 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
     </div>

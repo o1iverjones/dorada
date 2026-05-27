@@ -655,6 +655,7 @@
     "new_language": "Agregar idioma",
     "appointment_types": "Tipos de cita",
     "add_type": "Agregar tipo",
+    "confirm_delete_type": "¿Estás seguro de que deseas eliminar este tipo de cita? Esta acción no se puede deshacer.",
     "type_name": "Nombre del tipo",
     "hourly": "Por hora",
     "flat_rate": "Tarifa fija",

@@ -39,6 +39,14 @@ export function useUpdateAppointmentType(id: string) {
   });
 }
 
+export function useDeleteAppointmentType(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete(`/settings/appointment-types/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["system-settings"] }),
+  });
+}
+
 export function useInterpreterRates() {
   return useQuery({
     queryKey: ["interpreter-rates"],

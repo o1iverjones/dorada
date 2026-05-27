@@ -655,6 +655,7 @@
     "new_language": "Add language",
     "appointment_types": "Appointment types",
     "add_type": "Add type",
+    "confirm_delete_type": "Are you sure you want to delete this appointment type? This cannot be undone.",
     "type_name": "Type name",
     "hourly": "Hourly",
     "flat_rate": "Flat rate",
