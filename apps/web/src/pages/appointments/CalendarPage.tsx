@@ -230,6 +230,7 @@ export function CalendarPage() {
     const clinicName = (a.clinic as Record<string, unknown>)?.name as string;
     const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string;
     const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
+    const physician = a.referring_physician as string | null;
     const colorClass = apptColorClass(a);
     return (
       <button
@@ -243,6 +244,7 @@ export function CalendarPage() {
         <p className="text-xs leading-tight text-current/80">{timeStr}</p>
         {clinicName && <p className="text-xs leading-tight truncate opacity-75">{clinicName}</p>}
         {agencyName && <p className="text-xs leading-tight truncate opacity-75">{agencyName}</p>}
+        {physician && <p className="text-xs leading-tight truncate opacity-75">Dr. {physician}</p>}
         <p className="text-xs leading-tight truncate opacity-75 italic">
           {interpreterName ?? t("appointments.unassigned")}
         </p>
