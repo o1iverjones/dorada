@@ -46,6 +46,7 @@ export function PatientsPage() {
 
   const columns = [
     { key: "name", header: t("patients.name") },
+    { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => r.phone as string ?? "—" },
     {
       key: "date_of_birth",
       header: t("patients.date_of_birth"),
