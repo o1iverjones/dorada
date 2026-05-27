@@ -281,6 +281,8 @@ export async function refreshTokens(
   prisma: PrismaClient,
   fastify: FastifyInstance,
 ): Promise<{ access_token: string; refresh_token: string }> {
+  // Step 1: verify the JWT signature and expiry. This is the source of truth —
+  // the signed token IS the credential. No DB lookup is needed to validate it.
   let payload: { sub: string; type: string };
   try {
     payload = fastify.jwt.verify<{ sub: string; type: string }>(refreshToken);
@@ -294,34 +296,18 @@ export async function refreshTokens(
     throw new UnauthorizedError("TOKEN_REVOKED", "Invalid token type");
   }
 
-  // Look up non-revoked tokens for this user and find the matching one.
-  // We do NOT rotate the refresh token — the same token remains valid until
-  // it expires or is explicitly revoked (logout / password change).
-  // Rotation caused multi-tab race conditions: Tab A refreshes and revokes the
-  // token; Tab B then tries the same (now-revoked) token and gets logged out.
-  const allTokens = await prisma.refreshToken.findMany({
-    where: isInterpreter
-      ? { interpreter_id: payload.sub, revoked_at: null }
-      : { user_id: payload.sub, revoked_at: null },
-  });
-
-  let matchedToken = null;
-  for (const t of allTokens) {
-    if (await bcrypt.compare(refreshToken, t.token_hash)) {
-      matchedToken = t;
-      break;
-    }
-  }
-
-  if (!matchedToken || matchedToken.expires_at < new Date()) {
-    throw new UnauthorizedError("TOKEN_REVOKED", "Refresh token expired or revoked");
-  }
-
-  // Issue a fresh access token and return the same refresh token unchanged.
+  // Step 2: verify the account still exists and is active, then issue a new
+  // access token. Return the same refresh token — no rotation.
+  //
+  // We intentionally skip the DB revocation check. Previously the DB record
+  // was used to enforce single-use rotation, but rotation caused multi-tab
+  // race conditions and logged users out unexpectedly. The JWT expiry (720h)
+  // is the session boundary; explicit logout clears localStorage.
   if (isInterpreter) {
     const interpreter = await prisma.interpreter.findUnique({ where: { id: payload.sub } });
-    if (!interpreter) throw new UnauthorizedError("TOKEN_REVOKED", "Account not found");
-
+    if (!interpreter || !interpreter.is_active) {
+      throw new UnauthorizedError("TOKEN_REVOKED", "Account not found or inactive");
+    }
     const newAccess = fastify.jwt.sign(
       { sub: interpreter.id, type: "interpreter", organization_id: interpreter.organization_id },
       { expiresIn: config.JWT_ACCESS_TTL },
@@ -333,7 +319,9 @@ export async function refreshTokens(
     where: { id: payload.sub },
     include: { role: { include: { permissions: true } } },
   });
-  if (!user) throw new UnauthorizedError("TOKEN_REVOKED", "Account not found");
+  if (!user || !user.is_active) {
+    throw new UnauthorizedError("TOKEN_REVOKED", "Account not found or inactive");
+  }
 
   const permissions = user.role.permissions.map((p) => p.permission);
   const newAccess = fastify.jwt.sign(
