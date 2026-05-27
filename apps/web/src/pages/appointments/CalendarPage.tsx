@@ -199,13 +199,18 @@ export function CalendarPage() {
   // ── Shared appointment pill ────────────────────────────────────────────────
 
   function apptColorClass(a: Record<string, unknown>) {
+    const status = a.status as string;
+    // Cancelled/completed always use their status colour regardless of interpreter
+    if (status === "cancelled" || status === "completed") {
+      return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
+    }
     const hasInterpreter = !!(a.interpreter as Record<string, unknown> | null)?.id;
     if (!hasInterpreter) {
       const hasPendingOffer = ((a.offers as Array<unknown>) ?? []).length > 0;
       if (hasPendingOffer) return "bg-orange-100 border-orange-300 text-orange-900";
       return "bg-gray-100 border-gray-300 text-gray-500";
     }
-    return STATUS_COLORS[a.status as string] ?? "bg-muted border-gray-300";
+    return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
   }
 
   function ApptPill({ a }: { a: Record<string, unknown> }) {
