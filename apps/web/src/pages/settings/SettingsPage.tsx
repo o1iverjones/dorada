@@ -307,6 +307,33 @@ export function SettingsPage() {
           <Button onClick={addType} disabled={!newType.name || createType.isPending}>{t("settings.add_type")}</Button>
         </CardContent>
       </Card>
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader><CardTitle>{t("settings.super_admin_options")}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.allow_manual_confirm")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.allow_manual_confirm_description")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={(settings as Record<string, unknown>)?.allow_manual_confirm as boolean ?? false}
+                onClick={() => update.mutate({ allow_manual_confirm: !((settings as Record<string, unknown>)?.allow_manual_confirm as boolean ?? false) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  (settings as Record<string, unknown>)?.allow_manual_confirm ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  (settings as Record<string, unknown>)?.allow_manual_confirm ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -661,6 +661,7 @@ model SystemSettings {
   follow_up_reminder_window_minutes   Int      @default(60)
   follow_up_max_reminders             Int      @default(2)
   timezone                            String   @default("America/Los_Angeles")
+  allow_manual_confirm                Boolean  @default(false)
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])

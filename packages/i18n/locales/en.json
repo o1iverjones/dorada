@@ -407,6 +407,8 @@
     "follow_up_dismissed": "Follow-up dismissed.",
     "pending_offers": "Pending offers",
     "offer_pending": "Awaiting response",
+    "manually_confirm": "Manually confirm",
+    "manually_confirmed": "Interpreter manually confirmed",
     "unavailable": "Unavailable",
     "upcoming": "Upcoming",
     "offers": "Offers",
@@ -640,6 +642,9 @@
   },
   "settings": {
     "title": "System settings",
+    "super_admin_options": "Super Admin options",
+    "allow_manual_confirm": "Allow manual interpreter confirmation",
+    "allow_manual_confirm_description": "Enables admins to manually assign and confirm an interpreter from the appointment page without requiring the interpreter to accept via the mobile app. Intended for testing — disable in production.",
     "timezone": "Platform timezone",
     "timezone_description": "All appointment times and logs across the platform will be displayed in this timezone, regardless of where each user is located.",
     "timezone_current": "Currently",
