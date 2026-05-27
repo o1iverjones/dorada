@@ -37,7 +37,7 @@ export function DashboardPage() {
 
   const { data: pendingOffers } = useQuery({
     queryKey: ["appointments", "pending_offer", todayStr],
-    queryFn: () => api.get<{ data: unknown[]; pagination: { total: number } }>(`/appointments?status=pending_offer&date_from=${todayStr}&limit=1`),
+    queryFn: () => api.get<{ data: unknown[] }>(`/appointments?status=pending_offer&date_from=${todayStr}&limit=500`),
   });
 
   const { data: followUpDrafts } = useQuery({
@@ -101,7 +101,7 @@ export function DashboardPage() {
         <StatCard
           icon={<Clock className="h-5 w-5 text-yellow-500" />}
           label={t("dashboard.pending_offers")}
-          value={pendingOffers?.pagination?.total ?? 0}
+          value={pendingOffers?.data.length ?? 0}
           href={`/appointments?status=pending_offer&date_from=${todayStr}`}
         />
         <StatCard
