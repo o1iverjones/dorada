@@ -181,6 +181,15 @@ export async function createAppointment(
   actor: { id: string; name: string },
   prisma: PrismaClient,
 ) {
+  // Guard: reject deactivated clinics
+  const clinic = await prisma.clinic.findUnique({
+    where: { id: body.clinic_id },
+    select: { is_active: true },
+  });
+  if (!clinic || clinic.is_active === false) {
+    throw new ValidationError("CLINIC_INACTIVE", "The selected clinic is deactivated and cannot accept new appointments");
+  }
+
   const appt = await prisma.appointment.create({
     data: {
       organization_id: organizationId,

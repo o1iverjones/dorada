@@ -102,8 +102,9 @@ export function NewAppointmentPage() {
       }) as { id: string };
       toast({ title: t("appointments.created") });
       navigate(`/appointments/${appt.id}`);
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: msg, variant: "destructive" });
     }
   }
 

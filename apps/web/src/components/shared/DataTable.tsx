@@ -14,6 +14,7 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   className?: string;
   rowClassName?: (row: T) => string;
+  rowStyle?: (row: T) => React.CSSProperties;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -23,6 +24,7 @@ export function DataTable<T extends { id: string }>({
   emptyMessage = "No results.",
   className,
   rowClassName,
+  rowStyle,
 }: DataTableProps<T>) {
   return (
     <div className={cn("rounded-md border", className)}>
@@ -53,6 +55,7 @@ export function DataTable<T extends { id: string }>({
                   onRowClick && "cursor-pointer hover:bg-muted/50",
                   rowClassName?.(row),
                 )}
+                style={rowStyle?.(row)}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={cn("px-4 py-3", col.className)}>

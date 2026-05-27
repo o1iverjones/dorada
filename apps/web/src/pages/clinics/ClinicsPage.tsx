@@ -65,7 +65,20 @@ export function ClinicsPage() {
   }
 
   const columns = [
-    { key: "name", header: t("clinics.name") },
+    {
+      key: "name",
+      header: t("clinics.name"),
+      render: (row: typeof allClinics[number]) => (
+        <span className="flex items-center gap-2">
+          {row.name}
+          {row.is_active === false && (
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#fee2e2", color: "#b91c1c" }}>
+              {t("clinics.deactivated")}
+            </span>
+          )}
+        </span>
+      ),
+    },
     { key: "address", header: t("clinics.address") },
     { key: "phone", header: t("clinics.phone") },
     { key: "primary_contact_name", header: t("clinics.primary_contact") },
@@ -98,7 +111,7 @@ export function ClinicsPage() {
           data={filteredClinics}
           onRowClick={(row) => navigate(`/clinics/${row.id}`)}
           emptyMessage={t("clinics.empty")}
-          rowClassName={(row) => row.is_active === false ? "bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30" : ""}
+          rowStyle={(row) => row.is_active === false ? { backgroundColor: "#fef2f2" } : {}}
         />
       )}
 
