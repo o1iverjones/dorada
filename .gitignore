@@ -70,7 +70,9 @@ apps/api/src/scripts/
 list-of-modules-needed.md
 
 # Database dumps — may contain real data, never commit
+# (Prisma migration files in prisma/migrations/ are tracked; only loose .sql dumps are blocked)
 *.sql
+!apps/api/prisma/migrations/**/migration.sql
 
 # Android generated files
 apps/mobile/android/

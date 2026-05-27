@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type { CreatePatientBody, UpdatePatientBody, PatientListQuery } from "@dorada/types";
-import { NotFoundError, ConflictError, ValidationError } from "../../lib/errors.js";
+import { NotFoundError, ValidationError } from "../../lib/errors.js";
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string) {
   if (!record || record.organization_id !== organizationId) {
@@ -8,13 +8,16 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
   }
 }
 
+const patientInclude = {
+  preferred_interpreter: { select: { id: true, name: true } },
+} as const;
+
 export async function listPatients(query: PatientListQuery, organizationId: string, prisma: PrismaClient) {
   const where = {
     organization_id: organizationId,
     ...(query.search ? {
       OR: [
         { name: { contains: query.search, mode: "insensitive" as const } },
-        { mrn: { contains: query.search, mode: "insensitive" as const } },
       ],
     } : {}),
     ...(query.language ? { preferred_language: query.language } : {}),
@@ -27,6 +30,7 @@ export async function listPatients(query: PatientListQuery, organizationId: stri
       take: query.limit,
       skip: (query.page - 1) * query.limit,
       orderBy: { name: "asc" },
+      include: patientInclude,
     }),
   ]);
 
@@ -38,17 +42,12 @@ export async function listPatients(query: PatientListQuery, organizationId: stri
 }
 
 export async function getPatient(id: string, organizationId: string, prisma: PrismaClient) {
-  const patient = await prisma.patient.findUnique({ where: { id } });
+  const patient = await prisma.patient.findUnique({ where: { id }, include: patientInclude });
   ensureTenant(patient, organizationId);
   return patient;
 }
 
 export async function createPatient(body: CreatePatientBody, organizationId: string, prisma: PrismaClient) {
-  if (body.mrn) {
-    const existing = await prisma.patient.findFirst({ where: { organization_id: organizationId, mrn: body.mrn } });
-    if (existing) throw new ConflictError("MRN_ALREADY_EXISTS", "MRN already registered");
-  }
-
   if (body.preferred_language) {
     const lang = await prisma.organizationLanguage.findFirst({
       where: { organization_id: organizationId, code: body.preferred_language, active: true },
@@ -60,11 +59,13 @@ export async function createPatient(body: CreatePatientBody, organizationId: str
     data: {
       organization_id: organizationId,
       name: body.name,
-      mrn: body.mrn ?? null,
+      case_numbers: body.case_numbers ?? [],
+      preferred_interpreter_id: body.preferred_interpreter_id ?? null,
       phone: body.phone ?? null,
       email: body.email ?? null,
       preferred_language: body.preferred_language ?? null,
     },
+    include: patientInclude,
   });
 }
 
@@ -77,10 +78,12 @@ export async function updatePatient(id: string, body: UpdatePatientBody, organiz
     data: {
       ...(body.name ? { name: body.name } : {}),
       ...(body.date_of_birth !== undefined ? { date_of_birth: body.date_of_birth ? new Date(body.date_of_birth) : null } : {}),
-      ...(body.mrn !== undefined ? { mrn: body.mrn } : {}),
+      ...(body.case_numbers !== undefined ? { case_numbers: body.case_numbers } : {}),
+      ...(body.preferred_interpreter_id !== undefined ? { preferred_interpreter_id: body.preferred_interpreter_id } : {}),
       ...(body.phone !== undefined ? { phone: body.phone } : {}),
       ...(body.email !== undefined ? { email: body.email } : {}),
       ...(body.preferred_language !== undefined ? { preferred_language: body.preferred_language } : {}),
     },
+    include: patientInclude,
   });
 }

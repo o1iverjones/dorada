@@ -171,6 +171,7 @@ model Interpreter {
   follow_up_responses FollowUpResponse[]
   invoices            Invoice[]
   appointment_media   AppointmentMedia[]
+  preferred_by_patients Patient[]             @relation("PreferredInterpreter")
 
   @@unique([organization_id, phone])
   @@map("interpreters")
@@ -264,21 +265,22 @@ model InsuranceAgency {
 // ─── Patients ─────────────────────────────────────────────────────────────────
 
 model Patient {
-  id                 String   @id @default(uuid())
-  organization_id    String
-  name               String
-  date_of_birth      DateTime? @db.Date
-  mrn                String?
-  phone              String?
-  email              String?
-  preferred_language String?
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  id                       String   @id @default(uuid())
+  organization_id          String
+  name                     String
+  date_of_birth            DateTime? @db.Date
+  case_numbers             String[]
+  preferred_interpreter_id String?
+  phone                    String?
+  email                    String?
+  preferred_language       String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
 
-  organization Organization  @relation(fields: [organization_id], references: [id])
-  appointments Appointment[]
+  organization          Organization  @relation(fields: [organization_id], references: [id])
+  appointments          Appointment[]
+  preferred_interpreter Interpreter?  @relation("PreferredInterpreter", fields: [preferred_interpreter_id], references: [id], onDelete: SetNull)
 
-  @@unique([organization_id, mrn])
   @@map("patients")
 }
 

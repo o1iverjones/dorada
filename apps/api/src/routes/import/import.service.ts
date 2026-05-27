@@ -316,12 +316,11 @@ export async function importPatients(
     const name = row["name"]?.trim();
     if (!name) { result.errors.push({ row: rowNum, message: "name is required" }); continue; }
 
-    const mrn = row["mrn"]?.trim() || null;
+    const caseNumber = row["mrn"]?.trim() || null; // CSV column kept as "mrn" for backward compat
 
-    const data = {
+    const baseData = {
       organization_id: organizationId,
       name,
-      mrn,
       phone: normalizePhone(row["phone"]?.trim() ?? "") || row["phone"]?.trim() || null,
       email: row["email"]?.trim() || null,
       // Language codes should always be lowercase (e.g. "es", "zh")
@@ -329,15 +328,19 @@ export async function importPatients(
     };
 
     try {
-      const existing = mrn
-        ? await prisma.patient.findFirst({ where: { organization_id: organizationId, mrn } })
-        : null;
+      // Try to find by name first; case numbers can be added after import
+      const existing = await prisma.patient.findFirst({
+        where: { organization_id: organizationId, name: { equals: name, mode: "insensitive" } },
+      });
 
       if (existing) {
-        await prisma.patient.update({ where: { id: existing.id }, data });
+        const updatedCaseNumbers = caseNumber && !existing.case_numbers.includes(caseNumber)
+          ? [...existing.case_numbers, caseNumber]
+          : existing.case_numbers;
+        await prisma.patient.update({ where: { id: existing.id }, data: { ...baseData, case_numbers: updatedCaseNumbers } });
         result.updated++;
       } else {
-        await prisma.patient.create({ data });
+        await prisma.patient.create({ data: { ...baseData, case_numbers: caseNumber ? [caseNumber] : [] } });
         result.created++;
       }
     } catch (err) {
@@ -496,14 +499,19 @@ export async function importAppointments(
         continue;
       }
 
-      const patientMrn = row["patient_mrn"]?.trim() || null;
-      let patient = patientMrn
-        ? await prisma.patient.findFirst({ where: { organization_id: organizationId, mrn: patientMrn } })
-        : await prisma.patient.findFirst({ where: { organization_id: organizationId, name: { equals: patientName, mode: "insensitive" } } });
+      const patientCaseNumber = row["patient_mrn"]?.trim() || null; // CSV column kept as "patient_mrn" for backward compat
+      let patient = await prisma.patient.findFirst({
+        where: { organization_id: organizationId, name: { equals: patientName, mode: "insensitive" } },
+      });
 
       if (!patient) {
         patient = await prisma.patient.create({
-          data: { organization_id: organizationId, name: patientName, mrn: patientMrn },
+          data: { organization_id: organizationId, name: patientName, case_numbers: patientCaseNumber ? [patientCaseNumber] : [] },
+        });
+      } else if (patientCaseNumber && !patient.case_numbers.includes(patientCaseNumber)) {
+        await prisma.patient.update({
+          where: { id: patient.id },
+          data: { case_numbers: [...patient.case_numbers, patientCaseNumber] },
         });
       }
 

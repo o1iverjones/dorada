@@ -17,7 +17,7 @@ export function PatientsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", mrn: "", preferred_language: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", preferred_language: "" });
   const [page, setPage] = useState(1);
 
   const params: Record<string, string> = { limit: "50", page: String(page) };
@@ -47,7 +47,14 @@ export function PatientsPage() {
   const columns = [
     { key: "name", header: t("patients.name") },
     { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => r.phone as string ?? "—" },
-    { key: "mrn", header: t("patients.mrn"), render: (r: Record<string, unknown>) => r.mrn as string ?? "—" },
+    {
+      key: "case_numbers",
+      header: t("patients.case_numbers"),
+      render: (r: Record<string, unknown>) => {
+        const nums = r.case_numbers as string[] | undefined;
+        return nums?.length ? nums.join(", ") : "—";
+      },
+    },
     { key: "preferred_language", header: t("patients.preferred_language"), render: (r: Record<string, unknown>) => r.preferred_language as string ?? "—" },
   ];
 
@@ -96,7 +103,6 @@ export function PatientsPage() {
                 { key: "name", label: t("patients.name") },
                 { key: "phone", label: t("patients.phone") },
                 { key: "email", label: t("patients.email") },
-                { key: "mrn", label: t("patients.mrn") },
                 { key: "preferred_language", label: t("patients.preferred_language") },
               ] as const).map(({ key, label }) => (
                 <div key={key} className="space-y-1">
