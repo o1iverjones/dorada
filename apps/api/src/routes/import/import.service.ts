@@ -27,7 +27,7 @@ const TEMPLATES: Record<EntityType, { headers: string[]; example: string[] }> = 
     ],
     example: [
       "2026-06-15 10:00", "60", "In-Person", "es",
-      "Certified", "John Smith", "MRN-00123",
+      "certified", "John Smith", "MRN-00123",
       "Riverside Medical Center", "BlueCross Demo", "Dr. Emily Carter",
       "150.00", "20", "PO-2026-001", "+15550001001",
     ],
@@ -39,7 +39,7 @@ const TEMPLATES: Record<EntityType, { headers: string[]; example: string[] }> = 
       "emergency_contact_name", "emergency_contact_phone", "notes",
     ],
     example: [
-      "Maria Garcia", "+15550001001", "maria@example.com", "Certified", "es,zh",
+      "Maria Garcia", "+15550001001", "maria@example.com", "certified", "es,zh",
       "123 Main St", "45.00", "check",
       "Juan Garcia", "+15550009999", "",
     ],
@@ -99,18 +99,18 @@ function normalizePhone(raw: string): string | null {
   return `+${digits}`;
 }
 
-function extractTypeFromTags(row: Record<string, string>): "Certified" | "Qualified" {
+function extractTypeFromTags(row: Record<string, string>): "certified" | "qualified" {
   for (let t = 1; t <= 27; t++) {
     const val = row[`Tag ${t}`]?.trim().toLowerCase();
-    if (val === "certified") return "Certified";
-    if (val === "qualified") return "Qualified";
+    if (val === "certified") return "certified";
+    if (val === "qualified") return "qualified";
   }
-  return "Qualified";
+  return "qualified";
 }
 
-function extractPayRate(row: Record<string, string>, type: "Certified" | "Qualified"): number | null {
+function extractPayRate(row: Record<string, string>, type: "certified" | "qualified"): number | null {
   const preferredPositions =
-    type === "Certified"
+    type === "certified"
       ? ["interpreter - certified", "new rate", "interpreter normal"]
       : ["interpreter normal", "interpreter - certified"];
 
@@ -164,7 +164,7 @@ export async function importInterpreters(
     const row = rows[i]!;
     const rowNum = i + 2;
 
-    let name: string, phone: string | null, type: "Certified" | "Qualified",
+    let name: string, phone: string | null, type: "certified" | "qualified",
       email: string | null, address: string | null, payRate: number | null,
       paymentMethod: string | null, emergencyContactName: string | null,
       emergencyContactPhone: string | null, notes: string | null,
@@ -181,27 +181,27 @@ export async function importInterpreters(
       payRate = extractPayRate(row, type);
       paymentMethod = row["Tax Status"]?.trim() || null;
       emergencyContactName = row["Emergency Contact Name"]?.trim() || null;
-      emergencyContactPhone = normalizePhone(row["Emergency Contact Phone Number"] ?? "") ;
+      emergencyContactPhone = normalizePhone(row["Emergency Contact Phone Number"] ?? "");
       notes = row["Notes"]?.trim() || null;
       languages = ["es"]; // Spanish interpreting agency default
     } else {
       name = row["name"]?.trim() ?? "";
-      phone = row["phone"]?.trim() || null;
-      const rawType = row["type"]?.trim();
-      if (!rawType || !["Certified", "Qualified"].includes(rawType)) {
-        result.errors.push({ row: rowNum, message: "type must be 'Certified' or 'Qualified'" });
+      phone = normalizePhone(row["phone"]?.trim() ?? "");
+      const rawType = row["type"]?.trim().toLowerCase();
+      if (!rawType || !["certified", "qualified"].includes(rawType)) {
+        result.errors.push({ row: rowNum, message: "type must be 'certified' or 'qualified'" });
         continue;
       }
-      type = rawType as "Certified" | "Qualified";
+      type = rawType as "certified" | "qualified";
       email = row["email"]?.trim() || null;
       address = row["address"]?.trim() || null;
       payRate = row["pay_rate"] ? parseFloat(row["pay_rate"]) : null;
       paymentMethod = row["payment_method"]?.trim() || null;
       emergencyContactName = row["emergency_contact_name"]?.trim() || null;
-      emergencyContactPhone = row["emergency_contact_phone"]?.trim() || null;
+      emergencyContactPhone = normalizePhone(row["emergency_contact_phone"]?.trim() ?? "");
       notes = row["notes"]?.trim() || null;
       languages = row["languages"]
-        ? row["languages"].split(",").map((l) => l.trim()).filter(Boolean)
+        ? row["languages"].split(",").map((l) => l.trim().toLowerCase()).filter(Boolean)
         : [];
     }
 
@@ -250,31 +250,41 @@ export async function importClinics(
   const rows = parseRows(csvText);
   const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [] };
 
+  const VALID_BILLING_MODELS = ["hourly", "flat_rate", "per_session"];
+  const VALID_INVOICE_CYCLES = ["monthly", "weekly", "biweekly", "per_appointment"];
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]!;
     const rowNum = i + 2;
 
     const name = row["name"]?.trim();
-
     if (!name) { result.errors.push({ row: rowNum, message: "name is required" }); continue; }
+
+    const billingModel = (row["billing_model"]?.trim().toLowerCase() || "hourly").replace(/[- ]/g, "_");
+    const invoiceCycle = (row["billing_invoice_cycle"]?.trim().toLowerCase() || "monthly").replace(/[- ]/g, "_");
+
+    if (row["billing_model"] && !VALID_BILLING_MODELS.includes(billingModel)) {
+      result.errors.push({ row: rowNum, message: `billing_model '${row["billing_model"]}' is not valid (use: ${VALID_BILLING_MODELS.join(", ")})` });
+      continue;
+    }
 
     const data = {
       organization_id: organizationId,
       name,
       address: row["address"] || null,
-      phone: row["phone"] || null,
-      primary_contact_name: row["primary_contact_name"] || null,
-      primary_contact_phone: row["primary_contact_phone"] || null,
-      primary_contact_email: row["primary_contact_email"] || null,
-      billing_model: row["billing_model"]?.trim() || "hourly",
+      phone: normalizePhone(row["phone"]?.trim() ?? "") || row["phone"]?.trim() || null,
+      primary_contact_name: row["primary_contact_name"]?.trim() || null,
+      primary_contact_phone: normalizePhone(row["primary_contact_phone"]?.trim() ?? "") || row["primary_contact_phone"]?.trim() || null,
+      primary_contact_email: row["primary_contact_email"]?.trim() || null,
+      billing_model: billingModel,
       billing_hourly_rate: row["billing_hourly_rate"] ? parseFloat(row["billing_hourly_rate"]) : null,
       billing_flat_rate: row["billing_flat_rate"] ? parseFloat(row["billing_flat_rate"]) : null,
-      billing_invoice_cycle: row["billing_invoice_cycle"] || "monthly",
+      billing_invoice_cycle: invoiceCycle,
     };
 
     try {
       const existing = await prisma.clinic.findFirst({
-        where: { organization_id: organizationId, name },
+        where: { organization_id: organizationId, name: { equals: name, mode: "insensitive" } },
       });
       if (existing) {
         await prisma.clinic.update({ where: { id: existing.id }, data });
@@ -312,9 +322,10 @@ export async function importPatients(
       organization_id: organizationId,
       name,
       mrn,
-      phone: row["phone"] || null,
-      email: row["email"] || null,
-      preferred_language: row["preferred_language"] || null,
+      phone: normalizePhone(row["phone"]?.trim() ?? "") || row["phone"]?.trim() || null,
+      email: row["email"]?.trim() || null,
+      // Language codes should always be lowercase (e.g. "es", "zh")
+      preferred_language: row["preferred_language"]?.trim().toLowerCase() || null,
     };
 
     try {
@@ -365,18 +376,18 @@ export async function importInsuranceAgencies(
       name = row["Name"]?.trim() ?? "";
       phone = null; // no agency-level phone in this format
       contactName = row["Contact Full Name"]?.trim() || null;
-      contactPhone = normalizePhone(row["Contact Phone Number"] ?? "") ;
+      contactPhone = normalizePhone(row["Contact Phone Number"] ?? "");
       contactEmail = row["Contact Email"]?.trim() || null;
       // Combine admin + supervisor notes, skipping blanks
       const noteParts = [row["Admin Notes"]?.trim(), row["Supervisor Notes"]?.trim()].filter(Boolean);
       notes = noteParts.length ? noteParts.join("\n\n") : null;
     } else {
       name = row["name"]?.trim() ?? "";
-      phone = row["phone"] || null;
-      contactName = row["primary_contact_name"] || null;
-      contactPhone = row["primary_contact_phone"] || null;
-      contactEmail = row["primary_contact_email"] || null;
-      notes = row["notes"] || null;
+      phone = normalizePhone(row["phone"]?.trim() ?? "") || row["phone"]?.trim() || null;
+      contactName = row["primary_contact_name"]?.trim() || null;
+      contactPhone = normalizePhone(row["primary_contact_phone"]?.trim() ?? "") || row["primary_contact_phone"]?.trim() || null;
+      contactEmail = row["primary_contact_email"]?.trim() || null;
+      notes = row["notes"]?.trim() || null;
     }
 
     if (!name) { result.errors.push({ row: rowNum, message: "name is required" }); continue; }
@@ -395,7 +406,7 @@ export async function importInsuranceAgencies(
 
     try {
       const existing = await prisma.insuranceAgency.findFirst({
-        where: { organization_id: organizationId, name },
+        where: { organization_id: organizationId, name: { equals: name, mode: "insensitive" } },
       });
       if (existing) {
         await prisma.insuranceAgency.update({ where: { id: existing.id }, data });
@@ -427,8 +438,8 @@ export async function importAppointments(
     const dateTimeStr = row["date_time"]?.trim();
     const durationStr = row["duration_minutes"]?.trim();
     const appointmentTypeName = row["appointment_type"]?.trim();
-    const language = row["language"]?.trim();
-    const interpreterTypeRequired = row["interpreter_type_required"]?.trim();
+    const language = row["language"]?.trim().toLowerCase();
+    const interpreterTypeRequired = row["interpreter_type_required"]?.trim().toLowerCase();
     const patientName = row["patient_name"]?.trim();
     const clinicName = row["clinic_name"]?.trim();
     const insuranceAgencyName = row["insurance_agency_name"]?.trim();
@@ -439,6 +450,10 @@ export async function importAppointments(
     if (!appointmentTypeName) { result.errors.push({ row: rowNum, message: "appointment_type is required" }); continue; }
     if (!language) { result.errors.push({ row: rowNum, message: "language is required" }); continue; }
     if (!interpreterTypeRequired) { result.errors.push({ row: rowNum, message: "interpreter_type_required is required" }); continue; }
+    if (!["certified", "qualified"].includes(interpreterTypeRequired)) {
+      result.errors.push({ row: rowNum, message: `interpreter_type_required must be 'certified' or 'qualified', got '${interpreterTypeRequired}'` });
+      continue;
+    }
     if (!patientName) { result.errors.push({ row: rowNum, message: "patient_name is required" }); continue; }
     if (!clinicName) { result.errors.push({ row: rowNum, message: "clinic_name is required" }); continue; }
     if (!insuranceAgencyName) { result.errors.push({ row: rowNum, message: "insurance_agency_name is required" }); continue; }
@@ -456,8 +471,9 @@ export async function importAppointments(
     }
 
     try {
+      // Case-insensitive lookups so "In-Person" matches "in-person" etc.
       const appointmentType = await prisma.appointmentType.findFirst({
-        where: { organization_id: organizationId, name: appointmentTypeName, is_active: true },
+        where: { organization_id: organizationId, name: { equals: appointmentTypeName, mode: "insensitive" }, is_active: true },
       });
       if (!appointmentType) {
         result.errors.push({ row: rowNum, message: `appointment_type '${appointmentTypeName}' not found` });
@@ -465,7 +481,7 @@ export async function importAppointments(
       }
 
       const clinic = await prisma.clinic.findFirst({
-        where: { organization_id: organizationId, name: clinicName, is_active: true },
+        where: { organization_id: organizationId, name: { equals: clinicName, mode: "insensitive" }, is_active: true },
       });
       if (!clinic) {
         result.errors.push({ row: rowNum, message: `clinic '${clinicName}' not found — import clinics first` });
@@ -473,7 +489,7 @@ export async function importAppointments(
       }
 
       const insuranceAgency = await prisma.insuranceAgency.findFirst({
-        where: { organization_id: organizationId, name: insuranceAgencyName, is_active: true },
+        where: { organization_id: organizationId, name: { equals: insuranceAgencyName, mode: "insensitive" }, is_active: true },
       });
       if (!insuranceAgency) {
         result.errors.push({ row: rowNum, message: `insurance_agency '${insuranceAgencyName}' not found — import agencies first` });
@@ -483,7 +499,7 @@ export async function importAppointments(
       const patientMrn = row["patient_mrn"]?.trim() || null;
       let patient = patientMrn
         ? await prisma.patient.findFirst({ where: { organization_id: organizationId, mrn: patientMrn } })
-        : await prisma.patient.findFirst({ where: { organization_id: organizationId, name: patientName } });
+        : await prisma.patient.findFirst({ where: { organization_id: organizationId, name: { equals: patientName, mode: "insensitive" } } });
 
       if (!patient) {
         patient = await prisma.patient.create({
@@ -492,8 +508,10 @@ export async function importAppointments(
       }
 
       let interpreterId: string | null = null;
-      const interpreterPhone = row["interpreter_phone"]?.trim();
-      if (interpreterPhone) {
+      const interpreterPhoneRaw = row["interpreter_phone"]?.trim();
+      if (interpreterPhoneRaw) {
+        // Normalize before lookup so "555-123-4567" matches "+15551234567"
+        const interpreterPhone = normalizePhone(interpreterPhoneRaw) ?? interpreterPhoneRaw;
         const interpreter = await prisma.interpreter.findFirst({
           where: { organization_id: organizationId, phone: interpreterPhone },
         });
@@ -523,7 +541,7 @@ export async function importAppointments(
           clinic_id: clinic.id,
           insurance_agency_id: insuranceAgency.id,
           patient_id: patient.id,
-          referring_physician: row["referring_physician"] || null,
+          referring_physician: row["referring_physician"]?.trim() || null,
           pre_auth_amount: preAuthAmountStr ? parseFloat(preAuthAmountStr) : 0,
           pre_auth_mileage: row["pre_auth_mileage"] ? parseInt(row["pre_auth_mileage"], 10) : 0,
           po_number: poNumber,

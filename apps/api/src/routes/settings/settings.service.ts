@@ -13,7 +13,7 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
     prisma.systemSettings.findUnique({ where: { organization_id: organizationId } }),
     prisma.organizationLanguage.findMany({ where: { organization_id: organizationId }, orderBy: { name: "asc" } }),
     prisma.appointmentType.findMany({
-      where: { organization_id: organizationId },
+      where: { organization_id: organizationId, is_active: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -29,6 +29,7 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
       max_reminders: settings?.follow_up_max_reminders ?? 2,
     },
     timezone: settings?.timezone ?? "America/Los_Angeles",
+    allow_manual_confirm: settings?.allow_manual_confirm ?? false,
     languages,
     appointment_types: appointmentTypes,
   };
@@ -48,6 +49,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
         follow_up_max_reminders: body.follow_up_config.max_reminders,
       } : {}),
       ...(body.timezone ? { timezone: body.timezone } : {}),
+      ...(body.allow_manual_confirm !== undefined ? { allow_manual_confirm: body.allow_manual_confirm } : {}),
     },
     create: {
       organization_id: organizationId,
@@ -57,6 +59,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       follow_up_reminder_window_minutes: body.follow_up_config?.non_response_window_minutes ?? 60,
       follow_up_max_reminders: body.follow_up_config?.max_reminders ?? 2,
       timezone: body.timezone ?? "America/Los_Angeles",
+      allow_manual_confirm: body.allow_manual_confirm ?? false,
     },
   });
 

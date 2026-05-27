@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useAppointments, usePatchClockTimes, useAppointmentMedia } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useAppointments, usePatchClockTimes, useAppointmentMedia, useManualConfirm } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
@@ -44,6 +44,8 @@ export function AppointmentDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
+  const { data: settingsData } = useSystemSettings();
+  const allowManualConfirm = (settingsData as Record<string, unknown>)?.allow_manual_confirm as boolean ?? false;
   const [selectedInterpreters, setSelectedInterpreters] = useState<string[]>([]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<FormState>({} as FormState);
@@ -64,6 +66,7 @@ export function AppointmentDetailPage() {
   const { data: adminNotes } = useAppointmentNotes(id!);
   const addNote = useAddAppointmentNote(id!);
   const { data: mediaData } = useAppointmentMedia(id!);
+  const manualConfirm = useManualConfirm(id!);
 
   // Lookup data for edit mode
   const { data: clinicsData } = useClinics({ limit: "500" });
@@ -169,8 +172,9 @@ export function AppointmentDetailPage() {
       toast({ title: t("appointments.offered") });
       setSelectedInterpreters([]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("common.error");
-      toast({ title: message, variant: "destructive" });
+      const message = (err instanceof Error && err.message) ? err.message : t("common.error");
+      const code = (err as Record<string, unknown>)?.code as string | undefined;
+      toast({ title: message, description: code ?? undefined, variant: "destructive" });
     }
   }
 
@@ -574,7 +578,25 @@ export function AppointmentDetailPage() {
               .map((o) => (
                 <div key={o.id as string} className="flex items-center justify-between rounded-md border p-3 text-sm">
                   <span className="font-medium">{(o.interpreter as Record<string, unknown>)?.name as string}</span>
-                  <span className="text-muted-foreground">{t("appointments.offer_pending")}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-muted-foreground">{t("appointments.offer_pending")}</span>
+                    {allowManualConfirm && (
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                          disabled={manualConfirm.isPending}
+                          onChange={() => {
+                            manualConfirm.mutate((o.interpreter as Record<string, unknown>)?.id as string, {
+                              onSuccess: () => toast({ title: t("appointments.manually_confirmed") }),
+                              onError: () => toast({ title: t("common.error"), variant: "destructive" }),
+                            });
+                          }}
+                        />
+                        {t("appointments.manually_confirm")}
+                      </label>
+                    )}
+                  </div>
                 </div>
               ))}
           </CardContent>

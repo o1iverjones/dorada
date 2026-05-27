@@ -69,6 +69,9 @@ apps/api/uploads/
 apps/api/src/scripts/
 list-of-modules-needed.md
 
+# Database dumps — may contain real data, never commit
+*.sql
+
 # Android generated files
 apps/mobile/android/
 apps/mobile/.expo/

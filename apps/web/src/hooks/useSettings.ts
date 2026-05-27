@@ -30,6 +30,23 @@ export function useAppointmentTypes() {
   });
 }
 
+export function useUpdateAppointmentType(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name?: string; pay_model?: string; minimum_billable_minutes?: number }) =>
+      api.patch(`/settings/appointment-types/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["system-settings"] }),
+  });
+}
+
+export function useDeleteAppointmentType(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete(`/settings/appointment-types/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["system-settings"] }),
+  });
+}
+
 export function useInterpreterRates() {
   return useQuery({
     queryKey: ["interpreter-rates"],

@@ -449,6 +449,42 @@ export async function confirmOffer(
   return { appointment: { id: appointmentId, status: "confirmed" } };
 }
 
+export async function manualConfirmInterpreter(
+  appointmentId: string,
+  interpreterId: string,
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+  if (!appointment || appointment.organization_id !== organizationId) {
+    throw new NotFoundError("APPOINTMENT_NOT_FOUND", "Appointment not found");
+  }
+  if (appointment.status !== "pending_offer") {
+    throw new ConflictError("INVALID_STATUS", "Appointment is not in pending_offer status");
+  }
+  if (appointment.interpreter_id) {
+    throw new ConflictError("ALREADY_CONFIRMED", "Appointment already has an interpreter assigned");
+  }
+
+  const interpreter = await prisma.interpreter.findUnique({ where: { id: interpreterId } });
+  if (!interpreter || interpreter.organization_id !== organizationId) {
+    throw new NotFoundError("INTERPRETER_NOT_FOUND", "Interpreter not found");
+  }
+
+  await prisma.$transaction([
+    prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { interpreter_id: interpreterId, status: "confirmed" },
+    }),
+    prisma.appointmentOffer.updateMany({
+      where: { appointment_id: appointmentId, status: "pending" },
+      data: { status: "expired" },
+    }),
+  ]);
+
+  return { appointment: { id: appointmentId, status: "confirmed" } };
+}
+
 export async function declineOffer(
   appointmentId: string,
   offerId: string,

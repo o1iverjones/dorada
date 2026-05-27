@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
+import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates, useUpdateAppointmentType, useDeleteAppointmentType } from "../../hooks/useSettings.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -11,11 +11,97 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { useNavigate } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil, Check, X } from "lucide-react";
 import { useAuthStore } from "../../store/auth.js";
 
 interface Language { id?: string; code: string; name: string; active: boolean; }
 interface AppointmentType { id: string; name: string; pay_model: string; minimum_billable_minutes: number; is_active: boolean; }
+
+function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => string }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: "", pay_model: "hourly", minimum_billable_hours: 1 });
+  const update = useUpdateAppointmentType(ty.id);
+  const remove = useDeleteAppointmentType(ty.id);
+
+  function startEdit() {
+    setForm({ name: ty.name, pay_model: ty.pay_model, minimum_billable_hours: ty.minimum_billable_minutes / 60 });
+    setEditing(true);
+  }
+
+  async function save() {
+    try {
+      await update.mutateAsync({
+        name: form.name,
+        pay_model: form.pay_model,
+        minimum_billable_minutes: Math.round(form.minimum_billable_hours * 60),
+      });
+      setEditing(false);
+      toast({ title: t("common.saved") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded-md border p-3 space-y-3">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Input
+            value={form.name}
+            onChange={(e) => setForm(s => ({ ...s, name: e.target.value }))}
+            placeholder={t("settings.type_name")}
+          />
+          <select
+            className="rounded-md border p-2 text-sm"
+            value={form.pay_model}
+            onChange={(e) => setForm(s => ({ ...s, pay_model: e.target.value }))}
+          >
+            <option value="hourly">{t("settings.hourly")}</option>
+            <option value="flat_rate">{t("settings.flat_rate")}</option>
+          </select>
+          <Input
+            type="number"
+            min={0.5}
+            step={0.5}
+            value={form.minimum_billable_hours}
+            onChange={(e) => setForm(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={save} disabled={!form.name || update.isPending}>
+            <Check className="h-3.5 w-3.5 mr-1" />{t("common.save_changes")}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+            <X className="h-3.5 w-3.5 mr-1" />{t("common.cancel")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-md border p-3 text-sm">
+      <span className="font-medium">{ty.name}</span>
+      <div className="flex items-center gap-4 text-muted-foreground">
+        <span>{ty.pay_model}</span>
+        <span>{(ty.minimum_billable_minutes / 60).toFixed(1)}h min</span>
+        <button type="button" onClick={startEdit} className="hover:text-foreground transition-colors">
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(t("settings.confirm_delete_type"))) remove.mutate();
+          }}
+          disabled={remove.isPending}
+          className="text-destructive hover:text-destructive/80 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -287,13 +373,7 @@ export function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             {types.map((ty) => (
-              <div key={ty.id} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                <span className="font-medium">{ty.name}</span>
-                <div className="flex gap-4 text-muted-foreground">
-                  <span>{ty.pay_model}</span>
-                  <span>{(ty.minimum_billable_minutes / 60).toFixed(1)}h min</span>
-                </div>
-              </div>
+              <AppointmentTypeRow key={ty.id} ty={ty} t={t} />
             ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -307,6 +387,33 @@ export function SettingsPage() {
           <Button onClick={addType} disabled={!newType.name || createType.isPending}>{t("settings.add_type")}</Button>
         </CardContent>
       </Card>
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader><CardTitle>{t("settings.super_admin_options")}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.allow_manual_confirm")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.allow_manual_confirm_description")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={(settings as Record<string, unknown>)?.allow_manual_confirm as boolean ?? false}
+                onClick={() => update.mutate({ allow_manual_confirm: !((settings as Record<string, unknown>)?.allow_manual_confirm as boolean ?? false) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  (settings as Record<string, unknown>)?.allow_manual_confirm ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  (settings as Record<string, unknown>)?.allow_manual_confirm ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

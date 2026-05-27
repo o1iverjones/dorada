@@ -65,6 +65,17 @@ export function useOfferAppointment(id: string) {
   });
 }
 
+export function useManualConfirm(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (interpreter_id: string) => api.post(`/appointments/${id}/manual-confirm`, { interpreter_id }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+    },
+  });
+}
+
 export function useAppointmentActivity(id: string) {
   return useQuery({
     queryKey: ["appointments", id, "activity"],

@@ -44,6 +44,7 @@ import {
   patchClockTimes,
   uploadAppointmentMedia,
   getAppointmentMedia,
+  manualConfirmInterpreter,
 } from "./appointments.service.js";
 
 async function resolveActor(payload: JwtPayload, fastify: FastifyInstance) {
@@ -219,6 +220,22 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const { id, offer_id } = req.params as { id: string; offer_id: string };
     const payload = req.user as JwtPayload;
     return reply.send(await declineOffer(id, offer_id, payload.sub, fastify.prisma));
+  });
+
+  // POST /appointments/:id/manual-confirm — admin manually assigns an interpreter (feature-flagged)
+  fastify.post("/:id/manual-confirm", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { interpreter_id } = req.body as { interpreter_id: string };
+    const payload = req.user as JwtPayload;
+
+    const settings = await fastify.prisma.systemSettings.findUnique({
+      where: { organization_id: payload.organization_id },
+    });
+    if (!settings?.allow_manual_confirm) {
+      return reply.status(403).send({ error: { code: "FEATURE_DISABLED", message: "Manual confirm is not enabled" } });
+    }
+
+    return reply.send(await manualConfirmInterpreter(id, interpreter_id, payload.organization_id, fastify.prisma));
   });
 
   // POST /appointments/:id/clock-in
