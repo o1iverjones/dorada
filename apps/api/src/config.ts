@@ -15,7 +15,7 @@ const ConfigSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default("15m"),
   JWT_REFRESH_TTL_DAYS: z.coerce.number().default(30),
-  ADMIN_REFRESH_TTL_HOURS: z.coerce.number().default(8),
+  ADMIN_REFRESH_TTL_HOURS: z.coerce.number().default(720), // 30 days
   MFA_TOKEN_TTL: z.string().default("5m"),
 
   TWILIO_ACCOUNT_SID: z.string().optional(),
