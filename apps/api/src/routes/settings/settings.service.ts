@@ -13,7 +13,7 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
     prisma.systemSettings.findUnique({ where: { organization_id: organizationId } }),
     prisma.organizationLanguage.findMany({ where: { organization_id: organizationId }, orderBy: { name: "asc" } }),
     prisma.appointmentType.findMany({
-      where: { organization_id: organizationId },
+      where: { organization_id: organizationId, is_active: true },
       orderBy: { name: "asc" },
     }),
   ]);
