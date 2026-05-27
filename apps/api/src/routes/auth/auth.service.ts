@@ -294,6 +294,11 @@ export async function refreshTokens(
     throw new UnauthorizedError("TOKEN_REVOKED", "Invalid token type");
   }
 
+  // Look up non-revoked tokens for this user and find the matching one.
+  // We do NOT rotate the refresh token — the same token remains valid until
+  // it expires or is explicitly revoked (logout / password change).
+  // Rotation caused multi-tab race conditions: Tab A refreshes and revokes the
+  // token; Tab B then tries the same (now-revoked) token and gets logged out.
   const allTokens = await prisma.refreshToken.findMany({
     where: isInterpreter
       ? { interpreter_id: payload.sub, revoked_at: null }
@@ -312,11 +317,7 @@ export async function refreshTokens(
     throw new UnauthorizedError("TOKEN_REVOKED", "Refresh token expired or revoked");
   }
 
-  await prisma.refreshToken.update({
-    where: { id: matchedToken.id },
-    data: { revoked_at: new Date() },
-  });
-
+  // Issue a fresh access token and return the same refresh token unchanged.
   if (isInterpreter) {
     const interpreter = await prisma.interpreter.findUnique({ where: { id: payload.sub } });
     if (!interpreter) throw new UnauthorizedError("TOKEN_REVOKED", "Account not found");
@@ -325,16 +326,7 @@ export async function refreshTokens(
       { sub: interpreter.id, type: "interpreter", organization_id: interpreter.organization_id },
       { expiresIn: config.JWT_ACCESS_TTL },
     );
-    const newRefresh = fastify.jwt.sign(
-      { sub: interpreter.id, type: "interpreter_refresh" },
-      { expiresIn: `${config.JWT_REFRESH_TTL_DAYS}d` },
-    );
-    const tokenHash = await bcrypt.hash(newRefresh, BCRYPT_ROUNDS);
-    const expiresAt = new Date(Date.now() + config.JWT_REFRESH_TTL_DAYS * 86400_000);
-    await prisma.refreshToken.create({
-      data: { interpreter_id: interpreter.id, token_hash: tokenHash, expires_at: expiresAt },
-    });
-    return { access_token: newAccess, refresh_token: newRefresh };
+    return { access_token: newAccess, refresh_token: refreshToken };
   }
 
   const user = await prisma.user.findUnique({
@@ -348,16 +340,7 @@ export async function refreshTokens(
     { sub: user.id, type: "admin", name: user.name, organization_id: user.organization_id, role_id: user.role_id, permissions },
     { expiresIn: config.JWT_ACCESS_TTL },
   );
-  const newRefresh = fastify.jwt.sign(
-    { sub: user.id, type: "admin_refresh" },
-    { expiresIn: `${config.ADMIN_REFRESH_TTL_HOURS}h` },
-  );
-  const tokenHash = await bcrypt.hash(newRefresh, BCRYPT_ROUNDS);
-  const expiresAt = new Date(Date.now() + config.ADMIN_REFRESH_TTL_HOURS * 3600_000);
-  await prisma.refreshToken.create({
-    data: { user_id: user.id, token_hash: tokenHash, expires_at: expiresAt },
-  });
-  return { access_token: newAccess, refresh_token: newRefresh };
+  return { access_token: newAccess, refresh_token: refreshToken };
 }
 
 export async function logout(
