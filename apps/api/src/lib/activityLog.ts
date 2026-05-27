@@ -14,7 +14,7 @@ export async function writeActivityLog(
     adminName,
   }: {
     organizationId: string;
-    entityType: "appointment" | "clinic" | "interpreter" | "agency" | "admin_user" | "report";
+    entityType: "appointment" | "clinic" | "interpreter" | "agency" | "admin_user" | "report" | "insurance_company";
     entityId: string;
     entityName?: string | null | undefined;
     action: string;

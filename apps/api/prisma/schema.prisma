@@ -43,6 +43,7 @@ model Organization {
   super_admin_settings SuperAdminSettings?
   report_jobs          ReportJob[]
   invoices             Invoice[]
+  insurance_companies  InsuranceCompany[]
 
   @@map("organizations")
 }
@@ -303,6 +304,21 @@ model Claim {
   insurance_agency InsuranceAgency? @relation(fields: [insurance_agency_id], references: [id], onDelete: SetNull)
 
   @@map("claims")
+}
+
+model InsuranceCompany {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  phone           String?
+  email           String?
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("insurance_companies")
 }
 
 // ─── Appointments ─────────────────────────────────────────────────────────────

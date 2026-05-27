@@ -37,6 +37,8 @@ import { AccountPage } from "./pages/account/AccountPage.js";
 import { ImportPage } from "./pages/import/ImportPage.js";
 import { IconGalleryPage } from "./pages/icons/IconGalleryPage.js";
 import { InvoicesPage } from "./pages/invoices/InvoicesPage.js";
+import { InsuranceCompaniesPage } from "./pages/insurance-companies/InsuranceCompaniesPage.js";
+import { InsuranceCompanyDetailPage } from "./pages/insurance-companies/InsuranceCompanyDetailPage.js";
 
 export const router = createBrowserRouter([
   {
@@ -108,6 +110,14 @@ export const router = createBrowserRouter([
       {
         path: "insurance-agencies/:id",
         element: <PermissionGuard permission="manage_clinics"><InsuranceAgencyDetailPage /></PermissionGuard>,
+      },
+      {
+        path: "insurance-companies",
+        element: <PermissionGuard permission="manage_clinics"><InsuranceCompaniesPage /></PermissionGuard>,
+      },
+      {
+        path: "insurance-companies/:id",
+        element: <PermissionGuard permission="manage_clinics"><InsuranceCompanyDetailPage /></PermissionGuard>,
       },
       {
         path: "patients",
