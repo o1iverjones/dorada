@@ -54,16 +54,14 @@ export function InterpreterDetailPage() {
       const payload: Record<string, unknown> = {};
       if (f.name) payload.name = f.name;
       if (f.phone) payload.phone = f.phone;
-      if (f.email !== undefined) payload.email = f.email || null;
-      if (f.pay_rate !== undefined && f.pay_rate !== "") payload.pay_rate = Number(f.pay_rate);
-      if (f.notes !== undefined) payload.notes = f.notes || null;
-      if (f.certificate_number !== undefined) payload.certificate_number = f.certificate_number || null;
-      if (f.zip_code !== undefined) payload.zip_code = f.zip_code || null;
-      if (f.coverage_range_miles !== undefined && f.coverage_range_miles !== "") {
-        payload.coverage_range_miles = Number(f.coverage_range_miles);
-      } else {
-        payload.coverage_range_miles = null;
-      }
+      payload.email = (f.email as string)?.trim() || null;
+      if (f.pay_rate !== "" && f.pay_rate != null) payload.pay_rate = Number(f.pay_rate);
+      payload.notes = (f.notes as string)?.trim() || null;
+      payload.certificate_number = (f.certificate_number as string)?.trim() || null;
+      payload.zip_code = (f.zip_code as string)?.trim() || null;
+      payload.coverage_range_miles = (f.coverage_range_miles as string) !== "" && f.coverage_range_miles != null
+        ? Number(f.coverage_range_miles)
+        : null;
       const ecName = String(f.emergency_contact_name ?? "").trim();
       const ecPhone = String(f.emergency_contact_phone ?? "").trim();
       if (ecName || ecPhone) {

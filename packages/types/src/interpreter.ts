@@ -45,19 +45,19 @@ export const InterpreterSchema = z.object({
 export const CreateInterpreterBodySchema = z.object({
   name: z.string().min(1).max(255),
   phone: z.string().min(7).max(20),
-  email: z.string().email().optional(),
+  email: z.string().email().nullish(),
   type: InterpreterTypeSchema,
   languages: z.array(z.string().min(2).max(10)).min(1),
   location: LocationSchema.optional(),
-  pay_rate: z.number().nonnegative().optional(),
-  payment_method: z.string().max(100).optional(),
-  address: z.string().max(500).optional(),
+  pay_rate: z.number().nonnegative().nullish(),
+  payment_method: z.string().max(100).nullish(),
+  address: z.string().max(500).nullish(),
   emergency_contact: EmergencyContactSchema.optional(),
   clinics_not_allowed: z.array(UuidSchema).optional(),
-  notes: z.string().max(5000).optional(),
-  certificate_number: z.string().max(100).optional(),
-  zip_code: z.string().max(10).optional(),
-  coverage_range_miles: z.number().nonnegative().optional(),
+  notes: z.string().max(5000).nullish(),
+  certificate_number: z.string().max(100).nullish(),
+  zip_code: z.string().max(10).nullish(),
+  coverage_range_miles: z.number().nonnegative().nullish(),
 });
 
 export const UpdateInterpreterBodySchema = CreateInterpreterBodySchema.partial();
