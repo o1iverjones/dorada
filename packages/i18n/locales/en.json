@@ -280,10 +280,10 @@
     "todays_appointments": "Today's Appointments",
     "pending_offers": "Pending Offers",
     "follow_up_drafts": "Follow-Up Drafts",
-    "email_drafts": "Email Intake Drafts",
+    "email_drafts": "Email Intake",
     "todays_schedule": "Today's Schedule",
     "no_appointments_today": "No appointments scheduled for today.",
-    "email_intake_queue": "Email Intake Queue",
+    "email_intake_queue": "Email Intake",
     "no_pending_emails": "No pending email drafts.",
     "activity_log": "Activity log",
     "pending_invoices": "Pending Invoices"

@@ -280,10 +280,10 @@
     "todays_appointments": "Citas de hoy",
     "pending_offers": "Ofertas pendientes",
     "follow_up_drafts": "Borradores de seguimiento",
-    "email_drafts": "Borradores de correo",
+    "email_drafts": "Correo entrante",
     "todays_schedule": "Agenda de hoy",
     "no_appointments_today": "No hay citas programadas para hoy.",
-    "email_intake_queue": "Cola de correos entrantes",
+    "email_intake_queue": "Correo entrante",
     "no_pending_emails": "No hay borradores de correo pendientes.",
     "activity_log": "Registro de actividad",
     "pending_invoices": "Facturas Pendientes"
