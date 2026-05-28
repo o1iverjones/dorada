@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/auth.js";
 import { useUnreadMessageCount } from "../../hooks/useMessages.js";
+import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { formatInTz } from "../../lib/timezone.js";
 import { cn } from "../../lib/utils.js";
 import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
@@ -9,6 +12,15 @@ import {
   Settings, User, Upload, Receipt, Landmark,
 } from "lucide-react";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
+
+function useClock() {
+  const [time, setTime] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 10_000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
 
 interface NavItem {
   label: string;
@@ -24,6 +36,8 @@ export function Sidebar() {
   const canManageInvoices = hasPermission("manage_invoices");
   const { data: invoiceStats } = useInvoiceStats(canManageInvoices);
   const pendingInvoices = invoiceStats?.submitted_count ?? 0;
+  const now = useClock();
+  const tz = useOrgTimezone();
 
   const navItems: NavItem[] = [
     { label: t("nav.dashboard"), to: "/dashboard", icon: LayoutDashboard },
@@ -49,10 +63,20 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-64 flex-col bg-sidebar-bg">
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-5 border-b border-white/10">
-        <img src="/dorada-logo-trans2.png" alt="Dorada" className="h-9 w-9 rounded-full object-contain" />
-        <span style={{ fontFamily: "PlanetComic, sans-serif", fontSize: "1.75rem" }} className="text-white">DORADA</span>
+      {/* Logo + clock */}
+      <div className="border-b border-white/10">
+        <div className="flex h-16 items-center gap-3 px-5">
+          <img src="/dorada-logo-trans2.png" alt="Dorada" className="h-9 w-9 rounded-full object-contain" />
+          <span style={{ fontFamily: "PlanetComic, sans-serif", fontSize: "1.75rem" }} className="text-white">DORADA</span>
+        </div>
+        <div className="px-5 pb-3 -mt-1">
+          <p className="text-xl font-semibold tabular-nums text-white leading-none">
+            {formatInTz(now, { hour: "2-digit", minute: "2-digit" }, tz)}
+          </p>
+          <p className="text-[11px] text-white/50 mt-0.5">
+            {formatInTz(now, { weekday: "short", month: "short", day: "numeric" }, tz)} · PST
+          </p>
+        </div>
       </div>
 
       {/* Nav */}
