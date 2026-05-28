@@ -71,7 +71,7 @@ export function Sidebar() {
         </div>
         <div className="pb-3 -mt-1 text-center">
           <p className="text-xl font-semibold tabular-nums text-white leading-none">
-            {formatInTz(now, { hour: "2-digit", minute: "2-digit" }, tz)}
+            {formatInTz(now, { hour: "numeric", minute: "2-digit" }, tz)}
           </p>
           <p className="text-[11px] text-white/50 mt-0.5">
             {formatInTz(now, { weekday: "short", month: "short", day: "numeric" }, tz)} · PST
