@@ -148,12 +148,13 @@ The following services need accounts created and API keys configured before goin
 |---|---|---|
 | **Railway** | PaaS hosting — selected platform | [railway.app](https://railway.app) |
 
-### Domain & Security
+### Domain & DNS
 
 | Service | Purpose | Link |
 |---|---|---|
-| **Cloudflare** | DNS, CDN, DDoS protection, free TLS proxy | [cloudflare.com](https://cloudflare.com) |
-| **Let's Encrypt / Certbot** | Free TLS certificates (self-hosted) | [letsencrypt.org](https://letsencrypt.org) |
+| **Porkbun** | Domain registrar and DNS management for `dorada.app` | [porkbun.com](https://porkbun.com) |
+| **Cloudflare** | CDN, DDoS protection, free TLS proxy (production) | [cloudflare.com](https://cloudflare.com) |
+| **Let's Encrypt / Certbot** | Free TLS certificates (self-hosted only) | [letsencrypt.org](https://letsencrypt.org) |
 
 ### Monitoring & Error Tracking
 
@@ -182,7 +183,7 @@ Work through this list in order. Each section builds on the previous.
 - [ ] Add `.env.production` to `.gitignore`
 - [ ] Rotate all secrets that currently use the dev placeholder values (`change-me-*`)
 - [ ] Create a Twilio account, verify a sender number, fill `TWILIO_*` vars
-- [ ] Create a Resend account at [resend.com](https://resend.com), verify your sending domain, generate an API key, fill `RESEND_API_KEY` and `RESEND_FROM_EMAIL`
+- [ ] Create a Resend account at [resend.com](https://resend.com), add `dorada.app` as a sending domain, then add the SPF/DKIM/DMARC `TXT` records Resend provides into **Porkbun DNS** (porkbun.com → your domain → DNS records). Once verified, generate an API key and fill `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `APP_URL`
 - [ ] Create a Firebase project, download service account JSON, fill `FIREBASE_SERVICE_ACCOUNT_JSON`
 - [ ] Create a Cloudflare R2 bucket, generate an API token with read/write access, fill `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`
 - [ ] Add Anthropic API key for email intake
@@ -266,7 +267,7 @@ The report worker (`apps/api/src/workers/reports-worker.ts`) consumes the BullMQ
 
 ### Phase 7 — DNS & TLS
 
-- [ ] Point `dorada.app` nameservers to Cloudflare (log in to Porkbun → update nameservers to Cloudflare's)
+- [ ] **DNS is managed in Porkbun** (porkbun.com). Optionally delegate to Cloudflare for CDN/proxy: log in to Porkbun → update nameservers to Cloudflare's assigned nameservers → manage all DNS records in Cloudflare thereafter. If staying on Porkbun DNS, add CNAME records directly there.
 - [ ] In Cloudflare DNS, add CNAME records for the Railway services:
   - `api.dorada.app` → Railway API service URL
   - `app.dorada.app` → Railway web service URL
@@ -315,10 +316,11 @@ TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=...
 TWILIO_FROM_NUMBER=+1xxxxxxxxxx
 
-# Resend
+# Resend (transactional email — domain managed in Porkbun)
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
-RESEND_FROM_EMAIL=no-reply@yourdomain.com
+RESEND_FROM_EMAIL=noreply@dorada.app
 RESEND_FROM_NAME=Dorada
+APP_URL=https://app.dorada.app
 
 # Firebase FCM
 FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
