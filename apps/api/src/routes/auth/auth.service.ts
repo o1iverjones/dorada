@@ -281,6 +281,8 @@ export async function refreshTokens(
   prisma: PrismaClient,
   fastify: FastifyInstance,
 ): Promise<{ access_token: string; refresh_token: string }> {
+  // Step 1: verify the JWT signature and expiry. This is the source of truth —
+  // the signed token IS the credential. No DB lookup is needed to validate it.
   let payload: { sub: string; type: string };
   try {
     payload = fastify.jwt.verify<{ sub: string; type: string }>(refreshToken);
@@ -294,70 +296,39 @@ export async function refreshTokens(
     throw new UnauthorizedError("TOKEN_REVOKED", "Invalid token type");
   }
 
-  const allTokens = await prisma.refreshToken.findMany({
-    where: isInterpreter
-      ? { interpreter_id: payload.sub, revoked_at: null }
-      : { user_id: payload.sub, revoked_at: null },
-  });
-
-  let matchedToken = null;
-  for (const t of allTokens) {
-    if (await bcrypt.compare(refreshToken, t.token_hash)) {
-      matchedToken = t;
-      break;
-    }
-  }
-
-  if (!matchedToken || matchedToken.expires_at < new Date()) {
-    throw new UnauthorizedError("TOKEN_REVOKED", "Refresh token expired or revoked");
-  }
-
-  await prisma.refreshToken.update({
-    where: { id: matchedToken.id },
-    data: { revoked_at: new Date() },
-  });
-
+  // Step 2: verify the account still exists and is active, then issue a new
+  // access token. Return the same refresh token — no rotation.
+  //
+  // We intentionally skip the DB revocation check. Previously the DB record
+  // was used to enforce single-use rotation, but rotation caused multi-tab
+  // race conditions and logged users out unexpectedly. The JWT expiry (720h)
+  // is the session boundary; explicit logout clears localStorage.
   if (isInterpreter) {
     const interpreter = await prisma.interpreter.findUnique({ where: { id: payload.sub } });
-    if (!interpreter) throw new UnauthorizedError("TOKEN_REVOKED", "Account not found");
-
+    if (!interpreter || !interpreter.is_active) {
+      throw new UnauthorizedError("TOKEN_REVOKED", "Account not found or inactive");
+    }
     const newAccess = fastify.jwt.sign(
       { sub: interpreter.id, type: "interpreter", organization_id: interpreter.organization_id },
       { expiresIn: config.JWT_ACCESS_TTL },
     );
-    const newRefresh = fastify.jwt.sign(
-      { sub: interpreter.id, type: "interpreter_refresh" },
-      { expiresIn: `${config.JWT_REFRESH_TTL_DAYS}d` },
-    );
-    const tokenHash = await bcrypt.hash(newRefresh, BCRYPT_ROUNDS);
-    const expiresAt = new Date(Date.now() + config.JWT_REFRESH_TTL_DAYS * 86400_000);
-    await prisma.refreshToken.create({
-      data: { interpreter_id: interpreter.id, token_hash: tokenHash, expires_at: expiresAt },
-    });
-    return { access_token: newAccess, refresh_token: newRefresh };
+    return { access_token: newAccess, refresh_token: refreshToken };
   }
 
   const user = await prisma.user.findUnique({
     where: { id: payload.sub },
     include: { role: { include: { permissions: true } } },
   });
-  if (!user) throw new UnauthorizedError("TOKEN_REVOKED", "Account not found");
+  if (!user || !user.is_active) {
+    throw new UnauthorizedError("TOKEN_REVOKED", "Account not found or inactive");
+  }
 
   const permissions = user.role.permissions.map((p) => p.permission);
   const newAccess = fastify.jwt.sign(
     { sub: user.id, type: "admin", name: user.name, organization_id: user.organization_id, role_id: user.role_id, permissions },
     { expiresIn: config.JWT_ACCESS_TTL },
   );
-  const newRefresh = fastify.jwt.sign(
-    { sub: user.id, type: "admin_refresh" },
-    { expiresIn: `${config.ADMIN_REFRESH_TTL_HOURS}h` },
-  );
-  const tokenHash = await bcrypt.hash(newRefresh, BCRYPT_ROUNDS);
-  const expiresAt = new Date(Date.now() + config.ADMIN_REFRESH_TTL_HOURS * 3600_000);
-  await prisma.refreshToken.create({
-    data: { user_id: user.id, token_hash: tokenHash, expires_at: expiresAt },
-  });
-  return { access_token: newAccess, refresh_token: newRefresh };
+  return { access_token: newAccess, refresh_token: refreshToken };
 }
 
 export async function logout(

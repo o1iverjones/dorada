@@ -59,6 +59,7 @@ export function useOfferAppointment(id: string) {
     mutationFn: (body: unknown) => api.post(`/appointments/${id}/offers`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
       qc.invalidateQueries({ queryKey: ["activity-log"] });
     },
@@ -71,7 +72,9 @@ export function useManualConfirm(id: string) {
     mutationFn: (interpreter_id: string) => api.post(`/appointments/${id}/manual-confirm`, { interpreter_id }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
     },
   });
 }
@@ -127,6 +130,7 @@ export function usePatchClockTimes(id: string) {
       api.patch(`/appointments/${id}/clock-times`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
     },
   });

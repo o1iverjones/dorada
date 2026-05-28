@@ -59,7 +59,8 @@ export function NewAppointmentPage() {
   const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
   const interpreterRates = ratesData?.data ?? [];
 
-  const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string }>)
+  const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string; is_active?: boolean }>)
+    .filter((c) => c.is_active !== false)
     .map((c) => ({ value: c.id, label: c.name }));
   const agencyOptions = ((agencies?.data ?? []) as Array<{ id: string; name: string }>)
     .map((a) => ({ value: a.id, label: a.name }));
@@ -101,8 +102,9 @@ export function NewAppointmentPage() {
       }) as { id: string };
       toast({ title: t("appointments.created") });
       navigate(`/appointments/${appt.id}`);
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast({ title: msg, variant: "destructive" });
     }
   }
 

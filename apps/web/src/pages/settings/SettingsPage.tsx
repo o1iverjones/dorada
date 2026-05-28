@@ -59,13 +59,17 @@ function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => 
             <option value="hourly">{t("settings.hourly")}</option>
             <option value="flat_rate">{t("settings.flat_rate")}</option>
           </select>
-          <Input
-            type="number"
-            min={0.5}
-            step={0.5}
-            value={form.minimum_billable_hours}
-            onChange={(e) => setForm(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))}
-          />
+          <div className="relative">
+            <Input
+              type="number"
+              min={0.5}
+              step={0.5}
+              value={form.minimum_billable_hours}
+              onChange={(e) => setForm(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))}
+              className="pr-10"
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">hrs</span>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={save} disabled={!form.name || update.isPending}>
@@ -84,7 +88,7 @@ function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => 
       <span className="font-medium">{ty.name}</span>
       <div className="flex items-center gap-4 text-muted-foreground">
         <span>{ty.pay_model}</span>
-        <span>{(ty.minimum_billable_minutes / 60).toFixed(1)}h min</span>
+        <span>{(ty.minimum_billable_minutes / 60).toFixed(1)} hrs min</span>
         <button type="button" onClick={startEdit} className="hover:text-foreground transition-colors">
           <Pencil className="h-4 w-4" />
         </button>
@@ -216,37 +220,6 @@ export function SettingsPage() {
           </Button>
         }
       />
-
-      <Card>
-        <CardHeader><CardTitle>{t("settings.timezone")}</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          <p className="text-sm text-muted-foreground">{t("settings.timezone_description")}</p>
-          <select
-            className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm"
-            value={form.timezone}
-            onChange={(e) => setForm(s => ({ ...s, timezone: e.target.value }))}
-          >
-            <optgroup label="United States">
-              <option value="America/New_York">Eastern — New York (ET)</option>
-              <option value="America/Chicago">Central — Chicago (CT)</option>
-              <option value="America/Denver">Mountain — Denver (MT)</option>
-              <option value="America/Phoenix">Mountain (no DST) — Phoenix</option>
-              <option value="America/Los_Angeles">Pacific — Los Angeles (PT)</option>
-              <option value="America/Anchorage">Alaska — Anchorage (AKT)</option>
-              <option value="Pacific/Honolulu">Hawaii — Honolulu (HT)</option>
-            </optgroup>
-            <optgroup label="Other">
-              <option value="UTC">UTC</option>
-              <option value="America/Puerto_Rico">Puerto Rico (AST)</option>
-              <option value="America/Mexico_City">Mexico City (CST)</option>
-              <option value="Europe/London">London (GMT/BST)</option>
-            </optgroup>
-          </select>
-          <p className="text-xs text-muted-foreground">
-            {t("settings.timezone_current")}: <span className="font-medium">{new Date().toLocaleString([], { timeZone: form.timezone, timeZoneName: "long" }).split(", ").pop()}</span>
-          </p>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader><CardTitle>{t("settings.pay_rates")}</CardTitle></CardHeader>
@@ -382,7 +355,10 @@ export function SettingsPage() {
               <option value="hourly">{t("settings.hourly")}</option>
               <option value="flat_rate">{t("settings.flat_rate")}</option>
             </select>
-            <Input type="number" min={0.5} step={0.5} value={newType.minimum_billable_hours} onChange={(e) => setNewType(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))} />
+            <div className="relative">
+              <Input type="number" min={0.5} step={0.5} value={newType.minimum_billable_hours} onChange={(e) => setNewType(s => ({ ...s, minimum_billable_hours: parseFloat(e.target.value) }))} className="pr-10" />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">hrs</span>
+            </div>
           </div>
           <Button onClick={addType} disabled={!newType.name || createType.isPending}>{t("settings.add_type")}</Button>
         </CardContent>
@@ -391,7 +367,41 @@ export function SettingsPage() {
       {hasPermission("manage_system_settings") && (
         <Card>
           <CardHeader><CardTitle>{t("settings.super_admin_options")}</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+
+            {/* Timezone */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t("settings.timezone")}</p>
+              <p className="text-xs text-muted-foreground">{t("settings.timezone_description")}</p>
+              <select
+                className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.timezone}
+                onChange={(e) => setForm(s => ({ ...s, timezone: e.target.value }))}
+              >
+                <optgroup label="United States">
+                  <option value="America/Los_Angeles">Pacific — Los Angeles (PT)</option>
+                  <option value="America/Denver">Mountain — Denver (MT)</option>
+                  <option value="America/Phoenix">Mountain (no DST) — Phoenix</option>
+                  <option value="America/Chicago">Central — Chicago (CT)</option>
+                  <option value="America/New_York">Eastern — New York (ET)</option>
+                  <option value="America/Anchorage">Alaska — Anchorage (AKT)</option>
+                  <option value="Pacific/Honolulu">Hawaii — Honolulu (HT)</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="UTC">UTC</option>
+                  <option value="America/Puerto_Rico">Puerto Rico (AST)</option>
+                  <option value="America/Mexico_City">Mexico City (CST)</option>
+                  <option value="Europe/London">London (GMT/BST)</option>
+                </optgroup>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                {t("settings.timezone_current")}: <span className="font-medium">{new Date().toLocaleString([], { timeZone: form.timezone, timeZoneName: "long" }).split(", ").pop()}</span>
+              </p>
+            </div>
+
+            <div className="border-t" />
+
+            {/* Allow manual confirm */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">{t("settings.allow_manual_confirm")}</p>
@@ -411,6 +421,7 @@ export function SettingsPage() {
                 }`} />
               </button>
             </div>
+
           </CardContent>
         </Card>
       )}

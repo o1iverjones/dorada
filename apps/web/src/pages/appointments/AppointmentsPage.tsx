@@ -18,14 +18,18 @@ export function AppointmentsPage() {
   const tz = useOrgTimezone();
   const [searchParams] = useSearchParams();
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "not_completed");
-  const initialDate = searchParams.get("date_from") ?? "";
-  const [dateFilter, setDateFilter] = useState(initialDate);
+  // dateFrom: open-ended "from this date onwards" (no date_to); dateExact: single-day filter (date_from = date_to)
+  const initialDateFrom = searchParams.get("date_from") && !searchParams.get("date_to") ? searchParams.get("date_from")! : "";
+  const initialDateExact = searchParams.get("date_from") && searchParams.get("date_to") ? searchParams.get("date_from")! : "";
+  const [dateFrom, setDateFrom] = useState(initialDateFrom);
+  const [dateFilter, setDateFilter] = useState(initialDateExact);
 
   const NOT_COMPLETED = "pending_offer,confirmed,in_progress,cancelled";
   const params: Record<string, string> = { limit: "50" };
   if (statusFilter === "not_completed") params.status = NOT_COMPLETED;
   else if (statusFilter) params.status = statusFilter;
   if (dateFilter) { params.date_from = dateFilter; params.date_to = dateFilter; }
+  else if (dateFrom) { params.date_from = dateFrom; }
 
   const { data, isLoading } = useAppointments(params);
 
@@ -66,6 +70,12 @@ export function AppointmentsPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
+        {dateFrom && (
+          <div className="flex items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-sm">
+            <span className="text-muted-foreground">From: <span className="font-medium text-foreground">{dateFrom}</span></span>
+            <button onClick={() => setDateFrom("")} className="ml-1 text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+        )}
         {dateFilter && (
           <div className="flex items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-sm">
             <span className="text-muted-foreground">Date: <span className="font-medium text-foreground">{dateFilter}</span></span>

@@ -27,18 +27,17 @@ export function DashboardPage() {
   const now = useClock();
   const tz = useOrgTimezone();
 
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+
   const { data: todayAppts, isLoading } = useQuery({
-    queryKey: ["appointments", "today", tz],
-    queryFn: () => {
-      // Use the org timezone so "today" matches the local calendar date, not UTC
-      const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
-      return api.get<{ data: unknown[] }>(`/appointments?date_from=${today}&date_to=${today}&limit=20`);
-    },
+    queryKey: ["appointments", "today", todayStr],
+    queryFn: () =>
+      api.get<{ data: unknown[] }>(`/appointments?date_from=${todayStr}&date_to=${todayStr}&limit=20`),
   });
 
   const { data: pendingOffers } = useQuery({
-    queryKey: ["appointments", "pending_offer"],
-    queryFn: () => api.get<{ data: unknown[] }>("/appointments?status=pending_offer&limit=5"),
+    queryKey: ["appointments", "pending_offer", todayStr],
+    queryFn: () => api.get<{ data: unknown[] }>(`/appointments?status=pending_offer&date_from=${todayStr}&limit=500`),
   });
 
   const { data: followUpDrafts } = useQuery({
@@ -87,7 +86,7 @@ export function DashboardPage() {
           <p className="text-muted-foreground">{t("dashboard.subtitle")}</p>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-semibold tabular-nums">{formatInTz(now, { hour: "2-digit", minute: "2-digit" }, tz)}</p>
+          <p className="text-3xl font-semibold tabular-nums">{formatInTz(now, { hour: "numeric", minute: "2-digit" }, tz)}</p>
           <p className="text-sm text-muted-foreground">(PST) {formatInTz(now, { weekday: "long", month: "long", day: "numeric" }, tz)}</p>
         </div>
       </div>
@@ -97,13 +96,13 @@ export function DashboardPage() {
           icon={<Calendar className="h-5 w-5 text-primary" />}
           label={t("dashboard.todays_appointments")}
           value={todayAppts?.data.length ?? 0}
-          href={`/appointments?date_from=${new Date().toLocaleDateString("en-CA", { timeZone: tz })}&status=`}
+          href={`/appointments?date_from=${todayStr}&status=`}
         />
         <StatCard
           icon={<Clock className="h-5 w-5 text-yellow-500" />}
           label={t("dashboard.pending_offers")}
           value={pendingOffers?.data.length ?? 0}
-          href="/appointments?status=pending_offer"
+          href={`/appointments?status=pending_offer&date_from=${todayStr}`}
         />
         <StatCard
           icon={<AlertTriangle className="h-5 w-5 text-orange-500" />}

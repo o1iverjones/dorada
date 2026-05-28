@@ -101,7 +101,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
       interpreter: { select: { id: true, name: true, profile_picture_url: true, pay_rate: true } },
       clinic: { select: { id: true, name: true } },
       insurance_agency: { select: { id: true, name: true } },
-      patient: { select: { id: true, name: true, mrn: true } },
+      patient: { select: { id: true, name: true } },
       offers: { where: { status: "pending" }, select: { interpreter: { select: { id: true, name: true } } } },
       invoice: { select: { id: true, status: true, billable_minutes: true } },
     },
@@ -123,7 +123,7 @@ export async function getAppointment(id: string, organizationId: string, prisma:
       interpreter: { select: { id: true, name: true } },
       clinic: { select: { id: true, name: true, address: true, parking: true } },
       insurance_agency: { select: { id: true, name: true } },
-      patient: { select: { id: true, name: true, mrn: true, date_of_birth: true } },
+      patient: { select: { id: true, name: true, date_of_birth: true } },
       offers: { include: { interpreter: { select: { id: true, name: true } } } },
       invoice: { select: { id: true, status: true, amount: true, submitted_at: true } },
     },
@@ -181,6 +181,15 @@ export async function createAppointment(
   actor: { id: string; name: string },
   prisma: PrismaClient,
 ) {
+  // Guard: reject deactivated clinics
+  const clinic = await prisma.clinic.findUnique({
+    where: { id: body.clinic_id },
+    select: { is_active: true },
+  });
+  if (!clinic || clinic.is_active === false) {
+    throw new ValidationError("CLINIC_INACTIVE", "The selected clinic is deactivated and cannot accept new appointments");
+  }
+
   const appt = await prisma.appointment.create({
     data: {
       organization_id: organizationId,
@@ -205,7 +214,7 @@ export async function createAppointment(
       interpreter: { select: { id: true, name: true } },
       clinic: { select: { id: true, name: true } },
       insurance_agency: { select: { id: true, name: true } },
-      patient: { select: { id: true, name: true, mrn: true } },
+      patient: { select: { id: true, name: true } },
     },
   });
   await logActivity(appt.id, organizationId, "created", actor.name, actor.id, null, prisma, appt.patient?.name, appt.po_number);
@@ -247,7 +256,7 @@ export async function updateAppointment(
       interpreter: { select: { id: true, name: true } },
       clinic: { select: { id: true, name: true } },
       insurance_agency: { select: { id: true, name: true } },
-      patient: { select: { id: true, name: true, mrn: true } },
+      patient: { select: { id: true, name: true } },
     },
   });
   const FIELD_LABELS: Record<string, string> = {
@@ -650,7 +659,7 @@ export async function getInterpreterAppointment(appointmentId: string, interpret
         },
       },
       insurance_agency: { select: { id: true, name: true } },
-      patient: { select: { id: true, name: true, mrn: true } },
+      patient: { select: { id: true, name: true } },
       invoice: { select: { id: true, status: true, amount: true } },
       media: { select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true }, orderBy: { uploaded_at: "asc" } },
     },
@@ -691,7 +700,7 @@ export async function getInterpreterAppointments(
         },
       },
       insurance_agency: { select: { id: true, name: true } },
-      patient: { select: { id: true, name: true, mrn: true } },
+      patient: { select: { id: true, name: true } },
     },
   });
 

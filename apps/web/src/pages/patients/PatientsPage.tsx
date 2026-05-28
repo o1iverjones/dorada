@@ -17,7 +17,7 @@ export function PatientsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", mrn: "", preferred_language: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", preferred_language: "" });
   const [page, setPage] = useState(1);
 
   const params: Record<string, string> = { limit: "50", page: String(page) };
@@ -47,8 +47,39 @@ export function PatientsPage() {
   const columns = [
     { key: "name", header: t("patients.name") },
     { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => r.phone as string ?? "—" },
-    { key: "mrn", header: t("patients.mrn"), render: (r: Record<string, unknown>) => r.mrn as string ?? "—" },
-    { key: "preferred_language", header: t("patients.preferred_language"), render: (r: Record<string, unknown>) => r.preferred_language as string ?? "—" },
+    {
+      key: "date_of_birth",
+      header: t("patients.date_of_birth"),
+      render: (r: Record<string, unknown>) => {
+        const dob = r.date_of_birth as string | null;
+        return dob ? new Date(dob).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }) : "—";
+      },
+    },
+    {
+      key: "claims_case",
+      header: t("patients.case_numbers"),
+      render: (r: Record<string, unknown>) => {
+        const claims = r.claims as Array<{ case_number: string }> | undefined;
+        return claims?.length ? claims.map((c) => c.case_number).join(", ") : "—";
+      },
+    },
+    {
+      key: "claims_injury",
+      header: t("patients.injury"),
+      render: (r: Record<string, unknown>) => {
+        const claims = r.claims as Array<{ injury: string | null }> | undefined;
+        const injuries = claims?.map((c) => c.injury).filter(Boolean) as string[] | undefined;
+        return injuries?.length ? injuries.join(", ") : "—";
+      },
+    },
+    {
+      key: "preferred_interpreter",
+      header: t("patients.preferred_interpreter"),
+      render: (r: Record<string, unknown>) => {
+        const interp = r.preferred_interpreter as { name: string } | null;
+        return interp?.name ?? "—";
+      },
+    },
   ];
 
   return (
@@ -96,7 +127,6 @@ export function PatientsPage() {
                 { key: "name", label: t("patients.name") },
                 { key: "phone", label: t("patients.phone") },
                 { key: "email", label: t("patients.email") },
-                { key: "mrn", label: t("patients.mrn") },
                 { key: "preferred_language", label: t("patients.preferred_language") },
               ] as const).map(({ key, label }) => (
                 <div key={key} className="space-y-1">

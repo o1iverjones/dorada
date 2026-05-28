@@ -71,7 +71,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefresh(): Promise<boolean> {
+  // If another call in this tab is already refreshing, wait for it.
   if (refreshPromise) return refreshPromise;
+
+  // If we (or another tab via localStorage) refreshed successfully within the
+  // last 10 seconds, skip the network call — the stored access token is fresh.
+  const tokenTimestamp = Number(localStorage.getItem("dorada_access_token_ts") ?? 0);
+  if (Date.now() - tokenTimestamp < 10_000) return true;
+
   refreshPromise = (async () => {
     const token = localStorage.getItem("dorada_refresh_token");
     if (!token) return false;
@@ -85,6 +92,8 @@ async function tryRefresh(): Promise<boolean> {
       const data = await res.json();
       localStorage.setItem("dorada_access_token", data.access_token);
       localStorage.setItem("dorada_refresh_token", data.refresh_token);
+      // Record timestamp so parallel tabs know a fresh token is available.
+      localStorage.setItem("dorada_access_token_ts", String(Date.now()));
       return true;
     } catch {
       return false;
@@ -98,11 +107,13 @@ async function tryRefresh(): Promise<boolean> {
 export function clearTokens() {
   localStorage.removeItem("dorada_access_token");
   localStorage.removeItem("dorada_refresh_token");
+  localStorage.removeItem("dorada_access_token_ts");
 }
 
 export function setTokens(accessToken: string, refreshToken: string) {
   localStorage.setItem("dorada_access_token", accessToken);
   localStorage.setItem("dorada_refresh_token", refreshToken);
+  localStorage.setItem("dorada_access_token_ts", String(Date.now()));
 }
 
 export const api = {

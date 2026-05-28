@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
-import type { CreatePatientBody, UpdatePatientBody, PatientListQuery } from "@dorada/types";
-import { NotFoundError, ConflictError, ValidationError } from "../../lib/errors.js";
+import type { CreatePatientBody, UpdatePatientBody, PatientListQuery, CreateClaimBody, UpdateClaimBody } from "@dorada/types";
+import { NotFoundError, ValidationError } from "../../lib/errors.js";
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string) {
   if (!record || record.organization_id !== organizationId) {
@@ -8,13 +8,25 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
   }
 }
 
+const claimInclude = {
+  insurance_agency: { select: { id: true, name: true } },
+  insurance_company: { select: { id: true, name: true } },
+} as const;
+
+const patientInclude = {
+  preferred_interpreter: { select: { id: true, name: true } },
+  claims: {
+    orderBy: { created_at: "asc" as const },
+    include: claimInclude,
+  },
+} as const;
+
 export async function listPatients(query: PatientListQuery, organizationId: string, prisma: PrismaClient) {
   const where = {
     organization_id: organizationId,
     ...(query.search ? {
       OR: [
         { name: { contains: query.search, mode: "insensitive" as const } },
-        { mrn: { contains: query.search, mode: "insensitive" as const } },
       ],
     } : {}),
     ...(query.language ? { preferred_language: query.language } : {}),
@@ -27,6 +39,7 @@ export async function listPatients(query: PatientListQuery, organizationId: stri
       take: query.limit,
       skip: (query.page - 1) * query.limit,
       orderBy: { name: "asc" },
+      include: patientInclude,
     }),
   ]);
 
@@ -38,17 +51,12 @@ export async function listPatients(query: PatientListQuery, organizationId: stri
 }
 
 export async function getPatient(id: string, organizationId: string, prisma: PrismaClient) {
-  const patient = await prisma.patient.findUnique({ where: { id } });
+  const patient = await prisma.patient.findUnique({ where: { id }, include: patientInclude });
   ensureTenant(patient, organizationId);
   return patient;
 }
 
 export async function createPatient(body: CreatePatientBody, organizationId: string, prisma: PrismaClient) {
-  if (body.mrn) {
-    const existing = await prisma.patient.findFirst({ where: { organization_id: organizationId, mrn: body.mrn } });
-    if (existing) throw new ConflictError("MRN_ALREADY_EXISTS", "MRN already registered");
-  }
-
   if (body.preferred_language) {
     const lang = await prisma.organizationLanguage.findFirst({
       where: { organization_id: organizationId, code: body.preferred_language, active: true },
@@ -60,11 +68,12 @@ export async function createPatient(body: CreatePatientBody, organizationId: str
     data: {
       organization_id: organizationId,
       name: body.name,
-      mrn: body.mrn ?? null,
+      preferred_interpreter_id: body.preferred_interpreter_id ?? null,
       phone: body.phone ?? null,
       email: body.email ?? null,
       preferred_language: body.preferred_language ?? null,
     },
+    include: patientInclude,
   });
 }
 
@@ -77,10 +86,76 @@ export async function updatePatient(id: string, body: UpdatePatientBody, organiz
     data: {
       ...(body.name ? { name: body.name } : {}),
       ...(body.date_of_birth !== undefined ? { date_of_birth: body.date_of_birth ? new Date(body.date_of_birth) : null } : {}),
-      ...(body.mrn !== undefined ? { mrn: body.mrn } : {}),
+      ...(body.preferred_interpreter_id !== undefined ? { preferred_interpreter_id: body.preferred_interpreter_id } : {}),
       ...(body.phone !== undefined ? { phone: body.phone } : {}),
       ...(body.email !== undefined ? { email: body.email } : {}),
       ...(body.preferred_language !== undefined ? { preferred_language: body.preferred_language } : {}),
     },
+    include: patientInclude,
   });
+}
+
+// ─── Claims ───────────────────────────────────────────────────────────────────
+
+export async function createClaim(patientId: string, body: CreateClaimBody, organizationId: string, prisma: PrismaClient) {
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+  ensureTenant(patient, organizationId);
+
+  return prisma.claim.create({
+    data: {
+      organization_id: organizationId,
+      patient_id: patientId,
+      case_number: body.case_number,
+      injury: body.injury ?? null,
+      date_of_injury: body.date_of_injury ? new Date(body.date_of_injury) : null,
+      insurance_agency_id: body.insurance_agency_id ?? null,
+      insurance_company_id: body.insurance_company_id ?? null,
+      adjuster: body.adjuster ?? null,
+      adjuster_phone: body.adjuster_phone ?? null,
+      adjuster_email: body.adjuster_email ?? null,
+    },
+    include: claimInclude,
+  });
+}
+
+export async function updateClaim(
+  patientId: string,
+  claimId: string,
+  body: UpdateClaimBody,
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const claim = await prisma.claim.findUnique({ where: { id: claimId } });
+  if (!claim || claim.organization_id !== organizationId || claim.patient_id !== patientId) {
+    throw new NotFoundError("CLAIM_NOT_FOUND", "Claim not found");
+  }
+
+  return prisma.claim.update({
+    where: { id: claimId },
+    data: {
+      ...(body.case_number !== undefined ? { case_number: body.case_number } : {}),
+      ...(body.injury !== undefined ? { injury: body.injury } : {}),
+      ...(body.date_of_injury !== undefined ? { date_of_injury: body.date_of_injury ? new Date(body.date_of_injury) : null } : {}),
+      ...(body.insurance_agency_id !== undefined ? { insurance_agency_id: body.insurance_agency_id } : {}),
+      ...(body.insurance_company_id !== undefined ? { insurance_company_id: body.insurance_company_id } : {}),
+      ...(body.adjuster !== undefined ? { adjuster: body.adjuster } : {}),
+      ...(body.adjuster_phone !== undefined ? { adjuster_phone: body.adjuster_phone } : {}),
+      ...(body.adjuster_email !== undefined ? { adjuster_email: body.adjuster_email } : {}),
+    },
+    include: claimInclude,
+  });
+}
+
+export async function deleteClaim(
+  patientId: string,
+  claimId: string,
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const claim = await prisma.claim.findUnique({ where: { id: claimId } });
+  if (!claim || claim.organization_id !== organizationId || claim.patient_id !== patientId) {
+    throw new NotFoundError("CLAIM_NOT_FOUND", "Claim not found");
+  }
+
+  await prisma.claim.delete({ where: { id: claimId } });
 }

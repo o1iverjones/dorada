@@ -35,3 +35,38 @@ export function useUpdatePatient(id: string) {
     },
   });
 }
+
+// ─── Claims ───────────────────────────────────────────────────────────────────
+
+export function useCreateClaim(patientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => api.post(`/patients/${patientId}/claims`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients", patientId] });
+      qc.invalidateQueries({ queryKey: ["patients"] });
+    },
+  });
+}
+
+export function useUpdateClaim(patientId: string, claimId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => api.patch(`/patients/${patientId}/claims/${claimId}`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients", patientId] });
+      qc.invalidateQueries({ queryKey: ["patients"] });
+    },
+  });
+}
+
+export function useDeleteClaim(patientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (claimId: string) => api.delete(`/patients/${patientId}/claims/${claimId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients", patientId] });
+      qc.invalidateQueries({ queryKey: ["patients"] });
+    },
+  });
+}
