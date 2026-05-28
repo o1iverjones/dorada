@@ -5,8 +5,8 @@ import { simpleParser } from "mailparser";
 // firebase-admin is an optional runtime dependency; use `any` to avoid compile-time errors
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FirebaseApp = any;
-import sgMail from "@sendgrid/mail";
 import { config, redisConnection } from "../config.js";
+import { sendEmail } from "../lib/email.js";
 import { extractAppointmentFromEmail } from "../integrations/claude.js";
 import {
   uploadString,
@@ -215,11 +215,10 @@ async function performConfirmation(
   if (method === "reply_email") {
     try {
       const template = log.insurance_agency?.reply_template ?? "Your appointment has been confirmed.";
-      const fromEmail = log.insurance_agency?.reply_from_email ?? config.SENDGRID_FROM_EMAIL;
-      await sgMail.send({
+      await sendEmail({
         to: log.from_email,
-        from: fromEmail,
         subject: "Appointment Confirmation",
+        html: `<p>${template}</p>`,
         text: template,
       });
       await prisma.emailIntakeLog.update({
@@ -277,10 +276,10 @@ async function notifyAdmins(
         notification: { title: "New Email Intake Draft", body: "An email requires your review." },
       }).catch(() => {});
     } else if (pref === "immediate_email" && user.email) {
-      await sgMail.send({
+      await sendEmail({
         to: user.email,
-        from: config.SENDGRID_FROM_EMAIL,
         subject: "New appointment draft from email intake",
+        html: `<p>A new draft appointment has been created and requires review. Log ID: ${relatedId}</p>`,
         text: `A new draft appointment has been created and requires review. Log ID: ${relatedId}`,
       }).catch(() => {});
     }

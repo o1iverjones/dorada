@@ -23,10 +23,6 @@ const ConfigSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
 
-  SENDGRID_API_KEY: z.string().optional(),
-  SENDGRID_FROM_EMAIL: z.string().email().optional().or(z.literal("")),
-  SENDGRID_FROM_NAME: z.string().default("Dorada"),
-
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default("noreply@dorada.app"),
   RESEND_FROM_NAME: z.string().default("Dorada"),
