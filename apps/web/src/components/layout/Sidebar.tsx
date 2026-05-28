@@ -69,7 +69,7 @@ export function Sidebar() {
           <img src="/dorada-logo-trans2.png" alt="Dorada" className="h-9 w-9 rounded-full object-contain" />
           <span style={{ fontFamily: "PlanetComic, sans-serif", fontSize: "1.75rem" }} className="text-white">DORADA</span>
         </div>
-        <div className="px-5 pb-3 -mt-1">
+        <div className="pb-3 -mt-1 text-center">
           <p className="text-xl font-semibold tabular-nums text-white leading-none">
             {formatInTz(now, { hour: "2-digit", minute: "2-digit" }, tz)}
           </p>
