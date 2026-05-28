@@ -303,7 +303,7 @@ export async function updateAppointment(
 
 export async function patchClockTimes(
   id: string,
-  body: { clock_in_time?: string; clock_out_time?: string },
+  body: { clock_in_time?: string; patient_arrived_at?: string; clock_out_time?: string },
   organizationId: string,
   actor: { id: string; name: string },
   prisma: PrismaClient,
@@ -315,6 +315,7 @@ export async function patchClockTimes(
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
 
   const clockIn = body.clock_in_time !== undefined ? new Date(body.clock_in_time) : undefined;
+  const patientArrived = body.patient_arrived_at !== undefined ? new Date(body.patient_arrived_at) : undefined;
   const clockOut = body.clock_out_time !== undefined ? new Date(body.clock_out_time) : undefined;
 
   // Recalculate actual duration when both times are known
@@ -326,6 +327,7 @@ export async function patchClockTimes(
     where: { id },
     data: {
       ...(clockIn !== undefined ? { clock_in_time: clockIn } : {}),
+      ...(patientArrived !== undefined ? { patient_arrived_at: patientArrived } : {}),
       ...(clockOut !== undefined ? { clock_out_time: clockOut } : {}),
       ...(actualMinutes !== undefined ? { actual_duration_minutes: actualMinutes } : {}),
     },
@@ -335,6 +337,7 @@ export async function patchClockTimes(
   const fmtTime = (d: Date) => new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: tz }).format(d);
   const changed: string[] = [];
   if (clockIn !== undefined) changed.push(`Clock-in → ${fmtTime(updated.clock_in_time!)}`);
+  if (patientArrived !== undefined) changed.push(`Patient arrived → ${fmtTime(updated.patient_arrived_at!)}`);
   if (clockOut !== undefined) changed.push(`Clock-out → ${fmtTime(updated.clock_out_time!)}`);
 
   await logActivity(id, organizationId, "clock_times_edited", actor.name, actor.id, changed.join("; "), prisma, appt!.patient?.name, appt!.po_number);

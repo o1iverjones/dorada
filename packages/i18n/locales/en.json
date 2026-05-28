@@ -374,6 +374,7 @@
     "pre_auth_mileage": "Pre-auth mileage",
     "shift_notes": "Shift notes",
     "clock_in": "Clock in",
+    "patient_arrived": "Patient arrived",
     "clock_out": "Clock out",
     "clock_in_location": "Clock-in location",
     "actual_duration": "Actual duration",

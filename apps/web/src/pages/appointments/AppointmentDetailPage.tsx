@@ -51,8 +51,10 @@ export function AppointmentDetailPage() {
   const [form, setForm] = useState<FormState>({} as FormState);
   const [noteText, setNoteText] = useState("");
   const [editingClockIn, setEditingClockIn] = useState(false);
+  const [editingPatientArrived, setEditingPatientArrived] = useState(false);
   const [editingClockOut, setEditingClockOut] = useState(false);
   const [clockInForm, setClockInForm] = useState("");
+  const [patientArrivedForm, setPatientArrivedForm] = useState("");
   const [clockOutForm, setClockOutForm] = useState("");
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
@@ -523,7 +525,7 @@ export function AppointmentDetailPage() {
                 </div>
               ) : (
                 <Button size="sm" variant="outline" onClick={() => {
-                  setClockInForm(a.clock_in_time ? toTzDateTimeInput(a.clock_in_time as string, tz) : "");
+                  setClockInForm(toTzDateTimeInput(new Date().toISOString(), tz));
                   setEditingClockIn(true);
                 }}>
                   <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("common.edit")}
@@ -534,6 +536,42 @@ export function AppointmentDetailPage() {
               <DateTimePicker value={clockInForm} onChange={setClockInForm} />
             ) : (
               <span className="font-medium">{a.clock_in_time ? formatInTz(a.clock_in_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) : "—"}</span>
+            )}
+          </div>
+
+          <div className="border-t" />
+
+          {/* Patient arrived row */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t("appointments.patient_arrived")}</span>
+              {editingPatientArrived ? (
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={patchClock.isPending} onClick={async () => {
+                    try {
+                      await patchClock.mutateAsync({ patient_arrived_at: patientArrivedForm ? fromTzDateTimeInput(patientArrivedForm, tz) : undefined });
+                      await refetch();
+                      toast({ title: t("common.saved") });
+                      setEditingPatientArrived(false);
+                    } catch {
+                      toast({ title: t("common.error"), variant: "destructive" });
+                    }
+                  }}>{t("common.save")}</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingPatientArrived(false)}>{t("common.cancel")}</Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => {
+                  setPatientArrivedForm(toTzDateTimeInput(new Date().toISOString(), tz));
+                  setEditingPatientArrived(true);
+                }}>
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("common.edit")}
+                </Button>
+              )}
+            </div>
+            {editingPatientArrived ? (
+              <DateTimePicker value={patientArrivedForm} onChange={setPatientArrivedForm} />
+            ) : (
+              <span className="font-medium">{a.patient_arrived_at ? formatInTz(a.patient_arrived_at as string, { dateStyle: "medium", timeStyle: "short" }, tz) : "—"}</span>
             )}
           </div>
 
@@ -559,7 +597,7 @@ export function AppointmentDetailPage() {
                 </div>
               ) : (
                 <Button size="sm" variant="outline" onClick={() => {
-                  setClockOutForm(a.clock_out_time ? toTzDateTimeInput(a.clock_out_time as string, tz) : "");
+                  setClockOutForm(toTzDateTimeInput(new Date().toISOString(), tz));
                   setEditingClockOut(true);
                 }}>
                   <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("common.edit")}
