@@ -86,7 +86,7 @@ export function DashboardPage() {
           <p className="text-muted-foreground">{t("dashboard.subtitle")}</p>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-semibold tabular-nums">{formatInTz(now, { hour: "2-digit", minute: "2-digit" }, tz)}</p>
+          <p className="text-3xl font-semibold tabular-nums">{formatInTz(now, { hour: "numeric", minute: "2-digit" }, tz)}</p>
           <p className="text-sm text-muted-foreground">(PST) {formatInTz(now, { weekday: "long", month: "long", day: "numeric" }, tz)}</p>
         </div>
       </div>
