@@ -28,6 +28,7 @@ export default function RootLayout() {
             headerStyle: { backgroundColor: "#0e402d" },
             headerTintColor: "#ffffff",
             headerTitleStyle: { fontWeight: "700" },
+            // @ts-ignore — headerTitleContainerStyle is valid at runtime but missing from types
             headerTitleContainerStyle: { maxWidth: "75%" },
             headerRight: () => <HeaderLogo />,
           }}

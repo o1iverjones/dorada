@@ -50,7 +50,6 @@ function DateTimePickerModal({ value, onChange, onClose }: {
           <Text style={pickerStyles.title}>Select date & time</Text>
           <Calendar
             minDate={todayStr}
-            selected={selectedDate}
             markedDates={{ [selectedDate]: { selected: true, selectedColor: C.primary } }}
             onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
             theme={{ todayTextColor: C.primary, arrowColor: C.primary }}
@@ -221,7 +220,7 @@ export default function AppointmentDetailScreen() {
       keyboardVerticalOffset={88}
     >
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {(() => {
+      {((): React.ReactNode => {
         const invoice = appt.invoice as { status: string; amount: number } | null | undefined;
         if (!invoice) return null;
         const approved = invoice.status === "approved";
@@ -247,16 +246,16 @@ export default function AppointmentDetailScreen() {
         <Text style={styles.label}>{t("appointments.date_time")}</Text>
         <Text style={styles.value}>{new Date(appt.date_time as string).toLocaleString()}</Text>
       </View>
-      {appt.status === "completed" && (appt.clock_in_time || appt.clock_out_time) && (
+      {appt.status === "completed" && ((appt.clock_in_time as string | null) || (appt.clock_out_time as string | null)) && (
         <View style={styles.clockRow}>
           <Ionicons name="time-outline" size={16} color={C.textMuted} />
           <View style={styles.clockTimes}>
-            {appt.clock_in_time && (
+            {(appt.clock_in_time as string | null) && (
               <Text style={styles.clockText}>
                 {t("appointments.clock_in")}: <Text style={styles.clockValue}>{new Date(appt.clock_in_time as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
               </Text>
             )}
-            {appt.clock_out_time && (
+            {(appt.clock_out_time as string | null) && (
               <Text style={styles.clockText}>
                 {t("appointments.clock_out")}: <Text style={styles.clockValue}>{new Date(appt.clock_out_time as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
               </Text>
@@ -273,7 +272,7 @@ export default function AppointmentDetailScreen() {
         address={clinic?.address as string | null}
         parking={clinic?.parking as string | null}
       />
-      {(appt.insurance_agency as Record<string, unknown> | null)?.name && (
+      {!!(appt.insurance_agency as Record<string, unknown> | null)?.name && (
         <View style={styles.section}>
           <Text style={styles.label}>{t("appointments.insurance_agency")}</Text>
           <Text style={styles.value}>{(appt.insurance_agency as Record<string, unknown>).name as string}</Text>
