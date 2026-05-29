@@ -61,7 +61,12 @@ export function CalendarPage() {
     return (stored === "month" || stored === "week" || stored === "day") ? stored : "week";
   });
   function changeView(v: View) { localStorage.setItem("dorada_calendar_view", v); setView(v); }
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(() => {
+    const stored = localStorage.getItem("dorada_calendar_date");
+    if (stored) { const d = new Date(stored); if (!isNaN(d.getTime())) return d; }
+    return new Date();
+  });
+  function changeDate(d: Date) { localStorage.setItem("dorada_calendar_date", d.toISOString()); setCurrentDate(d); }
   const [interpreterFilter, setInterpreterFilter] = useState("");
   const [clinicFilter, setClinicFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -169,14 +174,14 @@ export function CalendarPage() {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   function prev() {
-    if (view === "month") setCurrentDate(new Date(year, month - 1, 1));
-    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }
-    else { const d = new Date(currentDate); d.setDate(d.getDate() - 1); setCurrentDate(d); }
+    if (view === "month") changeDate(new Date(year, month - 1, 1));
+    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() - 7); changeDate(d); }
+    else { const d = new Date(currentDate); d.setDate(d.getDate() - 1); changeDate(d); }
   }
   function next() {
-    if (view === "month") setCurrentDate(new Date(year, month + 1, 1));
-    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }
-    else { const d = new Date(currentDate); d.setDate(d.getDate() + 1); setCurrentDate(d); }
+    if (view === "month") changeDate(new Date(year, month + 1, 1));
+    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() + 7); changeDate(d); }
+    else { const d = new Date(currentDate); d.setDate(d.getDate() + 1); changeDate(d); }
   }
 
   const rangeLabel = view === "month"
@@ -377,7 +382,7 @@ export function CalendarPage() {
                 onDrillMonthChange={setPickerDrillMonth}
                 onYearChange={setPickerYear}
                 onSelect={(y, m, d) => {
-                  setCurrentDate(new Date(y, m, d));
+                  changeDate(new Date(y, m, d));
                   setDatePickerOpen(false);
                 }}
                 onClose={() => setDatePickerOpen(false)}
