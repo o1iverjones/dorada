@@ -10,6 +10,30 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 
+const CONTACT_OPTIONS = ["Text", "Phone", "Email", "Link", "Portal", "App"] as const;
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+function ContactSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select
+      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">—</option>
+      {CONTACT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
 export function InsuranceAgencyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -25,10 +49,20 @@ export function InsuranceAgencyDetailPage() {
 
   function startEdit() {
     setForm({
-      name: agency.name,
-      reply_from_email: agency.reply_from_email,
-      reply_from_name: agency.reply_from_name,
-      reply_template: agency.reply_template,
+      name: agency.name ?? "",
+      contact_method: agency.contact_method ?? "",
+      telephone: agency.telephone ?? "",
+      id_number: agency.id_number ?? "",
+      rate_qualified: agency.rate_qualified ?? "",
+      rate_certified: agency.rate_certified ?? "",
+      miles: agency.miles ?? "",
+      reporting_info: agency.reporting_info ?? "",
+      followup_info: agency.followup_info ?? "",
+      invoice_info: agency.invoice_info ?? "",
+      notes: agency.notes ?? "",
+      reply_from_email: agency.reply_from_email ?? "",
+      reply_from_name: agency.reply_from_name ?? "",
+      reply_template: agency.reply_template ?? "",
       confirmation_method_override: agency.confirmation_method_override ?? "",
       sender_domains: (agency.sender_domains as string[] ?? []).join(", "),
     });
@@ -37,9 +71,20 @@ export function InsuranceAgencyDetailPage() {
 
   async function save() {
     try {
-      const payload = {
-        ...form,
-        sender_domains: (form.sender_domains as string).split(",").map((s) => s.trim()).filter(Boolean),
+      const f = form;
+      const payload: Record<string, unknown> = {
+        name: f.name,
+        contact_method: (f.contact_method as string) || null,
+        telephone: (f.telephone as string)?.trim() || null,
+        id_number: (f.id_number as string)?.trim() || null,
+        rate_qualified: f.rate_qualified !== "" && f.rate_qualified != null ? Number(f.rate_qualified) : null,
+        rate_certified: f.rate_certified !== "" && f.rate_certified != null ? Number(f.rate_certified) : null,
+        miles: f.miles !== "" && f.miles != null ? Number(f.miles) : null,
+        reporting_info: (f.reporting_info as string) || null,
+        followup_info: (f.followup_info as string) || null,
+        invoice_info: (f.invoice_info as string) || null,
+        notes: (f.notes as string)?.trim() || null,
+        sender_domains: (f.sender_domains as string).split(",").map((s) => s.trim()).filter(Boolean),
       };
       await update.mutateAsync(payload);
       toast({ title: t("common.saved") });
@@ -48,6 +93,8 @@ export function InsuranceAgencyDetailPage() {
       toast({ title: t("common.error"), variant: "destructive" });
     }
   }
+
+  const set = (k: string, v: unknown) => setForm((s) => ({ ...s, [k]: v }));
 
   return (
     <div className="space-y-6">
@@ -65,57 +112,167 @@ export function InsuranceAgencyDetailPage() {
         }
       />
 
-      <Card>
-        <CardHeader><CardTitle>{t("insurance_agencies.details")}</CardTitle></CardHeader>
-        <CardContent>
-          {editing ? (
-            <div className="space-y-3">
-              {[
-                { key: "name", label: t("insurance_agencies.name") },
-                { key: "reply_from_email", label: t("insurance_agencies.reply_from_email") },
-                { key: "reply_from_name", label: t("insurance_agencies.reply_from_name") },
-                { key: "sender_domains", label: t("insurance_agencies.sender_domains_hint") },
-                { key: "confirmation_method_override", label: t("insurance_agencies.confirmation_method") },
-              ].map(({ key, label }) => (
-                <div key={key} className="space-y-1">
-                  <Label>{label}</Label>
-                  <Input value={form[key] as string ?? ""} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
+      <div className="grid gap-6 lg:grid-cols-2">
+
+        {/* General info */}
+        <Card>
+          <CardHeader><CardTitle>{t("insurance_agencies.details")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.name")}</Label>
+                  <Input value={form.name as string} onChange={(e) => set("name", e.target.value)} />
                 </div>
-              ))}
-              <div className="space-y-1">
-                <Label>{t("insurance_agencies.reply_template")}</Label>
-                <textarea
-                  className="w-full rounded-md border p-2 text-sm"
-                  rows={6}
-                  value={form.reply_template as string ?? ""}
-                  onChange={(e) => setForm(s => ({ ...s, reply_template: e.target.value }))}
-                />
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.contact_method")}</Label>
+                  <Input value={form.contact_method as string} onChange={(e) => set("contact_method", e.target.value)} placeholder={t("common.optional")} />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.telephone")}</Label>
+                  <Input value={form.telephone as string} onChange={(e) => set("telephone", e.target.value)} placeholder={t("common.optional")} />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.id_number")}</Label>
+                  <Input value={form.id_number as string} onChange={(e) => set("id_number", e.target.value)} placeholder={t("common.optional")} />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.notes")}</Label>
+                  <textarea
+                    className="w-full rounded-md border p-2 text-sm"
+                    rows={3}
+                    value={form.notes as string}
+                    onChange={(e) => set("notes", e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-3 text-sm">
-              {[
-                ["insurance_agencies.name", agency.name],
-                ["insurance_agencies.reply_from_email", agency.reply_from_email],
-                ["insurance_agencies.reply_from_name", agency.reply_from_name],
-                ["insurance_agencies.sender_domains", (agency.sender_domains as string[] ?? []).join(", ")],
-                ["insurance_agencies.confirmation_method", agency.confirmation_method_override ?? t("common.auto")],
-              ].map(([label, value]) => (
-                <div key={label as string} className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">{t(label as string)}</span>
-                  <span className="text-right font-medium">{value as string ?? "—"}</span>
+            ) : (
+              <>
+                <Field label={t("insurance_agencies.name")} value={agency.name as string} />
+                <Field label={t("insurance_agencies.contact_method")} value={agency.contact_method as string} />
+                <Field label={t("insurance_agencies.telephone")} value={agency.telephone as string} />
+                <Field label={t("insurance_agencies.id_number")} value={agency.id_number as string} />
+                {agency.notes && (
+                  <div>
+                    <p className="text-muted-foreground mb-1">{t("insurance_agencies.notes")}</p>
+                    <p className="font-medium">{agency.notes as string}</p>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Rates */}
+        <Card>
+          <CardHeader><CardTitle>{t("insurance_agencies.rates")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.rate_qualified")}</Label>
+                  <Input type="number" step="0.01" min="0" value={form.rate_qualified as string} onChange={(e) => set("rate_qualified", e.target.value)} placeholder={t("common.optional")} />
                 </div>
-              ))}
-              {agency.reply_template && (
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_agencies.reply_template")}</p>
-                  <pre className="mt-1 rounded bg-muted p-2 text-xs whitespace-pre-wrap">{agency.reply_template as string}</pre>
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.rate_certified")}</Label>
+                  <Input type="number" step="0.01" min="0" value={form.rate_certified as string} onChange={(e) => set("rate_certified", e.target.value)} placeholder={t("common.optional")} />
                 </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.miles")}</Label>
+                  <Input type="number" step="0.1" min="0" value={form.miles as string} onChange={(e) => set("miles", e.target.value)} placeholder={t("common.optional")} />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Field label={t("insurance_agencies.rate_qualified")} value={agency.rate_qualified != null ? `$${Number(agency.rate_qualified).toFixed(2)}/hr` : null} />
+                <Field label={t("insurance_agencies.rate_certified")} value={agency.rate_certified != null ? `$${Number(agency.rate_certified).toFixed(2)}/hr` : null} />
+                <Field label={t("insurance_agencies.miles")} value={agency.miles != null ? `${agency.miles} mi` : null} />
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Communication preferences */}
+        <Card>
+          <CardHeader><CardTitle>{t("insurance_agencies.communication")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.reporting_info")}</Label>
+                  <ContactSelect value={form.reporting_info as string} onChange={(v) => set("reporting_info", v)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.followup_info")}</Label>
+                  <ContactSelect value={form.followup_info as string} onChange={(v) => set("followup_info", v)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.invoice_info")}</Label>
+                  <ContactSelect value={form.invoice_info as string} onChange={(v) => set("invoice_info", v)} />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Field label={t("insurance_agencies.reporting_info")} value={agency.reporting_info as string} />
+                <Field label={t("insurance_agencies.followup_info")} value={agency.followup_info as string} />
+                <Field label={t("insurance_agencies.invoice_info")} value={agency.invoice_info as string} />
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Email intake */}
+        <Card>
+          <CardHeader><CardTitle>{t("insurance_agencies.email_intake")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-3">
+                {[
+                  { key: "reply_from_email", label: t("insurance_agencies.reply_from_email") },
+                  { key: "reply_from_name", label: t("insurance_agencies.reply_from_name") },
+                  { key: "sender_domains", label: t("insurance_agencies.sender_domains_hint") },
+                  { key: "confirmation_method_override", label: t("insurance_agencies.confirmation_method") },
+                ].map(({ key, label }) => (
+                  <div key={key} className="space-y-1">
+                    <Label>{label}</Label>
+                    <Input value={form[key] as string ?? ""} onChange={(e) => set(key, e.target.value)} />
+                  </div>
+                ))}
+                <div className="space-y-1">
+                  <Label>{t("insurance_agencies.reply_template")}</Label>
+                  <textarea
+                    className="w-full rounded-md border p-2 text-sm"
+                    rows={5}
+                    value={form.reply_template as string ?? ""}
+                    onChange={(e) => set("reply_template", e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                {[
+                  ["insurance_agencies.reply_from_email", agency.reply_from_email],
+                  ["insurance_agencies.reply_from_name", agency.reply_from_name],
+                  ["insurance_agencies.sender_domains", (agency.sender_domains as string[] ?? []).join(", ")],
+                  ["insurance_agencies.confirmation_method", agency.confirmation_method_override ?? t("common.auto")],
+                ].map(([label, value]) => (
+                  <div key={label as string} className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">{t(label as string)}</span>
+                    <span className="text-right font-medium">{(value as string) || "—"}</span>
+                  </div>
+                ))}
+                {agency.reply_template && (
+                  <div>
+                    <p className="text-muted-foreground">{t("insurance_agencies.reply_template")}</p>
+                    <pre className="mt-1 rounded bg-muted p-2 text-xs whitespace-pre-wrap">{agency.reply_template as string}</pre>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
     </div>
   );
 }

@@ -250,6 +250,15 @@ model InsuranceAgency {
   primary_contact_phone              String?
   primary_contact_email              String?
   notes                              String?
+  contact_method                     String?
+  telephone                          String?
+  id_number                          String?
+  rate_qualified                     Decimal? @db.Decimal(8,2)
+  rate_certified                     Decimal? @db.Decimal(8,2)
+  miles                              Decimal? @db.Decimal(8,2)
+  reporting_info                     String?
+  followup_info                      String?
+  invoice_info                       String?
   email_intake_enabled               Boolean  @default(false)
   email_intake_sender_domains        String[] @default([])
   email_intake_confirmation_override String?
