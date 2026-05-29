@@ -253,7 +253,7 @@ export function CalendarPage() {
         <p className="text-xs leading-tight text-current/80">{timeStr}</p>
         {clinicName && <p className="text-xs leading-tight truncate opacity-75">{clinicName}</p>}
         {agencyName && <p className="text-xs leading-tight truncate opacity-75">{agencyName}</p>}
-        {physician && <p className="text-xs leading-tight truncate opacity-75">Dr. {physician}</p>}
+        {physician && <p className="text-xs leading-tight truncate opacity-75">{physician}</p>}
         <p className="text-xs leading-tight truncate opacity-75 italic">
           {interpreterName ?? t("appointments.unassigned")}
         </p>
