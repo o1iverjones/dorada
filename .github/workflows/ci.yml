@@ -38,6 +38,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    needs: typecheck-and-lint
     services:
       postgres:
         image: postgres:16
