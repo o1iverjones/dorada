@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev]
   pull_request:
-    branches: [main, develop]
+    branches: [main, dev]
 
 jobs:
   typecheck-and-lint:
@@ -23,6 +23,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm --filter @dorada/types build && pnpm --filter @dorada/utils build
+
+      - name: Generate Prisma client
+        run: pnpm --filter @dorada/api db:generate
 
       - name: Typecheck all packages
         run: pnpm typecheck
