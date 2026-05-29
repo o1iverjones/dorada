@@ -97,6 +97,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const { id } = req.params as { id: string };
     const body = z.object({
       clock_in_time: z.string().datetime().optional(),
+      patient_arrived_at: z.string().datetime().optional(),
       clock_out_time: z.string().datetime().optional(),
     }).parse(req.body);
     const payload = req.user as JwtPayload;

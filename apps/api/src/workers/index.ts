@@ -40,14 +40,6 @@ try {
   twilioClient = { messages: { create: async () => {} } };
 }
 
-// SendGrid — optional
-try {
-  if (!config.SENDGRID_API_KEY) throw new Error("No key");
-  const sgMail = await import("@sendgrid/mail");
-  (sgMail.default ?? sgMail).setApiKey(config.SENDGRID_API_KEY);
-} catch {
-  console.warn("⚠️  SendGrid not configured — emails disabled");
-}
 
 const reminderWorker = createAppointmentRemindersWorker(prisma, fcmApp);
 const followUpWorker = createFollowUpFlowWorker(prisma, fcmApp, twilioClient);

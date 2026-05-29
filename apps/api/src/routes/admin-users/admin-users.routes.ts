@@ -5,6 +5,9 @@ import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { listUsers, createUser, updateUser, listRoles, createRole } from "./admin-users.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
+import { sendEmail, welcomeAdminEmail } from "../../lib/email.js";
+import { config } from "../../config.js";
+import { logger } from "../../lib/logger.js";
 
 const CreateUserBody = z.object({
   name: z.string().min(1),
@@ -39,6 +42,13 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
     const payload = req.user as JwtPayload;
     const user = await createUser(body, payload.organization_id, payload.permissions, fastify.prisma);
     await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: user.id, entityName: user.name, action: "created", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+
+    // Send welcome email with login credentials (fire-and-forget — don't block response)
+    const loginUrl = `${config.APP_URL}/login`;
+    sendEmail(welcomeAdminEmail(user.name, user.email, body.password, loginUrl)).catch((err) => {
+      logger.error({ err, userId: user.id }, "Failed to send welcome email to new admin user");
+    });
+
     return reply.status(201).send(user);
   });
 

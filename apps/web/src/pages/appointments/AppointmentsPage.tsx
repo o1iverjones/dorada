@@ -19,7 +19,10 @@ export function AppointmentsPage() {
   const [searchParams] = useSearchParams();
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "not_completed");
   // dateFrom: open-ended "from this date onwards" (no date_to); dateExact: single-day filter (date_from = date_to)
-  const initialDateFrom = searchParams.get("date_from") && !searchParams.get("date_to") ? searchParams.get("date_from")! : "";
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+  const initialDateFrom = searchParams.get("date_from") && !searchParams.get("date_to")
+    ? searchParams.get("date_from")!
+    : !searchParams.get("date_from") ? todayStr : "";
   const initialDateExact = searchParams.get("date_from") && searchParams.get("date_to") ? searchParams.get("date_from")! : "";
   const [dateFrom, setDateFrom] = useState(initialDateFrom);
   const [dateFilter, setDateFilter] = useState(initialDateExact);

@@ -37,6 +37,7 @@ export function InterpreterDetailPage() {
       name: interp.name,
       phone: interp.phone,
       email: interp.email ?? "",
+      type: interp.type,
       pay_rate: interp.pay_rate,
       notes: interp.notes ?? "",
       emergency_contact_name: ec?.name ?? "",
@@ -54,6 +55,7 @@ export function InterpreterDetailPage() {
       const payload: Record<string, unknown> = {};
       if (f.name) payload.name = f.name;
       if (f.phone) payload.phone = f.phone;
+      if (f.type) payload.type = f.type;
       payload.email = (f.email as string)?.trim() || null;
       if (f.pay_rate !== "" && f.pay_rate != null) payload.pay_rate = Number(f.pay_rate);
       payload.notes = (f.notes as string)?.trim() || null;
@@ -154,6 +156,17 @@ export function InterpreterDetailPage() {
                     />
                   </div>
                 ))}
+                <div className="space-y-1">
+                  <Label>{t("interpreters.type")}</Label>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={editForm.type as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, type: e.target.value }))}
+                  >
+                    <option value="certified">{t("interpreters.certified")}</option>
+                    <option value="qualified">{t("interpreters.qualified")}</option>
+                  </select>
+                </div>
               </div>
             ) : (
               <div className="space-y-3 text-sm">

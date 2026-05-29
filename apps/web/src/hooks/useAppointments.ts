@@ -126,7 +126,7 @@ export function useReviewFollowUpDraft(draftId: string) {
 export function usePatchClockTimes(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { clock_in_time?: string; clock_out_time?: string }) =>
+    mutationFn: (body: { clock_in_time?: string; patient_arrived_at?: string; clock_out_time?: string }) =>
       api.patch(`/appointments/${id}/clock-times`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments", id] });

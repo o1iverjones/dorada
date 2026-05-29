@@ -148,8 +148,8 @@ function OfferCard({ offer }: { offer: Record<string, unknown> }) {
   return (
     <View style={styles.offerCard}>
       <Text style={styles.cardDate}>{new Date(offer.date_time as string).toLocaleString()}</Text>
-      <Text style={styles.cardTitle}>{offer.clinic_name as string}</Text>
-      <Text style={styles.cardSubtitle}>{offer.language as string} · {offer.interpreter_type_required as string}</Text>
+      <Text style={styles.cardPatient}>{offer.clinic_name as string}</Text>
+      <Text style={styles.cardClinic}>{offer.language as string} · {offer.interpreter_type_required as string}</Text>
       <View style={styles.offerActions}>
         <TouchableOpacity style={[styles.actionBtn, styles.confirmBtn]} onPress={handleConfirm} disabled={confirm.isPending}>
           <Ionicons name="checkmark" size={20} color="#fff" />

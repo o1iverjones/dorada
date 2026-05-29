@@ -1,6 +1,6 @@
 /**
  * Standalone entry point for the report generation worker.
- * Does not depend on firebase-admin, twilio, or sendgrid.
+ * Does not depend on firebase-admin or twilio.
  * Run with: pnpm dev:worker
  */
 import { PrismaClient } from "@prisma/client";
