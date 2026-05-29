@@ -346,7 +346,7 @@ export async function patchClockTimes(
 }
 
 export async function cancelAppointment(id: string, organizationId: string, actor: { id: string; name: string }, prisma: PrismaClient) {
-  const appt = await prisma.appointment.findUnique({ where: { id } });
+  const appt = await prisma.appointment.findUnique({ where: { id }, include: { patient: { select: { name: true } } } });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
   assertValidTransition(appt!.status, "cancelled");
 
@@ -385,7 +385,8 @@ export async function offerAppointment(
   });
   const alreadyOffered = new Set(existingOffers.map((o) => o.interpreter_id));
 
-  const offers = [];
+  type OfferWithInterpreter = { id: string; appointment_id: string; interpreter_id: string; status: string; expires_at: Date | null; offered_at: Date; responded_at: Date | null; interpreter: { id: string; name: string } };
+  const offers: Promise<OfferWithInterpreter>[] = [];
   for (const interpreter of interpreters) {
     if (alreadyOffered.has(interpreter.id)) continue;
 
@@ -414,7 +415,7 @@ export async function offerAppointment(
           expires_at: expiresAt,
         },
         include: { interpreter: { select: { id: true, name: true } } },
-      }),
+      }) as Promise<OfferWithInterpreter>,
     );
   }
 

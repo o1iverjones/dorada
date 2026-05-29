@@ -169,7 +169,7 @@ async function handleProcessEmail(
     },
   });
 
-  const confirmationMethod = log.insurance_agency?.confirmation_method_override ??
+  const confirmationMethod = log.insurance_agency?.email_intake_confirmation_override ??
     extraction.confirmation_method ?? "reply_email";
 
   await prisma.emailIntakeLog.update({
@@ -206,7 +206,7 @@ async function handleRetryConfirmation(
 }
 
 async function performConfirmation(
-  log: { id: string; from_email: string; insurance_agency: { reply_template?: string | null; reply_from_email?: string | null } | null },
+  log: { id: string; from_email: string; insurance_agency: { email_intake_reply_template?: string | null; email_intake_reply_from_email?: string | null } | null },
   _draftId: string,
   method: string,
   linkUrl: string | null,
@@ -214,7 +214,7 @@ async function performConfirmation(
 ) {
   if (method === "reply_email") {
     try {
-      const template = log.insurance_agency?.reply_template ?? "Your appointment has been confirmed.";
+      const template = log.insurance_agency?.email_intake_reply_template ?? "Your appointment has been confirmed.";
       await sendEmail({
         to: log.from_email,
         subject: "Appointment Confirmation",

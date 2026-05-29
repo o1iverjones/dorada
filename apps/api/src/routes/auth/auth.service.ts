@@ -62,7 +62,7 @@ export async function verifyOtp(
   prisma: PrismaClient,
   redis: Redis,
   fastify: FastifyInstance,
-): Promise<{ access_token: string; refresh_token: string; interpreter: { id: string; name: string; phone: string } }> {
+): Promise<{ access_token: string; refresh_token: string; interpreter: { id: string; name: string; phone: string; organization_id: string } }> {
   const normalized = normalizePhone(phone);
   const lockKey = `otp:lock:${normalized}`;
   const attemptsKey = `otp:attempts:${normalized}`;
