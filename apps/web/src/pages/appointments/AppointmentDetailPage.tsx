@@ -241,11 +241,20 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.patient")} value={
-                  <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-medium text-primary hover:underline">
+                  <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-bold text-primary hover:underline">
                     {(a.patient as Record<string, unknown>)?.name as string ?? "—"}
                   </button>
                 } />
               )}
+            </div>
+
+            {/* Interpreter — always read-only, shown directly under patient */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              <Field label={t("appointments.interpreter")} value={
+                <span className="font-bold">
+                  {(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")}
+                </span>
+              } />
             </div>
 
             {/* PO Number */}
@@ -364,11 +373,6 @@ export function AppointmentDetailPage() {
               ) : (
                 <Field label={t("appointments.insurance_agency")} value={(a.insurance_agency as Record<string, unknown>)?.name as string ?? "—"} />
               )}
-            </div>
-
-            {/* Interpreter — always read-only */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              <Field label={t("appointments.interpreter")} value={(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")} />
             </div>
 
             {/* Referring Physician */}
