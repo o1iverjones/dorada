@@ -255,6 +255,7 @@ model InsuranceAgency {
   id_number                          String?
   rate_qualified                     Decimal? @db.Decimal(8,2)
   rate_certified                     Decimal? @db.Decimal(8,2)
+  rate_qme                           Decimal? @db.Decimal(8,2)
   miles                              Decimal? @db.Decimal(8,2)
   reporting_info                     String?
   followup_info                      String?

@@ -13,7 +13,7 @@ function formatAgency(a: {
   primary_contact_name: string | null; primary_contact_phone: string | null; primary_contact_email: string | null;
   notes: string | null; is_active: boolean; created_at: Date; updated_at: Date;
   contact_method: string | null; telephone: string | null; id_number: string | null;
-  rate_qualified: unknown; rate_certified: unknown; miles: unknown;
+  rate_qualified: unknown; rate_certified: unknown; rate_qme: unknown; miles: unknown;
   reporting_info: string | null; followup_info: string | null; invoice_info: string | null;
   email_intake_enabled: boolean;
   email_intake_sender_domains: string[];
@@ -33,6 +33,7 @@ function formatAgency(a: {
     id_number: a.id_number,
     rate_qualified: a.rate_qualified != null ? Number(a.rate_qualified) : null,
     rate_certified: a.rate_certified != null ? Number(a.rate_certified) : null,
+    rate_qme: a.rate_qme != null ? Number(a.rate_qme) : null,
     miles: a.miles != null ? Number(a.miles) : null,
     reporting_info: a.reporting_info,
     followup_info: a.followup_info,
@@ -92,6 +93,7 @@ export async function createAgency(body: CreateInsuranceAgencyBody, organization
       id_number: body.id_number ?? null,
       rate_qualified: body.rate_qualified ?? null,
       rate_certified: body.rate_certified ?? null,
+      rate_qme: body.rate_qme ?? null,
       miles: body.miles ?? null,
       reporting_info: body.reporting_info ?? null,
       followup_info: body.followup_info ?? null,
@@ -122,6 +124,7 @@ export async function updateAgency(id: string, body: UpdateInsuranceAgencyBody, 
       ...(body.id_number !== undefined ? { id_number: body.id_number } : {}),
       ...(body.rate_qualified !== undefined ? { rate_qualified: body.rate_qualified } : {}),
       ...(body.rate_certified !== undefined ? { rate_certified: body.rate_certified } : {}),
+      ...(body.rate_qme !== undefined ? { rate_qme: body.rate_qme } : {}),
       ...(body.miles !== undefined ? { miles: body.miles } : {}),
       ...(body.reporting_info !== undefined ? { reporting_info: body.reporting_info } : {}),
       ...(body.followup_info !== undefined ? { followup_info: body.followup_info } : {}),

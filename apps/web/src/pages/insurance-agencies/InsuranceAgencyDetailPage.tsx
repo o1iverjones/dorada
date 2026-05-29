@@ -43,6 +43,7 @@ interface AgencyData {
   id_number?: string | null;
   rate_qualified?: number | null;
   rate_certified?: number | null;
+  rate_qme?: number | null;
   miles?: number | null;
   reporting_info?: string | null;
   followup_info?: string | null;
@@ -78,6 +79,7 @@ export function InsuranceAgencyDetailPage() {
       id_number: agency.id_number ?? "",
       rate_qualified: agency.rate_qualified ?? "",
       rate_certified: agency.rate_certified ?? "",
+      rate_qme: agency.rate_qme ?? "",
       miles: agency.miles ?? "",
       reporting_info: agency.reporting_info ?? "",
       followup_info: agency.followup_info ?? "",
@@ -110,6 +112,7 @@ export function InsuranceAgencyDetailPage() {
         id_number: (f.id_number as string)?.trim() || null,
         rate_qualified: f.rate_qualified !== "" && f.rate_qualified != null ? Number(f.rate_qualified) : null,
         rate_certified: f.rate_certified !== "" && f.rate_certified != null ? Number(f.rate_certified) : null,
+        rate_qme: f.rate_qme !== "" && f.rate_qme != null ? Number(f.rate_qme) : null,
         miles: f.miles !== "" && f.miles != null ? Number(f.miles) : null,
         reporting_info: (f.reporting_info as string) || null,
         followup_info: (f.followup_info as string) || null,
@@ -216,6 +219,10 @@ export function InsuranceAgencyDetailPage() {
                   <Input type="number" step="0.01" min="0" value={form.rate_certified as string} onChange={(e) => set("rate_certified", e.target.value)} placeholder={t("common.optional")} />
                 </div>
                 <div className="space-y-1">
+                  <Label>{t("insurance_agencies.rate_qme")}</Label>
+                  <Input type="number" step="0.01" min="0" value={form.rate_qme as string} onChange={(e) => set("rate_qme", e.target.value)} placeholder={t("common.optional")} />
+                </div>
+                <div className="space-y-1">
                   <Label>{t("insurance_agencies.miles")}</Label>
                   <Input type="number" step="0.1" min="0" value={form.miles as string} onChange={(e) => set("miles", e.target.value)} placeholder={t("common.optional")} />
                 </div>
@@ -224,6 +231,7 @@ export function InsuranceAgencyDetailPage() {
               <>
                 <Field label={t("insurance_agencies.rate_qualified")} value={agency.rate_qualified != null ? `$${Number(agency.rate_qualified).toFixed(2)}/hr` : null} />
                 <Field label={t("insurance_agencies.rate_certified")} value={agency.rate_certified != null ? `$${Number(agency.rate_certified).toFixed(2)}/hr` : null} />
+                <Field label={t("insurance_agencies.rate_qme")} value={agency.rate_qme != null ? `$${Number(agency.rate_qme).toFixed(2)}/hr` : null} />
                 <Field label={t("insurance_agencies.miles")} value={agency.miles != null ? `${agency.miles} mi` : null} />
               </>
             )}

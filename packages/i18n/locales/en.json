@@ -572,6 +572,7 @@
     "rates": "Rates",
     "rate_qualified": "Rate (qualified)",
     "rate_certified": "Rate (certified)",
+    "rate_qme": "Rate (QME)",
     "miles": "Miles",
     "communication": "Communication preferences",
     "reporting_info": "Reporting",
