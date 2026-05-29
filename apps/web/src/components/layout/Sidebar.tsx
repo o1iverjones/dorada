@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/auth.js";
 import { useUnreadMessageCount } from "../../hooks/useMessages.js";
@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils.js";
 import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
   ShieldCheck, UserSquare2, BarChart3, MessageSquare, Mail,
-  Settings, User, Upload, Receipt, Landmark,
+  Settings, User, Upload, Receipt, Landmark, Menu, X,
 } from "lucide-react";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
 
@@ -38,6 +38,11 @@ export function Sidebar() {
   const pendingInvoices = invoiceStats?.submitted_count ?? 0;
   const now = useClock();
   const tz = useOrgTimezone();
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close drawer whenever the route changes
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   const navItems: NavItem[] = [
     { label: t("nav.dashboard"), to: "/dashboard", icon: LayoutDashboard },
@@ -61,8 +66,9 @@ export function Sidebar() {
     (item) => !item.permission || hasPermission(item.permission),
   );
 
-  return (
-    <aside className="flex w-64 flex-col bg-sidebar-bg">
+  // Shared sidebar body used by both desktop and mobile overlay
+  const sidebarBody = (
+    <>
       {/* Logo + clock */}
       <div className="border-b border-white/10">
         <div className="flex h-16 items-center gap-3 px-5">
@@ -125,6 +131,50 @@ export function Sidebar() {
           <span className="truncate">{t("nav.account")}</span>
         </NavLink>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* ── Desktop sidebar — always visible ─────────────────────────────── */}
+      <aside className="hidden md:flex w-64 flex-col bg-sidebar-bg">
+        {sidebarBody}
+      </aside>
+
+      {/* ── Mobile: collapsed strip with hamburger ────────────────────────── */}
+      <aside className="md:hidden flex w-12 flex-col bg-sidebar-bg shrink-0">
+        <button
+          aria-label="Open navigation"
+          onClick={() => setMobileOpen(true)}
+          className="flex h-16 items-center justify-center text-white/70 hover:text-white transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </aside>
+
+      {/* ── Mobile: full overlay drawer ───────────────────────────────────── */}
+      {mobileOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          {/* Drawer */}
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar-bg md:hidden">
+            {/* Close button */}
+            <button
+              aria-label="Close navigation"
+              onClick={() => setMobileOpen(false)}
+              className="absolute top-4 right-3 text-white/70 hover:text-white transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {sidebarBody}
+          </aside>
+        </>
+      )}
+    </>
   );
 }
