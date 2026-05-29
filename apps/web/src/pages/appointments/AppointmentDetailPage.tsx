@@ -186,8 +186,14 @@ export function AppointmentDetailPage() {
         title={t("appointments.detail_title")}
         actions={
           <div className="flex gap-2">
-            {!editing && (
+            {editing ? (
               <>
+                <Button onClick={save} disabled={update.isPending}>{t("common.save")}</Button>
+                <Button variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
                 <Button variant="outline" onClick={() => navigate("/appointments/new", {
                   state: {
                     prefill: {
@@ -220,16 +226,8 @@ export function AppointmentDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>{t("appointments.details")}</CardTitle>
-            {editing ? (
-              <div className="flex gap-2">
-                <Button size="sm" onClick={save} disabled={update.isPending}>{t("common.save")}</Button>
-                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
-              </div>
-            ) : (
-              <Button size="sm" variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
-            )}
           </CardHeader>
           <CardContent className="text-sm p-0 pb-2">
 
