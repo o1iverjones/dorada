@@ -34,6 +34,28 @@ function ContactSelect({ value, onChange }: { value: string; onChange: (v: strin
   );
 }
 
+interface AgencyData {
+  id: string;
+  name: string;
+  notes?: string | null;
+  contact_method?: string | null;
+  telephone?: string | null;
+  id_number?: string | null;
+  rate_qualified?: number | null;
+  rate_certified?: number | null;
+  miles?: number | null;
+  reporting_info?: string | null;
+  followup_info?: string | null;
+  invoice_info?: string | null;
+  email_intake?: {
+    reply_from_email?: string | null;
+    reply_from_name?: string | null;
+    reply_template?: string | null;
+    sender_domains?: string[];
+    confirmation_method_override?: string | null;
+  } | null;
+}
+
 export function InsuranceAgencyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -45,7 +67,8 @@ export function InsuranceAgencyDetailPage() {
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
 
-  const agency = data as Record<string, unknown>;
+  const agency = data as AgencyData;
+  const intake = agency.email_intake;
 
   function startEdit() {
     setForm({
@@ -60,11 +83,12 @@ export function InsuranceAgencyDetailPage() {
       followup_info: agency.followup_info ?? "",
       invoice_info: agency.invoice_info ?? "",
       notes: agency.notes ?? "",
-      reply_from_email: agency.reply_from_email ?? "",
-      reply_from_name: agency.reply_from_name ?? "",
-      reply_template: agency.reply_template ?? "",
-      confirmation_method_override: agency.confirmation_method_override ?? "",
-      sender_domains: (agency.sender_domains as string[] ?? []).join(", "),
+      // email_intake fields — sourced from the nested object
+      reply_from_email: intake?.reply_from_email ?? "",
+      reply_from_name: intake?.reply_from_name ?? "",
+      reply_template: intake?.reply_template ?? "",
+      confirmation_method_override: intake?.confirmation_method_override ?? "",
+      sender_domains: (intake?.sender_domains ?? []).join(", "),
     });
     setEditing(true);
   }
@@ -72,6 +96,13 @@ export function InsuranceAgencyDetailPage() {
   async function save() {
     try {
       const f = form;
+      const senderDomains = (f.sender_domains as string).split(",").map((s) => s.trim()).filter(Boolean);
+      const hasEmailIntake = !!(
+        (f.reply_from_email as string)?.trim() ||
+        (f.reply_from_name as string)?.trim() ||
+        senderDomains.length
+      );
+
       const payload: Record<string, unknown> = {
         name: f.name,
         contact_method: (f.contact_method as string) || null,
@@ -84,7 +115,14 @@ export function InsuranceAgencyDetailPage() {
         followup_info: (f.followup_info as string) || null,
         invoice_info: (f.invoice_info as string) || null,
         notes: (f.notes as string)?.trim() || null,
-        sender_domains: (f.sender_domains as string).split(",").map((s) => s.trim()).filter(Boolean),
+        // email_intake is a nested object in the API schema
+        email_intake: hasEmailIntake ? {
+          sender_domains: senderDomains,
+          confirmation_method_override: (f.confirmation_method_override as string) || null,
+          reply_template: (f.reply_template as string) || "",
+          reply_from_name: (f.reply_from_name as string) || "",
+          reply_from_email: (f.reply_from_email as string) || "",
+        } : undefined,
       };
       await update.mutateAsync(payload);
       toast({ title: t("common.saved") });
@@ -99,7 +137,7 @@ export function InsuranceAgencyDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={agency.name as string}
+        title={agency.name}
         actions={
           editing ? (
             <div className="flex gap-2">
@@ -148,14 +186,14 @@ export function InsuranceAgencyDetailPage() {
               </div>
             ) : (
               <>
-                <Field label={t("insurance_agencies.name")} value={agency.name as string} />
-                <Field label={t("insurance_agencies.contact_method")} value={agency.contact_method as string} />
-                <Field label={t("insurance_agencies.telephone")} value={agency.telephone as string} />
-                <Field label={t("insurance_agencies.id_number")} value={agency.id_number as string} />
+                <Field label={t("insurance_agencies.name")} value={agency.name} />
+                <Field label={t("insurance_agencies.contact_method")} value={agency.contact_method} />
+                <Field label={t("insurance_agencies.telephone")} value={agency.telephone} />
+                <Field label={t("insurance_agencies.id_number")} value={agency.id_number} />
                 {agency.notes && (
                   <div>
                     <p className="text-muted-foreground mb-1">{t("insurance_agencies.notes")}</p>
-                    <p className="font-medium">{agency.notes as string}</p>
+                    <p className="font-medium">{agency.notes}</p>
                   </div>
                 )}
               </>
@@ -213,9 +251,9 @@ export function InsuranceAgencyDetailPage() {
               </div>
             ) : (
               <>
-                <Field label={t("insurance_agencies.reporting_info")} value={agency.reporting_info as string} />
-                <Field label={t("insurance_agencies.followup_info")} value={agency.followup_info as string} />
-                <Field label={t("insurance_agencies.invoice_info")} value={agency.invoice_info as string} />
+                <Field label={t("insurance_agencies.reporting_info")} value={agency.reporting_info} />
+                <Field label={t("insurance_agencies.followup_info")} value={agency.followup_info} />
+                <Field label={t("insurance_agencies.invoice_info")} value={agency.invoice_info} />
               </>
             )}
           </CardContent>
@@ -250,21 +288,14 @@ export function InsuranceAgencyDetailPage() {
               </div>
             ) : (
               <>
-                {[
-                  ["insurance_agencies.reply_from_email", agency.reply_from_email],
-                  ["insurance_agencies.reply_from_name", agency.reply_from_name],
-                  ["insurance_agencies.sender_domains", (agency.sender_domains as string[] ?? []).join(", ")],
-                  ["insurance_agencies.confirmation_method", agency.confirmation_method_override ?? t("common.auto")],
-                ].map(([label, value]) => (
-                  <div key={label as string} className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">{t(label as string)}</span>
-                    <span className="text-right font-medium">{(value as string) || "—"}</span>
-                  </div>
-                ))}
-                {agency.reply_template && (
+                <Field label={t("insurance_agencies.reply_from_email")} value={intake?.reply_from_email} />
+                <Field label={t("insurance_agencies.reply_from_name")} value={intake?.reply_from_name} />
+                <Field label={t("insurance_agencies.sender_domains")} value={(intake?.sender_domains ?? []).join(", ") || null} />
+                <Field label={t("insurance_agencies.confirmation_method")} value={intake?.confirmation_method_override ?? t("common.auto")} />
+                {intake?.reply_template && (
                   <div>
                     <p className="text-muted-foreground">{t("insurance_agencies.reply_template")}</p>
-                    <pre className="mt-1 rounded bg-muted p-2 text-xs whitespace-pre-wrap">{agency.reply_template as string}</pre>
+                    <pre className="mt-1 rounded bg-muted p-2 text-xs whitespace-pre-wrap">{intake.reply_template}</pre>
                   </div>
                 )}
               </>
