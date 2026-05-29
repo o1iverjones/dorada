@@ -49,6 +49,7 @@
     "select": "Select",
     "status": "Status",
     "optional": "Optional",
+    "none": "None",
     "uploading": "Uploading…",
     "remove": "Remove"
   },

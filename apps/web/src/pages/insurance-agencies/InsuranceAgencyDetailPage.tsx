@@ -177,15 +177,6 @@ export function InsuranceAgencyDetailPage() {
                   <Label>{t("insurance_agencies.id_number")}</Label>
                   <Input value={form.id_number as string} onChange={(e) => set("id_number", e.target.value)} placeholder={t("common.optional")} />
                 </div>
-                <div className="space-y-1">
-                  <Label>{t("insurance_agencies.notes")}</Label>
-                  <textarea
-                    className="w-full rounded-md border p-2 text-sm"
-                    rows={3}
-                    value={form.notes as string}
-                    onChange={(e) => set("notes", e.target.value)}
-                  />
-                </div>
               </div>
             ) : (
               <>
@@ -193,12 +184,6 @@ export function InsuranceAgencyDetailPage() {
                 <Field label={t("insurance_agencies.contact_method")} value={agency.contact_method} />
                 <Field label={t("insurance_agencies.telephone")} value={agency.telephone} />
                 <Field label={t("insurance_agencies.id_number")} value={agency.id_number} />
-                {agency.notes && (
-                  <div>
-                    <p className="text-muted-foreground mb-1">{t("insurance_agencies.notes")}</p>
-                    <p className="font-medium">{agency.notes}</p>
-                  </div>
-                )}
               </>
             )}
           </CardContent>
@@ -312,6 +297,27 @@ export function InsuranceAgencyDetailPage() {
         </Card>
 
       </div>
+
+      {/* Notes — full width */}
+      <Card>
+        <CardHeader><CardTitle>{t("insurance_agencies.notes")}</CardTitle></CardHeader>
+        <CardContent>
+          {editing ? (
+            <textarea
+              className="w-full rounded-md border p-2 text-sm"
+              rows={5}
+              placeholder={t("common.optional")}
+              value={form.notes as string}
+              onChange={(e) => set("notes", e.target.value)}
+            />
+          ) : (
+            agency.notes
+              ? <p className="text-sm whitespace-pre-wrap">{agency.notes}</p>
+              : <p className="text-sm text-muted-foreground">{t("common.none")}</p>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }

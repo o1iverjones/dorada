@@ -49,6 +49,7 @@
     "select": "Seleccionar",
     "status": "Estado",
     "optional": "Opcional",
+    "none": "Ninguno",
     "uploading": "Subiendo…",
     "remove": "Eliminar"
   },
