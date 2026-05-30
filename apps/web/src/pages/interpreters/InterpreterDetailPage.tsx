@@ -15,6 +15,7 @@ import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { InterpreterAvatar } from "../../components/shared/InterpreterAvatar.js";
 import { api } from "../../lib/api.js";
+import { X } from "lucide-react";
 
 export function InterpreterDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export function InterpreterDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, unknown>>({});
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [cityInput, setCityInput] = useState("");
 
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
@@ -50,7 +52,7 @@ export function InterpreterDetailPage() {
       city: interp.city ?? "",
       state: interp.state ?? "",
       zip_code: interp.zip_code ?? "",
-      coverage_range_miles: interp.coverage_range_miles ?? "",
+      preferred_cities: (interp.preferred_cities as string[] | undefined) ?? [],
     });
     setEditing(true);
   }
@@ -71,9 +73,7 @@ export function InterpreterDetailPage() {
       payload.city = (f.city as string)?.trim() || null;
       payload.state = (f.state as string)?.trim() || null;
       payload.zip_code = (f.zip_code as string)?.trim() || null;
-      payload.coverage_range_miles = (f.coverage_range_miles as string) !== "" && f.coverage_range_miles != null
-        ? Number(f.coverage_range_miles)
-        : null;
+      payload.preferred_cities = (f.preferred_cities as string[]) ?? [];
       const ecName = String(f.emergency_contact_name ?? "").trim();
       const ecPhone = String(f.emergency_contact_phone ?? "").trim();
       if (ecName || ecPhone) {
@@ -320,19 +320,72 @@ export function InterpreterDetailPage() {
           <CardHeader><CardTitle>{t("interpreters.coverage")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
-              <div className="space-y-1">
-                <Label>{t("interpreters.coverage_range_miles")}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={editForm.coverage_range_miles as number ?? ""}
-                  onChange={(e) => setEditForm(s => ({ ...s, coverage_range_miles: e.target.value }))}
-                  placeholder="e.g. 25"
-                />
+              <div className="space-y-2">
+                <Label>{t("interpreters.preferred_cities")}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={cityInput}
+                    onChange={(e) => setCityInput(e.target.value)}
+                    placeholder={t("interpreters.preferred_cities_placeholder")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const city = cityInput.trim();
+                        if (!city) return;
+                        const current = (editForm.preferred_cities as string[]) ?? [];
+                        if (!current.includes(city)) {
+                          setEditForm(s => ({ ...s, preferred_cities: [...current, city] }));
+                        }
+                        setCityInput("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const city = cityInput.trim();
+                      if (!city) return;
+                      const current = (editForm.preferred_cities as string[]) ?? [];
+                      if (!current.includes(city)) {
+                        setEditForm(s => ({ ...s, preferred_cities: [...current, city] }));
+                      }
+                      setCityInput("");
+                    }}
+                  >
+                    {t("common.add")}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {((editForm.preferred_cities as string[]) ?? []).map((city) => (
+                    <span key={city} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                      {city}
+                      <button
+                        type="button"
+                        onClick={() => setEditForm(s => ({ ...s, preferred_cities: (s.preferred_cities as string[]).filter((c) => c !== city) }))}
+                        className="ml-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : (
-              <Field label={t("interpreters.coverage_range_miles")} value={interp.coverage_range_miles != null ? `${interp.coverage_range_miles} mi` : "—"} />
+              <div>
+                <p className="text-muted-foreground mb-2">{t("interpreters.preferred_cities")}</p>
+                {((interp.preferred_cities as string[] | undefined) ?? []).length === 0 ? (
+                  <p className="text-muted-foreground italic">{t("interpreters.no_preferred_cities")}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {((interp.preferred_cities as string[]) ?? []).map((city) => (
+                      <span key={city} className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                        {city}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
