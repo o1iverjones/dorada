@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePatient, useUpdatePatient, useCreateClaim, useUpdateClaim, useDeleteClaim } from "../../hooks/usePatients.js";
@@ -11,7 +11,7 @@ import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../../components/ui/card.js";
 import { StatusBadge } from "../../components/shared/StatusBadge.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
@@ -45,10 +45,24 @@ const emptyClaimForm = {
   adjuster_email: "",
 };
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 export function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const tz = useOrgTimezone();
+  const isMobile = useIsMobile();
   const { data, isLoading } = usePatient(id!);
   const navigate = useNavigate();
   const { data: appts } = useAppointments({ patient_id: id!, limit: "20" });
@@ -60,7 +74,7 @@ export function PatientDetailPage() {
   const createClaim = useCreateClaim(id!);
   const deleteClaim = useDeleteClaim(id!);
 
-  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", date_of_birth: "", phone: "", email: "", preferred_language: "" });
   const [preferredInterpreterId, setPreferredInterpreterId] = useState<string>("");
 
@@ -95,7 +109,7 @@ export function PatientDetailPage() {
       preferred_language: (p.preferred_language as string) ?? "",
     });
     setPreferredInterpreterId(preferredInterpreter?.id ?? "");
-    setEditOpen(true);
+    setEditing(true);
   }
 
   async function handleSave() {
@@ -104,7 +118,7 @@ export function PatientDetailPage() {
       payload.preferred_interpreter_id = preferredInterpreterId || null;
       await update.mutateAsync(payload);
       toast({ title: t("common.saved") });
-      setEditOpen(false);
+      setEditing(false);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     }
@@ -163,14 +177,49 @@ export function PatientDetailPage() {
     }
   }
 
+  // Shared edit fields used in both inline (desktop) and dialog (mobile)
+  const editFields = (
+    <div className="space-y-3">
+      {([
+        { key: "name", label: t("patients.name"), type: "text" },
+        { key: "date_of_birth", label: t("appointments.dob"), type: "date" },
+        { key: "email", label: t("patients.email"), type: "email" },
+        { key: "preferred_language", label: t("patients.preferred_language"), type: "text" },
+      ] as const).map(({ key, label, type }) => (
+        <div key={key} className="space-y-1">
+          <Label>{label}</Label>
+          <Input type={type} value={form[key]} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
+        </div>
+      ))}
+      <div className="space-y-1">
+        <Label>{t("patients.phone")}</Label>
+        <PhoneInput value={form.phone} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+      </div>
+      <div className="space-y-1">
+        <Label>{t("patients.preferred_interpreter")}</Label>
+        <AutocompleteInput
+          options={interpreterOptions}
+          value={preferredInterpreterId}
+          onChange={setPreferredInterpreterId}
+          placeholder={t("common.search")}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={p.name as string}
         actions={
-          <Button variant="outline" onClick={openEdit}>
-            <Pencil className="mr-2 h-4 w-4" /> {t("common.edit")}
-          </Button>
+          !editing ? (
+            <Button variant="outline" onClick={openEdit}>
+              <Pencil className="mr-2 h-4 w-4" /> {t("common.edit")}
+            </Button>
+          ) : (
+            // Desktop: show Save/Cancel in the card footer; hide header buttons
+            <span className="hidden" />
+          )
         }
       />
 
@@ -179,19 +228,31 @@ export function PatientDetailPage() {
         <Card>
           <CardHeader><CardTitle>{t("patients.details")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {[
-              [t("appointments.dob"), p.date_of_birth ? new Date(p.date_of_birth as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) : null],
-              [t("patients.phone"), formatPhone(p.phone as string)],
-              [t("patients.email"), p.email],
-              [t("patients.preferred_language"), p.preferred_language],
-              [t("patients.preferred_interpreter"), preferredInterpreter?.name ?? null],
-            ].map(([label, value]) => (
-              <div key={label as string} className="flex justify-between gap-4">
-                <span className="text-muted-foreground">{label as string}</span>
-                <span className="font-medium">{(value as string) ?? "—"}</span>
-              </div>
-            ))}
+            {/* Desktop inline edit — only shown when editing on md+ */}
+            {editing && !isMobile ? (
+              editFields
+            ) : (
+              [
+                [t("appointments.dob"), p.date_of_birth ? new Date(p.date_of_birth as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) : null],
+                [t("patients.phone"), formatPhone(p.phone as string)],
+                [t("patients.email"), p.email],
+                [t("patients.preferred_language"), p.preferred_language],
+                [t("patients.preferred_interpreter"), preferredInterpreter?.name ?? null],
+              ].map(([label, value]) => (
+                <div key={label as string} className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">{label as string}</span>
+                  <span className="font-medium">{(value as string) ?? "—"}</span>
+                </div>
+              ))
+            )}
           </CardContent>
+          {/* Desktop Save / Cancel buttons */}
+          {editing && !isMobile && (
+            <CardFooter className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
+              <Button onClick={handleSave} disabled={update.isPending || !form.name}>{t("common.save_changes")}</Button>
+            </CardFooter>
+          )}
         </Card>
 
         {/* Claims */}
@@ -286,39 +347,14 @@ export function PatientDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Edit patient dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      {/* Edit patient — Dialog on mobile only */}
+      <Dialog open={editing && isMobile} onOpenChange={(open) => { if (!open) setEditing(false); }}>
         <DialogContent>
           <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
             <DialogHeader><DialogTitle>{t("patients.edit.title")}</DialogTitle></DialogHeader>
-            <div className="space-y-3 py-4">
-              {([
-                { key: "name", label: t("patients.name"), type: "text" },
-                { key: "date_of_birth", label: t("appointments.dob"), type: "date" },
-                { key: "email", label: t("patients.email"), type: "email" },
-                { key: "preferred_language", label: t("patients.preferred_language"), type: "text" },
-              ] as const).map(({ key, label, type }) => (
-                <div key={key} className="space-y-1">
-                  <Label>{label}</Label>
-                  <Input type={type} value={form[key]} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
-                </div>
-              ))}
-              <div className="space-y-1">
-                <Label>{t("patients.phone")}</Label>
-                <PhoneInput value={form.phone} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
-              </div>
-              <div className="space-y-1">
-                <Label>{t("patients.preferred_interpreter")}</Label>
-                <AutocompleteInput
-                  options={interpreterOptions}
-                  value={preferredInterpreterId}
-                  onChange={setPreferredInterpreterId}
-                  placeholder={t("common.search")}
-                />
-              </div>
-            </div>
+            <div className="py-4">{editFields}</div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>{t("common.cancel")}</Button>
+              <Button type="button" variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={update.isPending || !form.name}>{t("common.save_changes")}</Button>
             </DialogFooter>
           </form>
