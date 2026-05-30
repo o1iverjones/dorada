@@ -9,6 +9,7 @@ import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
 import { Label } from "../../components/ui/label.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { toast } from "../../hooks/use-toast.js";
@@ -74,7 +75,9 @@ export function NewInterpreterPage() {
               <Input {...register("name")} />
             </F>
             <F label={t("interpreters.phone")} error={errors.phone?.message}>
-              <Input type="tel" {...register("phone")} />
+              <Controller name="phone" control={control} render={({ field }) => (
+                <PhoneInput value={field.value ?? ""} onChange={field.onChange} />
+              )} />
             </F>
             <F label={t("interpreters.email")} error={errors.email?.message}>
               <Input type="email" {...register("email")} />
@@ -103,7 +106,9 @@ export function NewInterpreterPage() {
               <Input {...register("emergency_contact_name")} />
             </F>
             <F label={t("interpreters.emergency_phone")} error={errors.emergency_contact_phone?.message}>
-              <Input type="tel" {...register("emergency_contact_phone")} />
+              <Controller name="emergency_contact_phone" control={control} render={({ field }) => (
+                <PhoneInput value={field.value ?? ""} onChange={field.onChange} />
+              )} />
             </F>
 
             <div className="col-span-full space-y-2">

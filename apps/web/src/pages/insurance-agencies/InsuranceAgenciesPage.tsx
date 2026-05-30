@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { formatPhone } from "../../lib/phone.js";
 import { useTranslation } from "react-i18next";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -17,7 +18,7 @@ export function InsuranceAgenciesPage() {
   const columns = [
     { key: "name", header: t("insurance_agencies.name") },
     { key: "id_number", header: t("insurance_agencies.id_number"), render: (row: AgencyRow) => (row.id_number as string) || "—" },
-    { key: "telephone", header: t("insurance_agencies.telephone"), render: (row: AgencyRow) => (row.telephone as string) || "—" },
+    { key: "telephone", header: t("insurance_agencies.telephone"), render: (row: AgencyRow) => formatPhone(row.telephone as string) },
     { key: "reply_from_email", header: t("insurance_agencies.reply_from_email"), render: (row: AgencyRow) => row.email_intake?.reply_from_email || "—" },
     { key: "confirmation_method", header: t("insurance_agencies.confirmation_method"), render: (row: AgencyRow) => row.email_intake?.confirmation_method_override || t("common.auto") },
   ];

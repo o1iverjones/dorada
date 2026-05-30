@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/button.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { InterpreterAvatar } from "../../components/shared/InterpreterAvatar.js";
 import { Plus } from "lucide-react";
+import { formatPhone } from "../../lib/phone.js";
 
 export function InterpretersPage() {
   const { t } = useTranslation();
@@ -30,7 +31,7 @@ export function InterpretersPage() {
     { key: "type", header: t("interpreters.type"), render: (row: Record<string, unknown>) => (
       <Badge variant={row.type === "certified" ? "default" : "secondary"}>{row.type as string}</Badge>
     )},
-    { key: "phone", header: t("interpreters.phone") },
+    { key: "phone", header: t("interpreters.phone"), render: (row: Record<string, unknown>) => formatPhone(row.phone as string) },
     { key: "languages", header: t("interpreters.languages"), render: (row: Record<string, unknown>) => {
       const langs = row.languages as string[] ?? [];
       return langs.slice(0, 3).join(", ") + (langs.length > 3 ? ` +${langs.length - 3}` : "");

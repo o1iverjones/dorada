@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Badge } from "../../components/ui/badge.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { InterpreterAvatar } from "../../components/shared/InterpreterAvatar.js";
@@ -35,13 +37,13 @@ export function InterpreterDetailPage() {
     const ec = interp.emergency_contact as Record<string, unknown> | null;
     setEditForm({
       name: interp.name,
-      phone: interp.phone,
+      phone: formatPhoneInput(interp.phone as string ?? ""),
       email: interp.email ?? "",
       type: interp.type,
       pay_rate: interp.pay_rate,
       notes: interp.notes ?? "",
       emergency_contact_name: ec?.name ?? "",
-      emergency_contact_phone: ec?.phone ?? "",
+      emergency_contact_phone: formatPhoneInput(ec?.phone as string ?? ""),
       certificate_number: interp.certificate_number ?? "",
       zip_code: interp.zip_code ?? "",
       coverage_range_miles: interp.coverage_range_miles ?? "",
@@ -147,7 +149,7 @@ export function InterpreterDetailPage() {
           <CardContent className="space-y-4">
             {editing ? (
               <div className="space-y-3">
-                {(["name", "phone", "email"] as const).map((field) => (
+                {(["name", "email"] as const).map((field) => (
                   <div key={field} className="space-y-1">
                     <Label>{t(`interpreters.${field}`)}</Label>
                     <Input
@@ -156,6 +158,13 @@ export function InterpreterDetailPage() {
                     />
                   </div>
                 ))}
+                <div className="space-y-1">
+                  <Label>{t("interpreters.phone")}</Label>
+                  <PhoneInput
+                    value={editForm.phone as string ?? ""}
+                    onChange={(v) => setEditForm(s => ({ ...s, phone: v }))}
+                  />
+                </div>
                 <div className="space-y-1">
                   <Label>{t("interpreters.type")}</Label>
                   <select
@@ -173,7 +182,7 @@ export function InterpreterDetailPage() {
                 <Field label={t("interpreters.type")} value={
                   <Badge variant={interp.type === "certified" ? "default" : "secondary"}>{interp.type as string}</Badge>
                 } />
-                <Field label={t("interpreters.phone")} value={interp.phone as string} />
+                <Field label={t("interpreters.phone")} value={formatPhone(interp.phone as string)} />
                 <Field label={t("interpreters.email")} value={interp.email as string} />
                 <Field label={t("interpreters.status")} value={
                   <Badge variant={interp.is_active ? "success" : "secondary"}>
@@ -222,16 +231,16 @@ export function InterpreterDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <Label>{t("interpreters.emergency_phone")}</Label>
-                  <Input
+                  <PhoneInput
                     value={editForm.emergency_contact_phone as string ?? ""}
-                    onChange={(e) => setEditForm(s => ({ ...s, emergency_contact_phone: e.target.value }))}
+                    onChange={(v) => setEditForm(s => ({ ...s, emergency_contact_phone: v }))}
                   />
                 </div>
               </div>
             ) : (
               <>
                 <Field label={t("interpreters.emergency_name")} value={(interp.emergency_contact as Record<string, unknown>)?.name as string ?? "—"} />
-                <Field label={t("interpreters.emergency_phone")} value={(interp.emergency_contact as Record<string, unknown>)?.phone as string ?? "—"} />
+                <Field label={t("interpreters.emergency_phone")} value={formatPhone((interp.emergency_contact as Record<string, unknown>)?.phone as string)} />
               </>
             )}
           </CardContent>

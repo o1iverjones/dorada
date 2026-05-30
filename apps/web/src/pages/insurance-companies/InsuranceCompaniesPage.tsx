@@ -8,6 +8,8 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
@@ -73,7 +75,7 @@ export function InsuranceCompaniesPage() {
         </span>
       ),
     },
-    { key: "phone", header: t("insurance_companies.phone") },
+    { key: "phone", header: t("insurance_companies.phone"), render: (row: typeof allCompanies[number]) => formatPhone(row.phone) },
     { key: "email", header: t("insurance_companies.email") },
   ];
 
@@ -113,20 +115,18 @@ export function InsuranceCompaniesPage() {
           <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
             <DialogHeader><DialogTitle>{t("insurance_companies.new")}</DialogTitle></DialogHeader>
             <div className="space-y-3 py-4">
-              {([
-                { key: "name", label: t("insurance_companies.name") },
-                { key: "phone", label: t("insurance_companies.phone") },
-                { key: "email", label: t("insurance_companies.email") },
-              ] as const).map(({ key, label }) => (
-                <div key={key} className="space-y-1">
-                  <Label>{label}</Label>
-                  <Input
-                    value={form[key]}
-                    onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))}
-                    type={key === "email" ? "email" : "text"}
-                  />
-                </div>
-              ))}
+              <div className="space-y-1">
+                <Label>{t("insurance_companies.name")}</Label>
+                <Input value={form.name} onChange={(e) => setForm(s => ({ ...s, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("insurance_companies.phone")}</Label>
+                <PhoneInput value={form.phone} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("insurance_companies.email")}</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm(s => ({ ...s, email: e.target.value }))} />
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>

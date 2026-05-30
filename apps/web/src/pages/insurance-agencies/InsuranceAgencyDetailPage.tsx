@@ -7,6 +7,8 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 
@@ -75,7 +77,7 @@ export function InsuranceAgencyDetailPage() {
     setForm({
       name: agency.name ?? "",
       contact_method: agency.contact_method ?? "",
-      telephone: agency.telephone ?? "",
+      telephone: formatPhoneInput(agency.telephone ?? ""),
       id_number: agency.id_number ?? "",
       rate_qualified: agency.rate_qualified ?? "",
       rate_certified: agency.rate_certified ?? "",
@@ -171,7 +173,7 @@ export function InsuranceAgencyDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <Label>{t("insurance_agencies.telephone")}</Label>
-                  <Input value={form.telephone as string} onChange={(e) => set("telephone", e.target.value)} placeholder={t("common.optional")} />
+                  <PhoneInput value={form.telephone as string ?? ""} onChange={(v) => set("telephone", v)} />
                 </div>
                 <div className="space-y-1">
                   <Label>{t("insurance_agencies.id_number")}</Label>
@@ -182,7 +184,7 @@ export function InsuranceAgencyDetailPage() {
               <>
                 <Field label={t("insurance_agencies.name")} value={agency.name} />
                 <Field label={t("insurance_agencies.contact_method")} value={agency.contact_method} />
-                <Field label={t("insurance_agencies.telephone")} value={agency.telephone} />
+                <Field label={t("insurance_agencies.telephone")} value={formatPhone(agency.telephone)} />
                 <Field label={t("insurance_agencies.id_number")} value={agency.id_number} />
               </>
             )}

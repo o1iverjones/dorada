@@ -8,6 +8,8 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
@@ -80,7 +82,7 @@ export function ClinicsPage() {
       ),
     },
     { key: "address", header: t("clinics.address") },
-    { key: "phone", header: t("clinics.phone") },
+    { key: "phone", header: t("clinics.phone"), render: (row: typeof allClinics[number]) => formatPhone(row.phone as string) },
     { key: "primary_contact_name", header: t("clinics.primary_contact") },
   ];
 
@@ -123,7 +125,6 @@ export function ClinicsPage() {
               {([
                 { key: "name", label: t("clinics.name") },
                 { key: "address", label: t("clinics.address") },
-                { key: "phone", label: t("clinics.phone") },
                 { key: "contact_name", label: t("clinics.primary_contact") },
                 { key: "contact_email", label: "Contact email" },
               ] as const).map(({ key, label }) => (
@@ -132,6 +133,10 @@ export function ClinicsPage() {
                   <Input value={form[key]} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
                 </div>
               ))}
+              <div className="space-y-1">
+                <Label>{t("clinics.phone")}</Label>
+                <PhoneInput value={form.phone} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>

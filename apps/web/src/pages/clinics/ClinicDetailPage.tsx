@@ -11,6 +11,8 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { Textarea } from "../../components/ui/textarea.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
@@ -62,7 +64,7 @@ export function ClinicDetailPage() {
     setForm({
       name: (clinic.name as string) ?? "",
       address: (clinic.address as string) ?? "",
-      phone: (clinic.phone as string) ?? "",
+      phone: formatPhoneInput((clinic.phone as string) ?? ""),
       primary_contact_name: contact?.name ?? "",
       primary_contact_email: contact?.email ?? "",
     });
@@ -157,7 +159,7 @@ export function ClinicDetailPage() {
     }
   }
 
-  const fields = ["name", "address", "phone", "primary_contact_name", "primary_contact_email"] as const;
+  const fields = ["name", "address", "primary_contact_name", "primary_contact_email"] as const;
   const interpreterList = (allInterpreters?.data ?? []) as Array<{ id: string; name: string; type: string }>;
 
   return (
@@ -197,6 +199,10 @@ export function ClinicDetailPage() {
                     <Input value={form[f] as string ?? ""} onChange={(e) => setForm(s => ({ ...s, [f]: e.target.value }))} />
                   </div>
                 ))}
+                <div className="space-y-1">
+                  <Label>{t("clinics.phone")}</Label>
+                  <PhoneInput value={form.phone as string ?? ""} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+                </div>
               </div>
             ) : (
               <div className="grid gap-3 text-sm sm:grid-cols-2">
@@ -210,7 +216,7 @@ export function ClinicDetailPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("clinics.phone")}</p>
-                  <p className="font-medium">{clinic.phone as string ?? "—"}</p>
+                  <p className="font-medium">{formatPhone(clinic.phone as string)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("clinics.primary_contact_name")}</p>
