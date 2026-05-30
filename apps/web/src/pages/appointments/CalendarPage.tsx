@@ -157,10 +157,11 @@ export function CalendarPage() {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function appointmentsForDate(date: Date) {
-    // Use the org timezone to determine which calendar date each appointment falls on.
-    // Comparing raw Date objects via isSameDay uses browser-local timezone and will
-    // mis-place appointments when the browser timezone differs from the org timezone.
-    const target = toDateStr(date); // calendar date the cell represents (YYYY-MM-DD)
+    // Both sides must use the org timezone. Cell headers are rendered via formatInTz
+    // (org tz), so the "target" date for a cell must also be derived in org tz.
+    // Using browser-local Date methods (getDate, getMonth, etc.) breaks whenever the
+    // browser timezone differs from the org timezone.
+    const target = date.toLocaleDateString("en-CA", { timeZone: tz });
     return appointments
       .filter((a) => {
         const apptDateInOrgTz = new Date(a.date_time as string)
