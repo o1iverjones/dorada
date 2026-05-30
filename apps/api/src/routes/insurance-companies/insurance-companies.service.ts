@@ -12,7 +12,12 @@ function formatCompany(c: {
   id: string;
   name: string;
   phone: string | null;
+  fax: string | null;
   email: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -21,7 +26,12 @@ function formatCompany(c: {
     id: c.id,
     name: c.name,
     phone: c.phone,
+    fax: c.fax,
     email: c.email,
+    address: c.address,
+    city: c.city,
+    state: c.state,
+    zip_code: c.zip_code,
     is_active: c.is_active,
     created_at: c.created_at.toISOString(),
     updated_at: c.updated_at.toISOString(),
@@ -67,7 +77,12 @@ export async function createInsuranceCompany(
       organization_id: organizationId,
       name: body.name,
       phone: body.phone ?? null,
+      fax: body.fax ?? null,
       email: body.email ?? null,
+      address: body.address ?? null,
+      city: body.city ?? null,
+      state: body.state ?? null,
+      zip_code: body.zip_code ?? null,
     },
   });
   return formatCompany(company);
@@ -87,7 +102,12 @@ export async function updateInsuranceCompany(
     data: {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.phone !== undefined ? { phone: body.phone ?? null } : {}),
+      ...(body.fax !== undefined ? { fax: body.fax ?? null } : {}),
       ...(body.email !== undefined ? { email: body.email ?? null } : {}),
+      ...(body.address !== undefined ? { address: body.address ?? null } : {}),
+      ...(body.city !== undefined ? { city: body.city ?? null } : {}),
+      ...(body.state !== undefined ? { state: body.state ?? null } : {}),
+      ...(body.zip_code !== undefined ? { zip_code: body.zip_code ?? null } : {}),
       ...(body.is_active !== undefined ? { is_active: body.is_active } : {}),
     },
   });
