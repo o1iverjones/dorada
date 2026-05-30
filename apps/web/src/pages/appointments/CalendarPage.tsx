@@ -178,10 +178,13 @@ export function CalendarPage() {
 
   function blocksForDate(date: Date) {
     if (!showBlocks) return [];
+    // Use org timezone for the cell date, same as appointmentsForDate, so blocks
+    // are shown on the correct day regardless of the browser's local timezone.
+    const target = date.toLocaleDateString("en-CA", { timeZone: tz });
     return availabilityBlocks.filter((b) => {
-      const from = new Date(b.from as string); from.setHours(0,0,0,0);
-      const to   = new Date(b.to   as string); to.setHours(23,59,59,999);
-      return from <= date && to >= date;
+      const fromDate = new Date(b.from as string).toLocaleDateString("en-CA", { timeZone: tz });
+      const toDate   = new Date(b.to   as string).toLocaleDateString("en-CA", { timeZone: tz });
+      return fromDate <= target && toDate >= target;
     });
   }
 
