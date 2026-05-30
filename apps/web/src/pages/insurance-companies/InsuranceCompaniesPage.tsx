@@ -18,7 +18,7 @@ import { Plus } from "lucide-react";
 export function InsuranceCompaniesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data, isLoading } = useInsuranceCompanies();
+  const { data, isLoading } = useInsuranceCompanies({ limit: "500" });
   const create = useCreateInsuranceCompany();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", email: "" });
