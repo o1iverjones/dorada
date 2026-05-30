@@ -88,7 +88,7 @@ export const InterpreterListQuerySchema = z.object({
   check_availability_on: z.string().datetime().optional(),
   search: z.string().optional(),
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  limit: z.coerce.number().int().min(1).max(500).default(25),
 });
 
 export const InterpreterPreferencesSchema = z.object({
