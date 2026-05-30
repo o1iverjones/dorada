@@ -585,7 +585,8 @@
     "reply_from_name": "Reply from name",
     "reply_from_email": "Reply from email",
     "reply_email": "Reply email",
-    "sender_domains_hint": "Comma-separated list of accepted sender domains (e.g. acme.com)"
+    "sender_domains": "Sender domains",
+    "sender_domains_hint": "Sender domains (comma-separated, e.g. acme.com)"
   },
   "interpreters": {
     "title": "Interpreters",

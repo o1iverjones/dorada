@@ -585,7 +585,8 @@
     "reply_from_name": "Nombre de respuesta",
     "reply_from_email": "Correo de respuesta",
     "reply_email": "Correo de respuesta",
-    "sender_domains_hint": "Lista de dominios de remitente aceptados separados por coma (ej. acme.com)"
+    "sender_domains": "Dominios de remitente",
+    "sender_domains_hint": "Dominios de remitente (separados por coma, ej. acme.com)"
   },
   "interpreters": {
     "title": "Intérpretes",
