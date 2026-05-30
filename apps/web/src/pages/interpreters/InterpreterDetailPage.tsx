@@ -280,11 +280,12 @@ export function InterpreterDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className={interp.type !== "certified" ? "opacity-40 pointer-events-none select-none" : ""}>
+        {/* Use editForm.type in edit mode so the card activates immediately when the user changes type */}
+        <Card className={(editing ? editForm.type : interp.type) !== "certified" ? "opacity-40 pointer-events-none select-none" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {t("interpreters.certification")}
-              {interp.type !== "certified" && (
+              {(editing ? editForm.type : interp.type) !== "certified" && (
                 <span className="text-xs font-normal text-muted-foreground">({t("interpreters.certified_only")})</span>
               )}
             </CardTitle>
