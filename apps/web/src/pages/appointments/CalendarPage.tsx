@@ -303,7 +303,7 @@ export function CalendarPage() {
           <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
           {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} />}
-          {physician && <DayRow label={t("appointments.referring_physician")} value={physician} />}
+          {physician && <DayRow label={t("appointments.provider")} value={physician} />}
           {poNumber && <DayRow label={t("appointments.po_number")} value={poNumber} />}
         </div>
       </button>
@@ -751,7 +751,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
         <Row label={t("appointments.clinic")} value={clinicName} />
         <Row label={t("appointments.insurance_agency")} value={agencyName} />
         <Row label={t("appointments.interpreter")} value={interpreterName} />
-        {physician && <Row label={t("appointments.referring_physician")} value={physician} />}
+        {physician && <Row label={t("appointments.provider")} value={physician} />}
       </div>
     </div>
   );

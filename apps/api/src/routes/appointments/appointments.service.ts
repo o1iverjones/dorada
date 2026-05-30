@@ -267,7 +267,7 @@ export async function updateAppointment(
     clinic_id: "Clinic",
     insurance_agency_id: "Insurance Agency",
     patient_id: "Patient",
-    referring_physician: "Referring Physician",
+    referring_physician: "Provider",
     department: "Department",
     pre_auth_amount: "Pre-Auth Amount",
     pre_auth_mileage: "Pre-Auth Mileage",

@@ -371,7 +371,9 @@
     "clinic": "Clínica",
     "insurance_agency": "Agencia",
     "patient": "Paciente",
-    "referring_physician": "Médico referente",
+    "referring_physician": "Proveedor",
+    "provider": "Proveedor",
+    "select_clinic_first": "Selecciona una clínica primero",
     "po_number": "Número de PO",
     "pre_auth_amount": "Monto preautorizado",
     "pre_auth_mileage": "Millaje preautorizado",
@@ -517,7 +519,12 @@
     "note_type_notice": "Aviso",
     "note_type_info": "Información",
     "note_content": "Contenido de la nota",
-    "note_content_placeholder": "Escribe una nota que los intérpretes verán antes de la cita..."
+    "note_content_placeholder": "Escribe una nota que los intérpretes verán antes de la cita...",
+    "doctors": "Médicos",
+    "no_doctors": "Aún no se han agregado médicos.",
+    "add_doctor": "Agregar médico",
+    "doctor_name": "Nombre del médico",
+    "doctor_name_placeholder": "Ej. Dr. Juan Pérez"
   },
   "email_intake": {
     "logs_title": "Registro de correos entrantes",

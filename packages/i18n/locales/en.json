@@ -371,7 +371,9 @@
     "clinic": "Clinic",
     "insurance_agency": "Agency",
     "patient": "Patient",
-    "referring_physician": "Referring physician",
+    "referring_physician": "Provider",
+    "provider": "Provider",
+    "select_clinic_first": "Select a clinic first",
     "po_number": "PO Number",
     "pre_auth_amount": "Pre-auth amount",
     "pre_auth_mileage": "Pre-auth mileage",
@@ -517,7 +519,12 @@
     "note_type_notice": "Notice",
     "note_type_info": "Info",
     "note_content": "Note content",
-    "note_content_placeholder": "Enter a note that interpreters will see before the appointment..."
+    "note_content_placeholder": "Enter a note that interpreters will see before the appointment...",
+    "doctors": "Doctors",
+    "no_doctors": "No doctors added yet.",
+    "add_doctor": "Add doctor",
+    "doctor_name": "Doctor name",
+    "doctor_name_placeholder": "e.g. Dr. Jane Smith"
   },
   "email_intake": {
     "logs_title": "Email intake log",

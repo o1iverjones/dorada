@@ -3,10 +3,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useCreateAppointment, useAppointments } from "../../hooks/useAppointments.js";
+import { useCreateAppointment } from "../../hooks/useAppointments.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { fromTzDateTimeInput } from "../../lib/timezone.js";
-import { useClinics } from "../../hooks/useClinics.js";
+import { useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
 import { useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
@@ -17,7 +17,7 @@ import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "../../hooks/use-toast.js";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
 
@@ -32,7 +32,7 @@ const schema = z.object({
   clinic_id: z.string().min(1),
   insurance_agency_id: z.string().min(1),
   patient_id: z.string().min(1),
-  referring_physician: z.string().transform((v) => v || undefined).optional(),
+  referring_physician: z.string().optional(),
   po_number: z.string().optional(),
   pre_auth_amount: z.coerce.number().default(0),
   pre_auth_mileage: z.coerce.number().default(0),
@@ -53,7 +53,9 @@ export function NewAppointmentPage() {
   const { data: patients } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
-  const { data: pastAppts } = useAppointments({ limit: "200" });
+
+  const [selectedClinicId, setSelectedClinicId] = useState<string>(prefill?.clinic_id ?? "");
+  const { data: clinicDoctors } = useClinicDoctors(selectedClinicId);
 
   const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
   const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
@@ -66,13 +68,8 @@ export function NewAppointmentPage() {
     .map((a) => ({ value: a.id, label: a.name }));
   const patientOptions = ((patients?.data ?? []) as Array<{ id: string; name: string }>)
     .map((p) => ({ value: p.id, label: p.name }));
-  const physicianOptions = Array.from(
-    new Set(
-      ((pastAppts?.data ?? []) as Array<{ referring_physician?: string }>)
-        .map((a) => a.referring_physician)
-        .filter(Boolean) as string[]
-    )
-  ).map((name) => ({ value: name, label: name }));
+  const providerOptions = ((clinicDoctors ?? []) as Array<{ id: string; name: string }>)
+    .map((d) => ({ value: d.name, label: d.name }));
 
   const { register, control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -181,7 +178,7 @@ export function NewAppointmentPage() {
                 <AutocompleteInput
                   options={clinicOptions}
                   value={field.value ?? ""}
-                  onChange={field.onChange}
+                  onChange={(v) => { field.onChange(v); setSelectedClinicId(v); setValue("referring_physician", ""); }}
                   placeholder={t("common.search")}
                 />
               )} />
@@ -209,13 +206,13 @@ export function NewAppointmentPage() {
               )} />
             </FormField>
 
-            <FormField label={t("appointments.referring_physician")} error={errors.referring_physician?.message}>
+            <FormField label={t("appointments.provider")} error={errors.referring_physician?.message}>
               <Controller name="referring_physician" control={control} render={({ field }) => (
                 <AutocompleteInput
-                  options={physicianOptions}
+                  options={providerOptions}
                   value={field.value ?? ""}
                   onChange={field.onChange}
-                  placeholder={t("common.search")}
+                  placeholder={selectedClinicId ? t("common.search") : t("appointments.select_clinic_first")}
                   freeText
                 />
               )} />

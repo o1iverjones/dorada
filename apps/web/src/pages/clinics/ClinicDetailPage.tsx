@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useClinic, useUpdateClinic, useSetClinicInterpreterBlocks, useClinicActivity, useClinicNotes, useAddClinicNote, useClinicInterpreterNotes, useCreateClinicInterpreterNote, useUpdateClinicInterpreterNote, useDeleteClinicInterpreterNote } from "../../hooks/useClinics.js";
+import { useClinic, useUpdateClinic, useSetClinicInterpreterBlocks, useClinicActivity, useClinicNotes, useAddClinicNote, useClinicInterpreterNotes, useCreateClinicInterpreterNote, useUpdateClinicInterpreterNote, useDeleteClinicInterpreterNote, useAddClinicDoctor, useRemoveClinicDoctor } from "../../hooks/useClinics.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../../components/ui/badge.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus, AlertTriangle } from "lucide-react";
+import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus, AlertTriangle, Stethoscope, X } from "lucide-react";
 import { useAuthStore } from "../../store/auth.js";
 
 export function ClinicDetailPage() {
@@ -38,10 +38,14 @@ export function ClinicDetailPage() {
   const updateInterpreterNote = useUpdateClinicInterpreterNote(id!);
   const deleteInterpreterNote = useDeleteClinicInterpreterNote(id!);
 
+  const addDoctor = useAddClinicDoctor(id!);
+  const removeDoctor = useRemoveClinicDoctor(id!);
+
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const canManageClinics = hasPermission("manage_clinics");
 
   const [editing, setEditing] = useState(false);
+  const [newDoctorName, setNewDoctorName] = useState("");
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
@@ -59,6 +63,7 @@ export function ClinicDetailPage() {
   const isActive = (clinic.is_active as boolean) !== false;
   const contact = clinic.primary_contact as { name?: string; email?: string; phone?: string } | null;
   const excludedInterpreters = (clinic.interpreters_not_allowed ?? []) as Array<{ id: string; name: string }>;
+  const doctors = (clinic.doctors ?? []) as Array<{ id: string; name: string }>;
 
   function startEdit() {
     setForm({
@@ -273,6 +278,66 @@ export function ClinicDetailPage() {
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Doctors */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Stethoscope className="h-4 w-4" /> {t("clinics.doctors")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {doctors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("clinics.no_doctors")}</p>
+          ) : (
+            <ul className="space-y-1">
+              {doctors.map((doc) => (
+                <li key={doc.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="font-medium">{doc.name}</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await removeDoctor.mutateAsync(doc.id);
+                      } catch {
+                        toast({ title: t("common.error"), variant: "destructive" });
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title={t("common.remove")}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form
+            className="flex gap-2 pt-1"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const name = newDoctorName.trim();
+              if (!name) return;
+              try {
+                await addDoctor.mutateAsync(name);
+                setNewDoctorName("");
+              } catch {
+                toast({ title: t("common.error"), variant: "destructive" });
+              }
+            }}
+          >
+            <Input
+              value={newDoctorName}
+              onChange={(e) => setNewDoctorName(e.target.value)}
+              placeholder={t("clinics.doctor_name_placeholder")}
+              className="flex-1"
+            />
+            <Button type="submit" size="sm" disabled={!newDoctorName.trim() || addDoctor.isPending}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> {t("clinics.add_doctor")}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 

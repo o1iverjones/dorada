@@ -4,7 +4,7 @@ import { ClinicListQuerySchema, CreateClinicBodySchema, UpdateClinicBodySchema, 
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
-import { listClinics, getClinic, createClinic, updateClinic, deactivateClinic, setInterpreterBlocks, getClinicActivity, getClinicNotes, addClinicNote, listInterpreterNotes, createInterpreterNote, updateInterpreterNote, deleteInterpreterNote } from "./clinics.service.js";
+import { listClinics, getClinic, createClinic, updateClinic, deactivateClinic, setInterpreterBlocks, getClinicActivity, getClinicNotes, addClinicNote, listInterpreterNotes, createInterpreterNote, updateInterpreterNote, deleteInterpreterNote, listClinicDoctors, addClinicDoctor, removeClinicDoctor } from "./clinics.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
 
 export default async function clinicRoutes(fastify: FastifyInstance) {
@@ -195,6 +195,50 @@ export default async function clinicRoutes(fastify: FastifyInstance) {
       entityName: clinic?.name ?? null,
       action: "interpreter_note_removed",
       detail: note ? `[${note.type}] ${note.content.slice(0, 80)}${note.content.length > 80 ? "…" : ""}` : null,
+      adminId: payload.sub,
+      adminName: payload.name ?? "Admin",
+    });
+    return reply.status(204).send();
+  });
+
+  // ─── Doctors ─────────────────────────────────────────────────────────────────
+
+  fastify.get("/:id/doctors", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await listClinicDoctors(id, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.post("/:id/doctors", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { name } = z.object({ name: z.string().min(1).max(200) }).parse(req.body);
+    const payload = req.user as JwtPayload;
+    const doctor = await addClinicDoctor(id, name, payload.organization_id, fastify.prisma);
+    await writeActivityLog(fastify.prisma, {
+      organizationId: payload.organization_id,
+      entityType: "clinic",
+      entityId: id,
+      entityName: (await fastify.prisma.clinic.findUnique({ where: { id }, select: { name: true } }))?.name ?? null,
+      action: "doctor_added",
+      detail: name,
+      adminId: payload.sub,
+      adminName: payload.name ?? "Admin",
+    });
+    return reply.status(201).send(doctor);
+  });
+
+  fastify.delete("/:id/doctors/:doctorId", { preHandler }, async (req, reply) => {
+    const { id, doctorId } = req.params as { id: string; doctorId: string };
+    const payload = req.user as JwtPayload;
+    const doctor = await fastify.prisma.clinicDoctor.findUnique({ where: { id: doctorId }, select: { name: true } });
+    await removeClinicDoctor(id, doctorId, payload.organization_id, fastify.prisma);
+    await writeActivityLog(fastify.prisma, {
+      organizationId: payload.organization_id,
+      entityType: "clinic",
+      entityId: id,
+      entityName: (await fastify.prisma.clinic.findUnique({ where: { id }, select: { name: true } }))?.name ?? null,
+      action: "doctor_removed",
+      detail: doctor?.name ?? null,
       adminId: payload.sub,
       adminName: payload.name ?? "Admin",
     });

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useAppointments, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
-import { useClinic, useClinics } from "../../hooks/useClinics.js";
+import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients, useUpdatePatient } from "../../hooks/usePatients.js";
 import { useOrgTimezone, useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
@@ -79,14 +79,10 @@ export function AppointmentDetailPage() {
   const { data: patientsData } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
-  const { data: pastAppts } = useAppointments({ limit: "200" });
 
   const clinicOptions = ((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }));
   const agencyOptions = ((agenciesData?.data ?? []) as Array<{ id: string; name: string }>).map((a) => ({ value: a.id, label: a.name }));
   const patientOptions = ((patientsData?.data ?? []) as Array<{ id: string; name: string }>).map((p) => ({ value: p.id, label: p.name }));
-  const physicianOptions = Array.from(new Set(
-    ((pastAppts?.data ?? []) as Array<{ referring_physician?: string }>).map((a) => a.referring_physician).filter(Boolean) as string[]
-  )).map((name) => ({ value: name, label: name }));
   const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
   const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
   const interpreterRates = ratesData?.data ?? [];
@@ -102,6 +98,11 @@ export function AppointmentDetailPage() {
   });
 
   const clinicId = (a?.clinic as Record<string, unknown>)?.id as string | undefined;
+  // In edit mode, track which clinic is selected so provider list updates immediately
+  const editClinicId = editing ? form.clinic_id : (clinicId ?? "");
+  const { data: clinicDoctors } = useClinicDoctors(editClinicId);
+  const providerOptions = ((clinicDoctors ?? []) as Array<{ id: string; name: string }>)
+    .map((d) => ({ value: d.name, label: d.name }));
   const { data: clinicData } = useClinic(clinicId ?? "");
   const excludedFromClinic = new Set(
     ((clinicData as Record<string, unknown>)?.interpreters_not_allowed as Array<{ id: string }> ?? []).map((i) => i.id),
@@ -378,7 +379,7 @@ export function AppointmentDetailPage() {
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
                 <InlineRow label={t("appointments.clinic")}>
-                  <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => set("clinic_id", v)} placeholder={t("common.search")} />
+                  <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => { set("clinic_id", v); set("referring_physician", ""); }} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.clinic")} value={(a.clinic as Record<string, unknown>)?.name as string ?? "—"} />
@@ -396,15 +397,15 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Referring Physician */}
+            {/* Provider */}
             {(editing || a.referring_physician) && (
               <div className="px-6 py-2.5 even:bg-muted/40">
                 {editing ? (
-                  <InlineRow label={t("appointments.referring_physician")}>
-                    <AutocompleteInput options={physicianOptions} value={form.referring_physician} onChange={(v) => set("referring_physician", v)} placeholder={t("common.search")} freeText />
+                  <InlineRow label={t("appointments.provider")}>
+                    <AutocompleteInput options={providerOptions} value={form.referring_physician} onChange={(v) => set("referring_physician", v)} placeholder={t("common.search")} freeText />
                   </InlineRow>
                 ) : (
-                  <Field label={t("appointments.referring_physician")} value={a.referring_physician as string} />
+                  <Field label={t("appointments.provider")} value={a.referring_physician as string} />
                 )}
               </div>
             )}

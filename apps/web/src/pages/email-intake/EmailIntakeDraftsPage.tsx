@@ -139,7 +139,7 @@ function EmailDraftCard({ draft }: { draft: Record<string, unknown> }) {
                 {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </SF>
-            <SF label={t("appointments.referring_physician")}>
+            <SF label={t("appointments.provider")}>
               <Input value={form.referring_physician} onChange={(e) => setField("referring_physician", e.target.value)} />
             </SF>
           </div>

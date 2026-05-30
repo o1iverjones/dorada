@@ -57,13 +57,37 @@ function formatClinic(c: {
 export async function getClinic(id: string, organizationId: string, prisma: PrismaClient) {
   const clinic = await prisma.clinic.findUnique({
     where: { id },
-    include: { interpreters_blocked: { include: { interpreter: { select: { id: true, name: true } } } } },
+    include: {
+      interpreters_blocked: { include: { interpreter: { select: { id: true, name: true } } } },
+      doctors: { orderBy: { name: "asc" }, select: { id: true, name: true } },
+    },
   });
   ensureTenant(clinic, organizationId);
   return {
     ...formatClinic(clinic!),
     interpreters_not_allowed: clinic!.interpreters_blocked.map((b) => b.interpreter),
+    doctors: clinic!.doctors,
   };
+}
+
+export async function listClinicDoctors(clinicId: string, organizationId: string, prisma: PrismaClient) {
+  const clinic = await prisma.clinic.findUnique({ where: { id: clinicId }, select: { organization_id: true } });
+  ensureTenant(clinic, organizationId);
+  return prisma.clinicDoctor.findMany({ where: { clinic_id: clinicId }, orderBy: { name: "asc" } });
+}
+
+export async function addClinicDoctor(clinicId: string, name: string, organizationId: string, prisma: PrismaClient) {
+  const clinic = await prisma.clinic.findUnique({ where: { id: clinicId }, select: { organization_id: true } });
+  ensureTenant(clinic, organizationId);
+  return prisma.clinicDoctor.create({ data: { clinic_id: clinicId, name } });
+}
+
+export async function removeClinicDoctor(clinicId: string, doctorId: string, organizationId: string, prisma: PrismaClient) {
+  const clinic = await prisma.clinic.findUnique({ where: { id: clinicId }, select: { organization_id: true } });
+  ensureTenant(clinic, organizationId);
+  const doctor = await prisma.clinicDoctor.findUnique({ where: { id: doctorId } });
+  if (!doctor || doctor.clinic_id !== clinicId) throw new NotFoundError("DOCTOR_NOT_FOUND", "Doctor not found");
+  await prisma.clinicDoctor.delete({ where: { id: doctorId } });
 }
 
 export async function createClinic(body: CreateClinicBody, organizationId: string, prisma: PrismaClient) {

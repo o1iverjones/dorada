@@ -3,11 +3,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
-import { useAppointment, useUpdateAppointment, useAppointments } from "../../hooks/useAppointments.js";
+import { useEffect, useState } from "react";
+import { useAppointment, useUpdateAppointment } from "../../hooks/useAppointments.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
-import { useClinics } from "../../hooks/useClinics.js";
+import { useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
 import { useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
@@ -54,7 +54,9 @@ export function EditAppointmentPage() {
   const { data: patients } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
-  const { data: pastAppts } = useAppointments({ limit: "200" });
+
+  const [selectedClinicId, setSelectedClinicId] = useState<string>("");
+  const { data: clinicDoctors } = useClinicDoctors(selectedClinicId);
 
   const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
   const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
@@ -63,13 +65,8 @@ export function EditAppointmentPage() {
   const clinicOptions = ((clinics?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }));
   const agencyOptions = ((agencies?.data ?? []) as Array<{ id: string; name: string }>).map((a) => ({ value: a.id, label: a.name }));
   const patientOptions = ((patients?.data ?? []) as Array<{ id: string; name: string }>).map((p) => ({ value: p.id, label: p.name }));
-  const physicianOptions = Array.from(
-    new Set(
-      ((pastAppts?.data ?? []) as Array<{ referring_physician?: string }>)
-        .map((a) => a.referring_physician)
-        .filter(Boolean) as string[]
-    )
-  ).map((name) => ({ value: name, label: name }));
+  const providerOptions = ((clinicDoctors ?? []) as Array<{ id: string; name: string }>)
+    .map((d) => ({ value: d.name, label: d.name }));
 
   const { register, control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -78,13 +75,15 @@ export function EditAppointmentPage() {
   useEffect(() => {
     if (!appt) return;
     const a = appt as Record<string, unknown>;
+    const clinicId = (a.clinic as Record<string, unknown>)?.id as string;
+    setSelectedClinicId(clinicId ?? "");
     reset({
       date_time: toTzDateTimeInput(a.date_time as string, tz),
       duration_minutes: a.duration_minutes as number,
       type_id: (a.type as Record<string, unknown>)?.id as string,
       language: a.language as string,
       interpreter_type_required: a.interpreter_type_required as "certified" | "qualified",
-      clinic_id: (a.clinic as Record<string, unknown>)?.id as string,
+      clinic_id: clinicId,
       insurance_agency_id: (a.insurance_agency as Record<string, unknown>)?.id as string,
       patient_id: (a.patient as Record<string, unknown>)?.id as string,
       referring_physician: (a.referring_physician as string) ?? "",
@@ -182,7 +181,12 @@ export function EditAppointmentPage() {
 
             <FormField label={t("appointments.clinic")} error={errors.clinic_id?.message}>
               <Controller name="clinic_id" control={control} render={({ field }) => (
-                <AutocompleteInput options={clinicOptions} value={field.value ?? ""} onChange={field.onChange} placeholder={t("common.search")} />
+                <AutocompleteInput
+                  options={clinicOptions}
+                  value={field.value ?? ""}
+                  onChange={(v) => { field.onChange(v); setSelectedClinicId(v); setValue("referring_physician", ""); }}
+                  placeholder={t("common.search")}
+                />
               )} />
             </FormField>
 
@@ -198,9 +202,15 @@ export function EditAppointmentPage() {
               )} />
             </FormField>
 
-            <FormField label={t("appointments.referring_physician")} error={errors.referring_physician?.message}>
+            <FormField label={t("appointments.provider")} error={errors.referring_physician?.message}>
               <Controller name="referring_physician" control={control} render={({ field }) => (
-                <AutocompleteInput options={physicianOptions} value={field.value ?? ""} onChange={field.onChange} placeholder={t("common.search")} freeText />
+                <AutocompleteInput
+                  options={providerOptions}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder={selectedClinicId ? t("common.search") : t("appointments.select_clinic_first")}
+                  freeText
+                />
               )} />
             </FormField>
 

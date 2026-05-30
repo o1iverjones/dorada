@@ -104,3 +104,33 @@ export function useDeleteClinicInterpreterNote(clinicId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clinics", clinicId, "interpreter-notes"] }),
   });
 }
+
+export function useClinicDoctors(clinicId: string) {
+  return useQuery({
+    queryKey: ["clinics", clinicId, "doctors"],
+    queryFn: () => api.get<Array<{ id: string; name: string }>>(`/clinics/${clinicId}/doctors`),
+    enabled: !!clinicId,
+  });
+}
+
+export function useAddClinicDoctor(clinicId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api.post(`/clinics/${clinicId}/doctors`, { name }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinics", clinicId, "doctors"] });
+      qc.invalidateQueries({ queryKey: ["clinics", clinicId] });
+    },
+  });
+}
+
+export function useRemoveClinicDoctor(clinicId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (doctorId: string) => api.delete(`/clinics/${clinicId}/doctors/${doctorId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinics", clinicId, "doctors"] });
+      qc.invalidateQueries({ queryKey: ["clinics", clinicId] });
+    },
+  });
+}

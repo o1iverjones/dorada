@@ -222,8 +222,20 @@ model Clinic {
   interpreters_blocked ClinicInterpreterBlock[]
   notes                ClinicNote[]
   interpreter_notes    ClinicInterpreterNote[]
+  doctors              ClinicDoctor[]
 
   @@map("clinics")
+}
+
+model ClinicDoctor {
+  id         String   @id @default(uuid())
+  clinic_id  String
+  name       String
+  created_at DateTime @default(now())
+
+  clinic Clinic @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
+
+  @@map("clinic_doctors")
 }
 
 model ClinicInterpreterBlock {
