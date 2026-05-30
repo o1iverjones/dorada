@@ -34,10 +34,17 @@ const BLOCK_COLORS = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-function startOfWeek(d: Date): Date {
+function startOfWeek(d: Date, tz: string): Date {
+  // Find the most-recent Monday in the org timezone.
+  // Using browser-local getDay() would give wrong results when the browser
+  // timezone differs from the org timezone.
+  const dowStr = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(d);
+  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const dow = dowMap[dowStr] ?? 1;
+  const daysBack = dow === 0 ? 6 : dow - 1; // Mon→0, Tue→1, …, Sun→6
   const s = new Date(d);
+  s.setDate(s.getDate() - daysBack);
   s.setHours(0, 0, 0, 0);
-  s.setDate(s.getDate() - s.getDay());
   return s;
 }
 
@@ -105,7 +112,7 @@ export function CalendarPage() {
   const monthStart = `${year}-${pad(month + 1)}-01`;
   const monthEnd = `${year}-${pad(month + 1)}-${pad(lastDay.getDate())}`;
 
-  const weekStart = startOfWeek(currentDate);
+  const weekStart = startOfWeek(currentDate, tz);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -120,8 +127,8 @@ export function CalendarPage() {
   // the API, fetching zero appointments for the day that the header actually shows.
   const dayStr = currentDate.toLocaleDateString("en-CA", { timeZone: tz });
 
-  const dateFrom = view === "month" ? monthStart : view === "week" ? toDateStr(weekStart) : dayStr;
-  const dateTo   = view === "month" ? monthEnd   : view === "week" ? toDateStr(weekEnd)   : dayStr;
+  const dateFrom = view === "month" ? monthStart : view === "week" ? weekStart.toLocaleDateString("en-CA", { timeZone: tz }) : dayStr;
+  const dateTo   = view === "month" ? monthEnd   : view === "week" ? weekEnd.toLocaleDateString("en-CA", { timeZone: tz })   : dayStr;
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -213,7 +220,8 @@ export function CalendarPage() {
 
   const firstDay = new Date(year, month, 1);
   const cells: Array<Date | null> = [
-    ...Array(firstDay.getDay()).fill(null),
+    // Monday-first: Mon→0 offset, Tue→1, …, Sun→6  ((getDay()+6)%7 maps Sun(0)→6, Mon(1)→0, …, Sat(6)→5)
+    ...Array((firstDay.getDay() + 6) % 7).fill(null),
     ...Array.from({ length: lastDay.getDate() }, (_, i) => new Date(year, month, i + 1)),
   ];
   while (cells.length % 7 !== 0) cells.push(null);
@@ -459,7 +467,7 @@ export function CalendarPage() {
       {view === "month" && (
         <div className="rounded-md border">
           <div className="grid grid-cols-7 border-b bg-muted/50">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
               <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
             ))}
           </div>
