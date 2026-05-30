@@ -343,7 +343,12 @@ model InsuranceCompany {
   organization_id String
   name            String
   phone           String?
+  fax             String?
   email           String?
+  address         String?
+  city            String?
+  state           String?
+  zip_code        String?
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
