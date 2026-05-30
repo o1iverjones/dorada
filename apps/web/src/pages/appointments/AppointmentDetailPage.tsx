@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useAppointments, usePatchClockTimes, useAppointmentMedia, useManualConfirm } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useAppointments, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
@@ -16,8 +16,9 @@ import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle } from "lucide-react";
+import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle, UserX } from "lucide-react";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
 import { DurationInput } from "../../components/shared/DurationInput.js";
 
@@ -56,19 +57,21 @@ export function AppointmentDetailPage() {
   const [clockInForm, setClockInForm] = useState("");
   const [patientArrivedForm, setPatientArrivedForm] = useState("");
   const [clockOutForm, setClockOutForm] = useState("");
+  const [confirmUnassign, setConfirmUnassign] = useState(false);
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
   const cancel = useCancelAppointment(id!);
   const offer = useOfferAppointment(id!);
   const update = useUpdateAppointment(id!);
   const patchClock = usePatchClockTimes(id!);
-  const patientId = (appt?.patient as Record<string, unknown> | null | undefined)?.id as string | undefined;
+  const patientId = ((appt as Record<string, unknown>)?.patient as Record<string, unknown> | null | undefined)?.id as string | undefined;
   const updatePatient = useUpdatePatient(patientId ?? "");
   const { data: activityLog } = useAppointmentActivity(id!);
   const { data: adminNotes } = useAppointmentNotes(id!);
   const addNote = useAddAppointmentNote(id!);
   const { data: mediaData } = useAppointmentMedia(id!);
   const manualConfirm = useManualConfirm(id!);
+  const unassign = useUnassignInterpreter(id!);
 
   // Lookup data for edit mode
   const { data: clinicsData } = useClinics({ limit: "500" });
@@ -246,13 +249,33 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Interpreter — always read-only, shown directly under patient */}
+            {/* Interpreter */}
             <div className="px-6 py-2.5 even:bg-muted/40">
-              <Field label={t("appointments.interpreter")} value={
-                <span className="font-bold">
-                  {(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")}
-                </span>
-              } />
+              {editing && (a.interpreter as Record<string, unknown>)?.name ? (
+                <InlineRow label={t("appointments.interpreter")}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm">
+                      {(a.interpreter as Record<string, unknown>)?.name as string}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-destructive border-destructive hover:bg-destructive/10"
+                      onClick={() => setConfirmUnassign(true)}
+                    >
+                      <UserX className="h-3.5 w-3.5 mr-1" />
+                      {t("appointments.unassign")}
+                    </Button>
+                  </div>
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.interpreter")} value={
+                  <span className="font-bold">
+                    {(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")}
+                  </span>
+                } />
+              )}
             </div>
 
             {/* PO Number */}
@@ -750,6 +773,41 @@ export function AppointmentDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Unassign interpreter confirmation dialog */}
+      <Dialog open={confirmUnassign} onOpenChange={setConfirmUnassign}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("appointments.unassign_confirm_title")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("appointments.unassign_confirm_body", {
+              name: ((appt as Record<string, unknown>)?.interpreter as Record<string, unknown>)?.name as string ?? "",
+            })}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmUnassign(false)} disabled={unassign.isPending}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={unassign.isPending}
+              onClick={async () => {
+                try {
+                  await unassign.mutateAsync();
+                  toast({ title: t("appointments.interpreter_unassigned") });
+                  setConfirmUnassign(false);
+                  setEditing(false);
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("appointments.unassign")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

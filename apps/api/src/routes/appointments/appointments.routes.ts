@@ -45,6 +45,7 @@ import {
   uploadAppointmentMedia,
   getAppointmentMedia,
   manualConfirmInterpreter,
+  unassignInterpreter,
 } from "./appointments.service.js";
 
 async function resolveActor(payload: JwtPayload, fastify: FastifyInstance) {
@@ -237,6 +238,15 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     }
 
     return reply.send(await manualConfirmInterpreter(id, interpreter_id, payload.organization_id, fastify.prisma));
+  });
+
+  // POST /appointments/:id/unassign — admin removes interpreter and returns to pending_offer
+  fastify.post("/:id/unassign", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    const actor = await resolveActor(payload, fastify);
+    await unassignInterpreter(id, payload.organization_id, actor, fastify.prisma);
+    return reply.status(200).send({ success: true });
   });
 
   // POST /appointments/:id/clock-in

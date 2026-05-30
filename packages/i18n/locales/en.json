@@ -354,6 +354,8 @@
     "activity_offer_sent": "Offer sent",
     "activity_note_added": "Note added",
     "activity_clock_times_edited": "Clock times edited",
+    "activity_interpreter_unassigned": "Interpreter unassigned",
+    "activity_manually_confirmed": "Interpreter manually confirmed",
     "location": "Location",
     "no_address": "No address on file",
     "open_maps": "Open in Maps",
@@ -433,7 +435,11 @@
     "follow_up_sent": "Follow-up sent",
     "photos": "Photos",
     "upload_photo": "Upload photo",
-    "photo_permission_denied": "Please allow access to your photo library in Settings."
+    "photo_permission_denied": "Please allow access to your photo library in Settings.",
+    "unassign": "Unassign",
+    "interpreter_unassigned": "Interpreter unassigned.",
+    "unassign_confirm_title": "Unassign interpreter?",
+    "unassign_confirm_body": "This will remove {{name}} from the appointment and return it to 'no offer sent' so a new interpreter can be assigned."
   },
   "calendar": {
     "status_pending_offer": "Offered",

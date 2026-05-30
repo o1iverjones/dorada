@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatPhone } from "../../lib/phone.js";
 import { useTranslation } from "react-i18next";
@@ -6,12 +7,18 @@ import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Button } from "../../components/ui/button.js";
+import { Input } from "../../components/ui/input.js";
 import { Plus } from "lucide-react";
 
 export function InsuranceAgenciesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data, isLoading } = useInsuranceAgencies();
+  const [search, setSearch] = useState("");
+
+  const params: Record<string, string> = { limit: "100" };
+  if (search) params.search = search;
+
+  const { data, isLoading } = useInsuranceAgencies(params);
 
   type AgencyRow = Record<string, unknown> & { email_intake?: { reply_from_email?: string | null; confirmation_method_override?: string | null } | null };
 
@@ -33,6 +40,14 @@ export function InsuranceAgenciesPage() {
           </Button>
         }
       />
+      <div className="mb-4">
+        <Input
+          placeholder={t("common.search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
       {isLoading ? (
         <LoadingSpinner />
       ) : (

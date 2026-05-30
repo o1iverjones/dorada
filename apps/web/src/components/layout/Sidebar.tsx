@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
   ShieldCheck, UserSquare2, BarChart3, MessageSquare, Mail,
   Settings, User, Upload, Receipt, Landmark, Menu, X,
+  type LucideIcon,
 } from "lucide-react";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
 
@@ -25,7 +26,7 @@ function useClock() {
 interface NavItem {
   label: string;
   to: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   permission?: string;
 }
 
@@ -72,7 +73,7 @@ export function Sidebar() {
       {/* Logo + clock */}
       <div className="border-b border-white/10">
         <div className="flex h-16 items-center gap-3 px-5">
-          <img src="/dorada-logo-trans2.png" alt="Dorada" className="h-9 w-9 rounded-full object-contain" />
+          <img src="/fruta-dorada-illustrated3.png" alt="Dorada" className="h-9 w-9 rounded-full object-contain" />
           <span style={{ fontFamily: "PlanetComic, sans-serif", fontSize: "1.75rem" }} className="text-white">DORADA</span>
         </div>
         <div className="pb-3 -mt-1 text-center">

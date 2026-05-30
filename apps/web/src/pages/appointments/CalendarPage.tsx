@@ -291,7 +291,7 @@ export function CalendarPage() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-base font-bold leading-tight">{patientName}</p>
-            <p className="text-sm font-medium mt-0.5">{timeStr} · {a.duration_minutes} min</p>
+            <p className="text-sm font-medium mt-0.5">{timeStr} · {a.duration_minutes as number} min</p>
           </div>
           <span className="shrink-0 text-xs font-semibold capitalize px-2 py-0.5 rounded-full border border-current/30 bg-white/40">
             {status}

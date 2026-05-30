@@ -354,6 +354,8 @@
     "activity_offer_sent": "Oferta enviada",
     "activity_note_added": "Nota añadida",
     "activity_clock_times_edited": "Horarios de registro editados",
+    "activity_interpreter_unassigned": "Intérprete desasignado",
+    "activity_manually_confirmed": "Intérprete confirmado manualmente",
     "location": "Ubicación",
     "no_address": "Sin dirección registrada",
     "open_maps": "Abrir en Maps",
@@ -433,7 +435,11 @@
     "follow_up_sent": "Seguimiento enviado",
     "photos": "Fotos",
     "upload_photo": "Subir foto",
-    "photo_permission_denied": "Por favor permite el acceso a tu biblioteca de fotos en Configuración."
+    "photo_permission_denied": "Por favor permite el acceso a tu biblioteca de fotos en Configuración.",
+    "unassign": "Desasignar",
+    "interpreter_unassigned": "Intérprete desasignado.",
+    "unassign_confirm_title": "¿Desasignar intérprete?",
+    "unassign_confirm_body": "Esto eliminará a {{name}} de la cita y la devolverá al estado 'sin oferta enviada' para que se pueda asignar un nuevo intérprete."
   },
   "calendar": {
     "status_pending_offer": "Ofertada",

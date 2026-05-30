@@ -48,7 +48,7 @@ function EmailDraftCard({ draft }: { draft: Record<string, unknown> }) {
   const [form, setForm] = useState({
     date_time: draft.extracted_date_time as string ?? "",
     clinic_id: "",
-    insurance_agency_id: draft.insurance_agency?.id as string ?? "",
+    insurance_agency_id: (draft.insurance_agency as Record<string, unknown> | null | undefined)?.id as string ?? "",
     patient_id: "",
     type_id: "",
     languages: draft.extracted_languages as string[] ?? [],

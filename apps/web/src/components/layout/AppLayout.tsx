@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { useOutlet } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket } from "../../lib/socket.js";
 import { Sidebar } from "./Sidebar.js";
@@ -8,6 +8,7 @@ import { Toaster } from "../ui/toaster.js";
 
 export function AppLayout() {
   const qc = useQueryClient();
+  const outlet = useOutlet();
 
   useEffect(() => {
     const socket = getSocket();
@@ -61,7 +62,7 @@ export function AppLayout() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          {outlet}
         </main>
       </div>
       <Toaster />

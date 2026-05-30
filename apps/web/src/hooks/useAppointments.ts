@@ -79,6 +79,19 @@ export function useManualConfirm(id: string) {
   });
 }
 
+export function useUnassignInterpreter(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(`/appointments/${id}/unassign`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
+  });
+}
+
 export function useAppointmentActivity(id: string) {
   return useQuery({
     queryKey: ["appointments", id, "activity"],

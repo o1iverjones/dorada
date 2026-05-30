@@ -360,6 +360,29 @@ export async function cancelAppointment(id: string, organizationId: string, acto
   await logActivity(id, organizationId, "cancelled", actor.name, actor.id, null, prisma, appt!.patient?.name ?? null, appt!.po_number);
 }
 
+export async function unassignInterpreter(id: string, organizationId: string, actor: { id: string; name: string }, prisma: PrismaClient) {
+  const appt = await prisma.appointment.findUnique({ where: { id }, include: { patient: { select: { name: true } } } });
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+
+  if (!appt!.interpreter_id) throw new ConflictError("NO_INTERPRETER", "Appointment has no interpreter assigned");
+  if (!["confirmed", "pending_offer"].includes(appt!.status)) {
+    throw new ValidationError("INVALID_STATUS_TRANSITION", "Cannot unassign interpreter from an appointment that is in progress or completed");
+  }
+
+  await prisma.$transaction([
+    prisma.appointment.update({
+      where: { id },
+      data: { interpreter_id: null, status: "pending_offer" },
+    }),
+    prisma.appointmentOffer.updateMany({
+      where: { appointment_id: id },
+      data: { status: "expired" },
+    }),
+  ]);
+
+  await logActivity(id, organizationId, "interpreter_unassigned", actor.name, actor.id, null, prisma, appt!.patient?.name ?? null, appt!.po_number);
+}
+
 export async function offerAppointment(
   id: string,
   body: OfferAppointmentBody,
