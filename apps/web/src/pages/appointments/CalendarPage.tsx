@@ -171,22 +171,6 @@ export function CalendarPage() {
       .sort((a, b) => new Date(a.date_time as string).getTime() - new Date(b.date_time as string).getTime());
   }
 
-  // ── DEBUG (remove after confirming fix) ────────────────────────────────────
-  const debugInfo = view === "week" ? {
-    tz,
-    dateFrom,
-    dateTo,
-    totalFetched: appointments.length,
-    weekDays: weekDays.map((d) => ({
-      utcIso: d.toISOString(),
-      orgTzDate: d.toLocaleDateString("en-CA", { timeZone: tz }),
-      count: appointmentsForDate(d).length,
-    })),
-    rawDates: appointments.slice(0, 5).map((a) => ({
-      utc: a.date_time,
-      orgTz: new Date(a.date_time as string).toLocaleDateString("en-CA", { timeZone: tz }),
-    })),
-  } : null;
 
   function blocksForDate(date: Date) {
     if (!showBlocks) return [];
@@ -463,13 +447,6 @@ export function CalendarPage() {
           <Button variant="ghost" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
         )}
       </div>
-
-      {/* ── DEBUG PANEL (temporary) ── */}
-      {debugInfo && (
-        <pre className="rounded bg-black text-green-400 text-xs p-3 overflow-auto max-h-64">
-          {JSON.stringify(debugInfo, null, 2)}
-        </pre>
-      )}
 
       {/* ── Month view ── */}
       {view === "month" && (
