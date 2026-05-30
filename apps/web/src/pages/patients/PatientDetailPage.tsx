@@ -67,7 +67,7 @@ export function PatientDetailPage() {
   const navigate = useNavigate();
   const { data: appts } = useAppointments({ patient_id: id!, limit: "20" });
   const update = useUpdatePatient(id!);
-  const { data: interpretersData } = useInterpreters({ limit: "200" });
+  const { data: interpretersData } = useInterpreters({ limit: "500" });
   const { data: agenciesData } = useInsuranceAgencies({ limit: "200" });
   const { data: companiesData } = useInsuranceCompanies({ limit: "200" });
 
