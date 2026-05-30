@@ -108,6 +108,20 @@ export function AppointmentDetailPage() {
     ((clinicData as Record<string, unknown>)?.interpreters_not_allowed as Array<{ id: string }> ?? []).map((i) => i.id),
   );
 
+  const clinicCity = ((clinicData as Record<string, unknown>)?.city as string | undefined)?.trim().toLowerCase() ?? null;
+  const allInterpreterList = (interpreters?.data ?? []) as Array<Record<string, unknown>>;
+  const cityMatchedInterpreters = clinicCity
+    ? allInterpreterList.filter((i) =>
+        ((i.preferred_cities as string[] | undefined) ?? []).some(
+          (c) => c.trim().toLowerCase() === clinicCity,
+        ),
+      )
+    : allInterpreterList;
+  // Fall back to all interpreters if none match the clinic city
+  const interpretersForOffer = cityMatchedInterpreters.length > 0 ? cityMatchedInterpreters : allInterpreterList;
+  const cityFilterApplied = clinicCity !== null && cityMatchedInterpreters.length > 0;
+  const cityFilterNoMatch = clinicCity !== null && cityMatchedInterpreters.length === 0;
+
   if (isLoading) return <LoadingSpinner />;
   if (!appt || !a) return <p>{t("common.not_found")}</p>;
 
@@ -509,10 +523,22 @@ export function AppointmentDetailPage() {
 
       {a.status === "pending_offer" && (
         <Card>
-          <CardHeader><CardTitle>{t("appointments.select_interpreters")}</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>{t("appointments.select_interpreters")}</CardTitle>
+            {cityFilterApplied && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("appointments.city_filter_active").replace("{{city}}", ((clinicData as Record<string, unknown>)?.city as string) ?? "")}
+              </p>
+            )}
+            {cityFilterNoMatch && (
+              <p className="text-xs text-amber-600 mt-1">
+                {t("appointments.city_filter_no_match").replace("{{city}}", ((clinicData as Record<string, unknown>)?.city as string) ?? "")}
+              </p>
+            )}
+          </CardHeader>
           <CardContent className="space-y-4">
             <InterpreterSearch
-              interpreters={(interpreters?.data ?? []) as Array<Record<string, unknown>>}
+              interpreters={interpretersForOffer}
               offers={(a.offers as Array<Record<string, unknown>>) ?? []}
               excludedFromClinic={excludedFromClinic}
               selectedInterpreters={selectedInterpreters}

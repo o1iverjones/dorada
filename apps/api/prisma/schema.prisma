@@ -205,6 +205,9 @@ model Clinic {
   organization_id       String
   name                  String
   address               String?
+  city                  String?
+  state                 String?
+  zip_code              String?
   location_lat          Float?
   location_lng          Float?
   parking               String?

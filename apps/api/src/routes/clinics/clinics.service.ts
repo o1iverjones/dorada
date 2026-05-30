@@ -30,13 +30,14 @@ export async function listClinics(query: ClinicListQuery, organizationId: string
 }
 
 function formatClinic(c: {
-  id: string; name: string; address: string | null; parking: string | null; phone: string | null;
+  id: string; name: string; address: string | null; city: string | null; state: string | null; zip_code: string | null;
+  parking: string | null; phone: string | null;
   primary_contact_name: string | null; primary_contact_phone: string | null; primary_contact_email: string | null;
   billing_model: string; billing_hourly_rate: unknown; billing_flat_rate: unknown;
   billing_invoice_cycle: string; is_active: boolean; created_at: Date; updated_at: Date;
 }) {
   return {
-    id: c.id, name: c.name, address: c.address, parking: c.parking, phone: c.phone,
+    id: c.id, name: c.name, address: c.address, city: c.city, state: c.state, zip_code: c.zip_code, parking: c.parking, phone: c.phone,
     primary_contact: c.primary_contact_name ? {
       name: c.primary_contact_name,
       phone: c.primary_contact_phone,
@@ -98,6 +99,9 @@ export async function createClinic(body: CreateClinicBody, organizationId: strin
       organization_id: organizationId,
       name: body.name,
       address: body.address ?? null,
+      city: body.city ?? null,
+      state: body.state ?? null,
+      zip_code: body.zip_code ?? null,
       location_lat: coords ? coords[0] : null,
       location_lng: coords ? coords[1] : null,
       parking: body.parking ?? null,
@@ -140,6 +144,9 @@ export async function updateClinic(id: string, body: UpdateClinicBody, organizat
       ...(body.name ? { name: body.name } : {}),
       ...(body.address !== undefined ? { address: body.address } : {}),
       ...(coordsUpdate ?? {}),
+      ...(body.city !== undefined ? { city: body.city ?? null } : {}),
+      ...(body.state !== undefined ? { state: body.state ?? null } : {}),
+      ...(body.zip_code !== undefined ? { zip_code: body.zip_code ?? null } : {}),
       ...(body.parking !== undefined ? { parking: body.parking } : {}),
       ...(body.phone !== undefined ? { phone: body.phone } : {}),
       ...(body.primary_contact
