@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
@@ -19,10 +19,23 @@ export function InterpretersPage() {
   const [showInactive, setShowInactive] = useState(false);
 
   const params: Record<string, string> = { limit: "500" };
-  if (search) params.search = search;
   if (showInactive) params.include_inactive = "true";
 
   const { data, isLoading } = useInterpreters(params);
+
+  const allInterpreters = (data?.data ?? []) as Array<{ id: string } & Record<string, unknown>>;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allInterpreters;
+    return allInterpreters.filter((i) => {
+      const nameMatch = (i.name as string)?.toLowerCase().includes(q);
+      const cityMatch = ((i.preferred_cities as string[] | undefined) ?? []).some((c) =>
+        c.toLowerCase().includes(q),
+      );
+      return nameMatch || cityMatch;
+    });
+  }, [allInterpreters, search]);
 
   const columns = [
     {
@@ -87,7 +100,7 @@ export function InterpretersPage() {
       ) : (
         <DataTable
           columns={columns as never}
-          data={(data?.data ?? []) as Array<{ id: string } & Record<string, unknown>>}
+          data={filtered}
           onRowClick={(row) => navigate(`/interpreters/${row.id}`)}
           emptyMessage={t("interpreters.empty")}
         />
