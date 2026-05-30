@@ -157,8 +157,16 @@ export function CalendarPage() {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function appointmentsForDate(date: Date) {
+    // Use the org timezone to determine which calendar date each appointment falls on.
+    // Comparing raw Date objects via isSameDay uses browser-local timezone and will
+    // mis-place appointments when the browser timezone differs from the org timezone.
+    const target = toDateStr(date); // calendar date the cell represents (YYYY-MM-DD)
     return appointments
-      .filter((a) => isSameDay(new Date(a.date_time as string), date))
+      .filter((a) => {
+        const apptDateInOrgTz = new Date(a.date_time as string)
+          .toLocaleDateString("en-CA", { timeZone: tz });
+        return apptDateInOrgTz === target;
+      })
       .sort((a, b) => new Date(a.date_time as string).getTime() - new Date(b.date_time as string).getTime());
   }
 
