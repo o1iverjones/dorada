@@ -66,7 +66,8 @@ function formatInterpreter(i: {
   location_lng: number | null; pay_rate: unknown; payment_method: string | null; is_active: boolean;
   created_at: Date; updated_at: Date;
   clinics_not_allowed: { clinic: { id: string; name: string } }[];
-  address?: string | null; emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
+  address_line1?: string | null; address_line2?: string | null; city?: string | null; state?: string | null;
+  emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
   notes?: string | null; certificate_number?: string | null; zip_code?: string | null; coverage_range_miles?: unknown;
 }) {
   return {
@@ -84,7 +85,10 @@ function formatInterpreter(i: {
     clinics_not_allowed: i.clinics_not_allowed.map((b) => b.clinic),
     created_at: i.created_at.toISOString(),
     updated_at: i.updated_at.toISOString(),
-    ...(i.address !== undefined ? { address: i.address } : {}),
+    ...(i.address_line1 !== undefined ? { address_line1: i.address_line1 } : {}),
+    ...(i.address_line2 !== undefined ? { address_line2: i.address_line2 } : {}),
+    ...(i.city !== undefined ? { city: i.city } : {}),
+    ...(i.state !== undefined ? { state: i.state } : {}),
     ...(i.emergency_contact_name !== undefined
       ? { emergency_contact: { name: i.emergency_contact_name, phone: i.emergency_contact_phone } }
       : {}),
@@ -104,7 +108,7 @@ export async function getInterpreter(id: string, organizationId: string, prisma:
     },
   });
   ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
-  return formatInterpreter({ ...interpreter!, address: interpreter!.address, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, zip_code: interpreter!.zip_code, coverage_range_miles: interpreter!.coverage_range_miles });
+  return formatInterpreter({ ...interpreter!, address_line1: interpreter!.address_line1, address_line2: interpreter!.address_line2, city: interpreter!.city, state: interpreter!.state, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, zip_code: interpreter!.zip_code, coverage_range_miles: interpreter!.coverage_range_miles });
 }
 
 function normalizePhone(phone: string): string {
@@ -133,7 +137,10 @@ export async function createInterpreter(body: CreateInterpreterBody, organizatio
       location_lng: body.location?.lng ?? null,
       pay_rate: body.pay_rate ?? defaultRate,
       payment_method: body.payment_method ?? null,
-      address: body.address ?? null,
+      address_line1: body.address_line1 ?? null,
+      address_line2: body.address_line2 ?? null,
+      city: body.city ?? null,
+      state: body.state ?? null,
       emergency_contact_name: body.emergency_contact?.name ?? null,
       emergency_contact_phone: body.emergency_contact?.phone ?? null,
       notes: body.notes ?? null,
@@ -177,7 +184,10 @@ export async function updateInterpreter(
       ...(body.location ? { location_lat: body.location.lat, location_lng: body.location.lng } : {}),
       ...(body.pay_rate !== undefined ? { pay_rate: body.pay_rate } : {}),
       ...(body.payment_method !== undefined ? { payment_method: body.payment_method } : {}),
-      ...(body.address !== undefined ? { address: body.address } : {}),
+      ...(body.address_line1 !== undefined ? { address_line1: body.address_line1 } : {}),
+      ...(body.address_line2 !== undefined ? { address_line2: body.address_line2 } : {}),
+      ...(body.city !== undefined ? { city: body.city } : {}),
+      ...(body.state !== undefined ? { state: body.state } : {}),
       ...(body.emergency_contact
         ? { emergency_contact_name: body.emergency_contact.name, emergency_contact_phone: body.emergency_contact.phone }
         : {}),

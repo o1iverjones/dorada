@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
@@ -5,14 +6,21 @@ import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
 import { Badge } from "../../components/ui/badge.js";
 import { Button } from "../../components/ui/button.js";
+import { Input } from "../../components/ui/input.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { InterpreterAvatar } from "../../components/shared/InterpreterAvatar.js";
 import { Plus } from "lucide-react";
+import { formatPhone } from "../../lib/phone.js";
 
 export function InterpretersPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data, isLoading } = useInterpreters({ limit: "100" });
+  const [search, setSearch] = useState("");
+
+  const params: Record<string, string> = { limit: "100" };
+  if (search) params.search = search;
+
+  const { data, isLoading } = useInterpreters(params);
 
   const columns = [
     {
@@ -30,11 +38,8 @@ export function InterpretersPage() {
     { key: "type", header: t("interpreters.type"), render: (row: Record<string, unknown>) => (
       <Badge variant={row.type === "certified" ? "default" : "secondary"}>{row.type as string}</Badge>
     )},
-    { key: "phone", header: t("interpreters.phone") },
-    { key: "languages", header: t("interpreters.languages"), render: (row: Record<string, unknown>) => {
-      const langs = row.languages as string[] ?? [];
-      return langs.slice(0, 3).join(", ") + (langs.length > 3 ? ` +${langs.length - 3}` : "");
-    }},
+    { key: "phone", header: t("interpreters.phone"), render: (row: Record<string, unknown>) => formatPhone(row.phone as string) },
+    { key: "certificate_number", header: t("interpreters.certificate_number"), render: (row: Record<string, unknown>) => (row.certificate_number as string) || "—" },
     { key: "is_active", header: t("common.status"), render: (row: Record<string, unknown>) => (
       <Badge variant={row.is_active ? "success" : "secondary"}>{row.is_active ? t("common.active") : t("common.inactive")}</Badge>
     )},
@@ -50,6 +55,14 @@ export function InterpretersPage() {
           </Button>
         }
       />
+      <div className="mb-4">
+        <Input
+          placeholder={t("common.search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
       {isLoading ? (
         <LoadingSpinner />
       ) : (

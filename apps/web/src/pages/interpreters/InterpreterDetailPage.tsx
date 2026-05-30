@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Badge } from "../../components/ui/badge.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { InterpreterAvatar } from "../../components/shared/InterpreterAvatar.js";
@@ -35,14 +37,18 @@ export function InterpreterDetailPage() {
     const ec = interp.emergency_contact as Record<string, unknown> | null;
     setEditForm({
       name: interp.name,
-      phone: interp.phone,
+      phone: formatPhoneInput(interp.phone as string ?? ""),
       email: interp.email ?? "",
       type: interp.type,
       pay_rate: interp.pay_rate,
       notes: interp.notes ?? "",
       emergency_contact_name: ec?.name ?? "",
-      emergency_contact_phone: ec?.phone ?? "",
+      emergency_contact_phone: formatPhoneInput(ec?.phone as string ?? ""),
       certificate_number: interp.certificate_number ?? "",
+      address_line1: interp.address_line1 ?? "",
+      address_line2: interp.address_line2 ?? "",
+      city: interp.city ?? "",
+      state: interp.state ?? "",
       zip_code: interp.zip_code ?? "",
       coverage_range_miles: interp.coverage_range_miles ?? "",
     });
@@ -60,6 +66,10 @@ export function InterpreterDetailPage() {
       if (f.pay_rate !== "" && f.pay_rate != null) payload.pay_rate = Number(f.pay_rate);
       payload.notes = (f.notes as string)?.trim() || null;
       payload.certificate_number = (f.certificate_number as string)?.trim() || null;
+      payload.address_line1 = (f.address_line1 as string)?.trim() || null;
+      payload.address_line2 = (f.address_line2 as string)?.trim() || null;
+      payload.city = (f.city as string)?.trim() || null;
+      payload.state = (f.state as string)?.trim() || null;
       payload.zip_code = (f.zip_code as string)?.trim() || null;
       payload.coverage_range_miles = (f.coverage_range_miles as string) !== "" && f.coverage_range_miles != null
         ? Number(f.coverage_range_miles)
@@ -147,7 +157,7 @@ export function InterpreterDetailPage() {
           <CardContent className="space-y-4">
             {editing ? (
               <div className="space-y-3">
-                {(["name", "phone", "email"] as const).map((field) => (
+                {(["name", "email"] as const).map((field) => (
                   <div key={field} className="space-y-1">
                     <Label>{t(`interpreters.${field}`)}</Label>
                     <Input
@@ -156,6 +166,13 @@ export function InterpreterDetailPage() {
                     />
                   </div>
                 ))}
+                <div className="space-y-1">
+                  <Label>{t("interpreters.phone")}</Label>
+                  <PhoneInput
+                    value={editForm.phone as string ?? ""}
+                    onChange={(v) => setEditForm(s => ({ ...s, phone: v }))}
+                  />
+                </div>
                 <div className="space-y-1">
                   <Label>{t("interpreters.type")}</Label>
                   <select
@@ -173,7 +190,7 @@ export function InterpreterDetailPage() {
                 <Field label={t("interpreters.type")} value={
                   <Badge variant={interp.type === "certified" ? "default" : "secondary"}>{interp.type as string}</Badge>
                 } />
-                <Field label={t("interpreters.phone")} value={interp.phone as string} />
+                <Field label={t("interpreters.phone")} value={formatPhone(interp.phone as string)} />
                 <Field label={t("interpreters.email")} value={interp.email as string} />
                 <Field label={t("interpreters.status")} value={
                   <Badge variant={interp.is_active ? "success" : "secondary"}>
@@ -222,16 +239,78 @@ export function InterpreterDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <Label>{t("interpreters.emergency_phone")}</Label>
-                  <Input
+                  <PhoneInput
                     value={editForm.emergency_contact_phone as string ?? ""}
-                    onChange={(e) => setEditForm(s => ({ ...s, emergency_contact_phone: e.target.value }))}
+                    onChange={(v) => setEditForm(s => ({ ...s, emergency_contact_phone: v }))}
                   />
                 </div>
               </div>
             ) : (
               <>
                 <Field label={t("interpreters.emergency_name")} value={(interp.emergency_contact as Record<string, unknown>)?.name as string ?? "—"} />
-                <Field label={t("interpreters.emergency_phone")} value={(interp.emergency_contact as Record<string, unknown>)?.phone as string ?? "—"} />
+                <Field label={t("interpreters.emergency_phone")} value={formatPhone((interp.emergency_contact as Record<string, unknown>)?.phone as string)} />
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>{t("interpreters.address")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("interpreters.address_line1")}</Label>
+                  <Input
+                    value={editForm.address_line1 as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, address_line1: e.target.value }))}
+                    placeholder="e.g. 123 Main St"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.address_line2")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                  <Input
+                    value={editForm.address_line2 as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, address_line2: e.target.value }))}
+                    placeholder="e.g. Apt 4B"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>{t("interpreters.city")}</Label>
+                    <Input
+                      value={editForm.city as string ?? ""}
+                      onChange={(e) => setEditForm(s => ({ ...s, city: e.target.value }))}
+                      placeholder="e.g. Los Angeles"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t("interpreters.state")}</Label>
+                    <Input
+                      value={editForm.state as string ?? ""}
+                      onChange={(e) => setEditForm(s => ({ ...s, state: e.target.value }))}
+                      placeholder="e.g. CA"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.zip_code")}</Label>
+                  <Input
+                    value={editForm.zip_code as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, zip_code: e.target.value }))}
+                    placeholder="e.g. 90210"
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Field label={t("interpreters.address_line1")} value={interp.address_line1 as string ?? "—"} />
+                {(interp.address_line2 as string) && (
+                  <Field label={t("interpreters.address_line2")} value={interp.address_line2 as string} />
+                )}
+                <Field label={t("interpreters.city")} value={interp.city as string ?? "—"} />
+                <Field label={t("interpreters.state")} value={interp.state as string ?? "—"} />
+                <Field label={t("interpreters.zip_code")} value={interp.zip_code as string ?? "—"} />
               </>
             )}
           </CardContent>
@@ -241,38 +320,33 @@ export function InterpreterDetailPage() {
           <CardHeader><CardTitle>{t("interpreters.coverage")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label>{t("interpreters.zip_code")}</Label>
-                  <Input
-                    value={editForm.zip_code as string ?? ""}
-                    onChange={(e) => setEditForm(s => ({ ...s, zip_code: e.target.value }))}
-                    placeholder="e.g. 90210"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>{t("interpreters.coverage_range_miles")}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={editForm.coverage_range_miles as number ?? ""}
-                    onChange={(e) => setEditForm(s => ({ ...s, coverage_range_miles: e.target.value }))}
-                    placeholder="e.g. 25"
-                  />
-                </div>
+              <div className="space-y-1">
+                <Label>{t("interpreters.coverage_range_miles")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={editForm.coverage_range_miles as number ?? ""}
+                  onChange={(e) => setEditForm(s => ({ ...s, coverage_range_miles: e.target.value }))}
+                  placeholder="e.g. 25"
+                />
               </div>
             ) : (
-              <>
-                <Field label={t("interpreters.zip_code")} value={interp.zip_code as string ?? "—"} />
-                <Field label={t("interpreters.coverage_range_miles")} value={interp.coverage_range_miles != null ? `${interp.coverage_range_miles} mi` : "—"} />
-              </>
+              <Field label={t("interpreters.coverage_range_miles")} value={interp.coverage_range_miles != null ? `${interp.coverage_range_miles} mi` : "—"} />
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader><CardTitle>{t("interpreters.certification")}</CardTitle></CardHeader>
+        {/* Use editForm.type in edit mode so the card activates immediately when the user changes type */}
+        <Card className={(editing ? editForm.type : interp.type) !== "certified" ? "opacity-40 pointer-events-none select-none" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {t("interpreters.certification")}
+              {(editing ? editForm.type : interp.type) !== "certified" && (
+                <span className="text-xs font-normal text-muted-foreground">({t("interpreters.certified_only")})</span>
+              )}
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-1">

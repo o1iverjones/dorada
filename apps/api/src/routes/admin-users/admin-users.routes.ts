@@ -40,7 +40,7 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
   fastify.post("/admin-users", { preHandler: manage }, async (req, reply) => {
     const body = CreateUserBody.parse(req.body);
     const payload = req.user as JwtPayload;
-    const user = await createUser(body, payload.organization_id, payload.permissions, fastify.prisma);
+    const user = await createUser(body, payload.organization_id, payload.permissions ?? [], fastify.prisma);
     await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: user.id, entityName: user.name, action: "created", adminId: payload.sub, adminName: payload.name ?? "Admin" });
 
     // Send welcome email with login credentials (fire-and-forget — don't block response)
@@ -56,7 +56,7 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
     const { id } = req.params as { id: string };
     const body = UpdateUserBody.parse(req.body);
     const payload = req.user as JwtPayload;
-    const user = await updateUser(id, body, payload.organization_id, payload.permissions, fastify.prisma);
+    const user = await updateUser(id, body, payload.organization_id, payload.permissions ?? [], fastify.prisma);
     await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: id, entityName: user.name, action: "updated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
     return reply.send(user);
   });

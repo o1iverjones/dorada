@@ -120,7 +120,6 @@ export function MessagesPage() {
       socket.off("connect", handleReconnect);
     };
   // qc is stable; intentionally omitting from deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Join socket room + mark read when conversation is selected
@@ -133,7 +132,6 @@ export function MessagesPage() {
     return () => {
       socketRef.current?.emit("leave_conversation", { interpreter_id: selectedId });
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
   // Auto-scroll to bottom on new messages
@@ -159,7 +157,7 @@ export function MessagesPage() {
     try {
       await send.mutateAsync({ body: draft });
       setDraft("");
-    } catch {}
+    } catch { /* fire and forget */ }
   }
 
   return (

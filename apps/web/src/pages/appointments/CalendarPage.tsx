@@ -61,7 +61,12 @@ export function CalendarPage() {
     return (stored === "month" || stored === "week" || stored === "day") ? stored : "week";
   });
   function changeView(v: View) { localStorage.setItem("dorada_calendar_view", v); setView(v); }
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(() => {
+    const stored = localStorage.getItem("dorada_calendar_date");
+    if (stored) { const d = new Date(stored); if (!isNaN(d.getTime())) return d; }
+    return new Date();
+  });
+  function changeDate(d: Date) { localStorage.setItem("dorada_calendar_date", d.toISOString()); setCurrentDate(d); }
   const [interpreterFilter, setInterpreterFilter] = useState("");
   const [clinicFilter, setClinicFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -169,14 +174,14 @@ export function CalendarPage() {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   function prev() {
-    if (view === "month") setCurrentDate(new Date(year, month - 1, 1));
-    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }
-    else { const d = new Date(currentDate); d.setDate(d.getDate() - 1); setCurrentDate(d); }
+    if (view === "month") changeDate(new Date(year, month - 1, 1));
+    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() - 7); changeDate(d); }
+    else { const d = new Date(currentDate); d.setDate(d.getDate() - 1); changeDate(d); }
   }
   function next() {
-    if (view === "month") setCurrentDate(new Date(year, month + 1, 1));
-    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }
-    else { const d = new Date(currentDate); d.setDate(d.getDate() + 1); setCurrentDate(d); }
+    if (view === "month") changeDate(new Date(year, month + 1, 1));
+    else if (view === "week") { const d = new Date(currentDate); d.setDate(d.getDate() + 7); changeDate(d); }
+    else { const d = new Date(currentDate); d.setDate(d.getDate() + 1); changeDate(d); }
   }
 
   const rangeLabel = view === "month"
@@ -253,7 +258,7 @@ export function CalendarPage() {
         <p className="text-xs leading-tight text-current/80">{timeStr}</p>
         {clinicName && <p className="text-xs leading-tight truncate opacity-75">{clinicName}</p>}
         {agencyName && <p className="text-xs leading-tight truncate opacity-75">{agencyName}</p>}
-        {physician && <p className="text-xs leading-tight truncate opacity-75">Dr. {physician}</p>}
+        {physician && <p className="text-xs leading-tight truncate opacity-75">{physician}</p>}
         <p className="text-xs leading-tight truncate opacity-75 italic">
           {interpreterName ?? t("appointments.unassigned")}
         </p>
@@ -286,7 +291,7 @@ export function CalendarPage() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-base font-bold leading-tight">{patientName}</p>
-            <p className="text-sm font-medium mt-0.5">{timeStr} · {a.duration_minutes} min</p>
+            <p className="text-sm font-medium mt-0.5">{timeStr} · {a.duration_minutes as number} min</p>
           </div>
           <span className="shrink-0 text-xs font-semibold capitalize px-2 py-0.5 rounded-full border border-current/30 bg-white/40">
             {status}
@@ -298,7 +303,7 @@ export function CalendarPage() {
           <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
           {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} />}
-          {physician && <DayRow label={t("appointments.referring_physician")} value={physician} />}
+          {physician && <DayRow label={t("appointments.provider")} value={physician} />}
           {poNumber && <DayRow label={t("appointments.po_number")} value={poNumber} />}
         </div>
       </button>
@@ -377,7 +382,7 @@ export function CalendarPage() {
                 onDrillMonthChange={setPickerDrillMonth}
                 onYearChange={setPickerYear}
                 onSelect={(y, m, d) => {
-                  setCurrentDate(new Date(y, m, d));
+                  changeDate(new Date(y, m, d));
                   setDatePickerOpen(false);
                 }}
                 onClose={() => setDatePickerOpen(false)}
@@ -746,7 +751,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
         <Row label={t("appointments.clinic")} value={clinicName} />
         <Row label={t("appointments.insurance_agency")} value={agencyName} />
         <Row label={t("appointments.interpreter")} value={interpreterName} />
-        {physician && <Row label={t("appointments.referring_physician")} value={physician} />}
+        {physician && <Row label={t("appointments.provider")} value={physician} />}
       </div>
     </div>
   );

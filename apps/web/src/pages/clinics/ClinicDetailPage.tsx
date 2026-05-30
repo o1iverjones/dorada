@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useClinic, useUpdateClinic, useSetClinicInterpreterBlocks, useClinicActivity, useClinicNotes, useAddClinicNote, useClinicInterpreterNotes, useCreateClinicInterpreterNote, useUpdateClinicInterpreterNote, useDeleteClinicInterpreterNote } from "../../hooks/useClinics.js";
+import { useClinic, useUpdateClinic, useSetClinicInterpreterBlocks, useClinicActivity, useClinicNotes, useAddClinicNote, useClinicInterpreterNotes, useCreateClinicInterpreterNote, useUpdateClinicInterpreterNote, useDeleteClinicInterpreterNote, useAddClinicDoctor, useRemoveClinicDoctor } from "../../hooks/useClinics.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
@@ -11,13 +11,15 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { Textarea } from "../../components/ui/textarea.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { Badge } from "../../components/ui/badge.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus, AlertTriangle } from "lucide-react";
+import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus, AlertTriangle, Stethoscope, X } from "lucide-react";
 import { useAuthStore } from "../../store/auth.js";
 
 export function ClinicDetailPage() {
@@ -36,10 +38,14 @@ export function ClinicDetailPage() {
   const updateInterpreterNote = useUpdateClinicInterpreterNote(id!);
   const deleteInterpreterNote = useDeleteClinicInterpreterNote(id!);
 
+  const addDoctor = useAddClinicDoctor(id!);
+  const removeDoctor = useRemoveClinicDoctor(id!);
+
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const canManageClinics = hasPermission("manage_clinics");
 
   const [editing, setEditing] = useState(false);
+  const [newDoctorName, setNewDoctorName] = useState("");
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
@@ -57,12 +63,13 @@ export function ClinicDetailPage() {
   const isActive = (clinic.is_active as boolean) !== false;
   const contact = clinic.primary_contact as { name?: string; email?: string; phone?: string } | null;
   const excludedInterpreters = (clinic.interpreters_not_allowed ?? []) as Array<{ id: string; name: string }>;
+  const doctors = (clinic.doctors ?? []) as Array<{ id: string; name: string }>;
 
   function startEdit() {
     setForm({
       name: (clinic.name as string) ?? "",
       address: (clinic.address as string) ?? "",
-      phone: (clinic.phone as string) ?? "",
+      phone: formatPhoneInput((clinic.phone as string) ?? ""),
       primary_contact_name: contact?.name ?? "",
       primary_contact_email: contact?.email ?? "",
     });
@@ -157,7 +164,7 @@ export function ClinicDetailPage() {
     }
   }
 
-  const fields = ["name", "address", "phone", "primary_contact_name", "primary_contact_email"] as const;
+  const fields = ["name", "address", "primary_contact_name", "primary_contact_email"] as const;
   const interpreterList = (allInterpreters?.data ?? []) as Array<{ id: string; name: string; type: string }>;
 
   return (
@@ -197,6 +204,10 @@ export function ClinicDetailPage() {
                     <Input value={form[f] as string ?? ""} onChange={(e) => setForm(s => ({ ...s, [f]: e.target.value }))} />
                   </div>
                 ))}
+                <div className="space-y-1">
+                  <Label>{t("clinics.phone")}</Label>
+                  <PhoneInput value={form.phone as string ?? ""} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+                </div>
               </div>
             ) : (
               <div className="grid gap-3 text-sm sm:grid-cols-2">
@@ -210,7 +221,7 @@ export function ClinicDetailPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("clinics.phone")}</p>
-                  <p className="font-medium">{clinic.phone as string ?? "—"}</p>
+                  <p className="font-medium">{formatPhone(clinic.phone as string)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("clinics.primary_contact_name")}</p>
@@ -267,6 +278,66 @@ export function ClinicDetailPage() {
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Doctors */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Stethoscope className="h-4 w-4" /> {t("clinics.doctors")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {doctors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("clinics.no_doctors")}</p>
+          ) : (
+            <ul className="space-y-1">
+              {doctors.map((doc) => (
+                <li key={doc.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="font-medium">{doc.name}</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await removeDoctor.mutateAsync(doc.id);
+                      } catch {
+                        toast({ title: t("common.error"), variant: "destructive" });
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title={t("common.remove")}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form
+            className="flex gap-2 pt-1"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const name = newDoctorName.trim();
+              if (!name) return;
+              try {
+                await addDoctor.mutateAsync(name);
+                setNewDoctorName("");
+              } catch {
+                toast({ title: t("common.error"), variant: "destructive" });
+              }
+            }}
+          >
+            <Input
+              value={newDoctorName}
+              onChange={(e) => setNewDoctorName(e.target.value)}
+              placeholder={t("clinics.doctor_name_placeholder")}
+              className="flex-1"
+            />
+            <Button type="submit" size="sm" disabled={!newDoctorName.trim() || addDoctor.isPending}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> {t("clinics.add_doctor")}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 

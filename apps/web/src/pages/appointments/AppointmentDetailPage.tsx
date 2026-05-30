@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useAppointments, usePatchClockTimes, useAppointmentMedia, useManualConfirm } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
-import { useClinic, useClinics } from "../../hooks/useClinics.js";
+import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients, useUpdatePatient } from "../../hooks/usePatients.js";
 import { useOrgTimezone, useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
@@ -16,8 +16,9 @@ import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle } from "lucide-react";
+import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle, UserX } from "lucide-react";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
 import { DurationInput } from "../../components/shared/DurationInput.js";
 
@@ -56,19 +57,21 @@ export function AppointmentDetailPage() {
   const [clockInForm, setClockInForm] = useState("");
   const [patientArrivedForm, setPatientArrivedForm] = useState("");
   const [clockOutForm, setClockOutForm] = useState("");
+  const [confirmUnassign, setConfirmUnassign] = useState(false);
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
   const cancel = useCancelAppointment(id!);
   const offer = useOfferAppointment(id!);
   const update = useUpdateAppointment(id!);
   const patchClock = usePatchClockTimes(id!);
-  const patientId = (appt?.patient as Record<string, unknown> | null | undefined)?.id as string | undefined;
+  const patientId = ((appt as Record<string, unknown>)?.patient as Record<string, unknown> | null | undefined)?.id as string | undefined;
   const updatePatient = useUpdatePatient(patientId ?? "");
   const { data: activityLog } = useAppointmentActivity(id!);
   const { data: adminNotes } = useAppointmentNotes(id!);
   const addNote = useAddAppointmentNote(id!);
   const { data: mediaData } = useAppointmentMedia(id!);
   const manualConfirm = useManualConfirm(id!);
+  const unassign = useUnassignInterpreter(id!);
 
   // Lookup data for edit mode
   const { data: clinicsData } = useClinics({ limit: "500" });
@@ -76,14 +79,10 @@ export function AppointmentDetailPage() {
   const { data: patientsData } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
-  const { data: pastAppts } = useAppointments({ limit: "200" });
 
   const clinicOptions = ((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }));
   const agencyOptions = ((agenciesData?.data ?? []) as Array<{ id: string; name: string }>).map((a) => ({ value: a.id, label: a.name }));
   const patientOptions = ((patientsData?.data ?? []) as Array<{ id: string; name: string }>).map((p) => ({ value: p.id, label: p.name }));
-  const physicianOptions = Array.from(new Set(
-    ((pastAppts?.data ?? []) as Array<{ referring_physician?: string }>).map((a) => a.referring_physician).filter(Boolean) as string[]
-  )).map((name) => ({ value: name, label: name }));
   const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
   const certQualTypes = apptTypes.filter((ty) => ty.name === "Certified" || ty.name === "Qualified");
   const interpreterRates = ratesData?.data ?? [];
@@ -99,6 +98,11 @@ export function AppointmentDetailPage() {
   });
 
   const clinicId = (a?.clinic as Record<string, unknown>)?.id as string | undefined;
+  // In edit mode, track which clinic is selected so provider list updates immediately
+  const editClinicId = editing ? form.clinic_id : (clinicId ?? "");
+  const { data: clinicDoctors } = useClinicDoctors(editClinicId);
+  const providerOptions = ((clinicDoctors ?? []) as Array<{ id: string; name: string }>)
+    .map((d) => ({ value: d.name, label: d.name }));
   const { data: clinicData } = useClinic(clinicId ?? "");
   const excludedFromClinic = new Set(
     ((clinicData as Record<string, unknown>)?.interpreters_not_allowed as Array<{ id: string }> ?? []).map((i) => i.id),
@@ -186,8 +190,14 @@ export function AppointmentDetailPage() {
         title={t("appointments.detail_title")}
         actions={
           <div className="flex gap-2">
-            {!editing && (
+            {editing ? (
               <>
+                <Button onClick={save} disabled={update.isPending}>{t("common.save")}</Button>
+                <Button variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
                 <Button variant="outline" onClick={() => navigate("/appointments/new", {
                   state: {
                     prefill: {
@@ -220,16 +230,8 @@ export function AppointmentDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>{t("appointments.details")}</CardTitle>
-            {editing ? (
-              <div className="flex gap-2">
-                <Button size="sm" onClick={save} disabled={update.isPending}>{t("common.save")}</Button>
-                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
-              </div>
-            ) : (
-              <Button size="sm" variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
-            )}
           </CardHeader>
           <CardContent className="text-sm p-0 pb-2">
 
@@ -241,9 +243,38 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.patient")} value={
-                  <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-medium text-primary hover:underline">
+                  <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-bold text-primary hover:underline">
                     {(a.patient as Record<string, unknown>)?.name as string ?? "—"}
                   </button>
+                } />
+              )}
+            </div>
+
+            {/* Interpreter */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing && (a.interpreter as Record<string, unknown>)?.name ? (
+                <InlineRow label={t("appointments.interpreter")}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm">
+                      {(a.interpreter as Record<string, unknown>)?.name as string}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-destructive border-destructive hover:bg-destructive/10"
+                      onClick={() => setConfirmUnassign(true)}
+                    >
+                      <UserX className="h-3.5 w-3.5 mr-1" />
+                      {t("appointments.unassign")}
+                    </Button>
+                  </div>
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.interpreter")} value={
+                  <span className="font-bold">
+                    {(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")}
+                  </span>
                 } />
               )}
             </div>
@@ -348,7 +379,7 @@ export function AppointmentDetailPage() {
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
                 <InlineRow label={t("appointments.clinic")}>
-                  <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => set("clinic_id", v)} placeholder={t("common.search")} />
+                  <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => { set("clinic_id", v); set("referring_physician", ""); }} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.clinic")} value={(a.clinic as Record<string, unknown>)?.name as string ?? "—"} />
@@ -366,20 +397,15 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Interpreter — always read-only */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              <Field label={t("appointments.interpreter")} value={(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")} />
-            </div>
-
-            {/* Referring Physician */}
+            {/* Provider */}
             {(editing || a.referring_physician) && (
               <div className="px-6 py-2.5 even:bg-muted/40">
                 {editing ? (
-                  <InlineRow label={t("appointments.referring_physician")}>
-                    <AutocompleteInput options={physicianOptions} value={form.referring_physician} onChange={(v) => set("referring_physician", v)} placeholder={t("common.search")} freeText />
+                  <InlineRow label={t("appointments.provider")}>
+                    <AutocompleteInput options={providerOptions} value={form.referring_physician} onChange={(v) => set("referring_physician", v)} placeholder={t("common.search")} freeText />
                   </InlineRow>
                 ) : (
-                  <Field label={t("appointments.referring_physician")} value={a.referring_physician as string} />
+                  <Field label={t("appointments.provider")} value={a.referring_physician as string} />
                 )}
               </div>
             )}
@@ -748,6 +774,41 @@ export function AppointmentDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Unassign interpreter confirmation dialog */}
+      <Dialog open={confirmUnassign} onOpenChange={setConfirmUnassign}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("appointments.unassign_confirm_title")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("appointments.unassign_confirm_body", {
+              name: ((appt as Record<string, unknown>)?.interpreter as Record<string, unknown>)?.name as string ?? "",
+            })}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmUnassign(false)} disabled={unassign.isPending}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={unassign.isPending}
+              onClick={async () => {
+                try {
+                  await unassign.mutateAsync();
+                  toast({ title: t("appointments.interpreter_unassigned") });
+                  setConfirmUnassign(false);
+                  setEditing(false);
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("appointments.unassign")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

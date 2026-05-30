@@ -1,21 +1,33 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { formatPhone } from "../../lib/phone.js";
 import { useTranslation } from "react-i18next";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Button } from "../../components/ui/button.js";
+import { Input } from "../../components/ui/input.js";
 import { Plus } from "lucide-react";
 
 export function InsuranceAgenciesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data, isLoading } = useInsuranceAgencies();
+  const [search, setSearch] = useState("");
+
+  const params: Record<string, string> = { limit: "100" };
+  if (search) params.search = search;
+
+  const { data, isLoading } = useInsuranceAgencies(params);
+
+  type AgencyRow = Record<string, unknown> & { email_intake?: { reply_from_email?: string | null; confirmation_method_override?: string | null } | null };
 
   const columns = [
     { key: "name", header: t("insurance_agencies.name") },
-    { key: "reply_from_email", header: t("insurance_agencies.reply_email"), render: (row: Record<string, unknown>) => row.reply_from_email as string ?? "—" },
-    { key: "confirmation_method_override", header: t("insurance_agencies.confirmation_method"), render: (row: Record<string, unknown>) => row.confirmation_method_override as string ?? t("common.auto") },
+    { key: "id_number", header: t("insurance_agencies.id_number"), render: (row: AgencyRow) => (row.id_number as string) || "—" },
+    { key: "telephone", header: t("insurance_agencies.telephone"), render: (row: AgencyRow) => formatPhone(row.telephone as string) },
+    { key: "reply_from_email", header: t("insurance_agencies.reply_from_email"), render: (row: AgencyRow) => row.email_intake?.reply_from_email || "—" },
+    { key: "confirmation_method", header: t("insurance_agencies.confirmation_method"), render: (row: AgencyRow) => row.email_intake?.confirmation_method_override || t("common.auto") },
   ];
 
   return (
@@ -28,6 +40,14 @@ export function InsuranceAgenciesPage() {
           </Button>
         }
       />
+      <div className="mb-4">
+        <Input
+          placeholder={t("common.search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
       {isLoading ? (
         <LoadingSpinner />
       ) : (

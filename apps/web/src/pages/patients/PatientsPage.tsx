@@ -11,6 +11,8 @@ import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone } from "../../lib/phone.js";
 
 export function PatientsPage() {
   const { t } = useTranslation();
@@ -46,7 +48,7 @@ export function PatientsPage() {
 
   const columns = [
     { key: "name", header: t("patients.name") },
-    { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => r.phone as string ?? "—" },
+    { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => formatPhone(r.phone as string) },
     {
       key: "date_of_birth",
       header: t("patients.date_of_birth"),
@@ -125,7 +127,6 @@ export function PatientsPage() {
             <div className="space-y-3 py-4">
               {([
                 { key: "name", label: t("patients.name") },
-                { key: "phone", label: t("patients.phone") },
                 { key: "email", label: t("patients.email") },
                 { key: "preferred_language", label: t("patients.preferred_language") },
               ] as const).map(({ key, label }) => (
@@ -134,6 +135,10 @@ export function PatientsPage() {
                   <Input value={form[key]} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
                 </div>
               ))}
+              <div className="space-y-1">
+                <Label>{t("patients.phone")}</Label>
+                <PhoneInput value={form.phone} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>

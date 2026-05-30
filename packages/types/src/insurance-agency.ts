@@ -10,6 +10,8 @@ export const EmailIntakeConfigSchema = z.object({
   reply_from_email: z.string().email(),
 });
 
+export const AGENCY_CONTACT_OPTIONS = ["Text", "Phone", "Email", "Link", "Portal", "App"] as const;
+
 export const InsuranceAgencySchema = z.object({
   id: UuidSchema,
   name: z.string(),
@@ -17,6 +19,16 @@ export const InsuranceAgencySchema = z.object({
   phone: z.string().nullable(),
   primary_contact: ContactSchema.nullable(),
   notes: z.string().nullable(),
+  contact_method: z.string().nullable(),
+  telephone: z.string().nullable(),
+  id_number: z.string().nullable(),
+  rate_qualified: z.number().nullable(),
+  rate_certified: z.number().nullable(),
+  rate_qme: z.number().nullable(),
+  miles: z.number().nullable(),
+  reporting_info: z.string().nullable(),
+  followup_info: z.string().nullable(),
+  invoice_info: z.string().nullable(),
   email_intake: EmailIntakeConfigSchema.nullable(),
   is_active: z.boolean(),
   created_at: z.string().datetime(),
@@ -25,10 +37,20 @@ export const InsuranceAgencySchema = z.object({
 
 export const CreateInsuranceAgencyBodySchema = z.object({
   name: z.string().min(1).max(255),
-  address: z.string().max(500).optional(),
-  phone: z.string().max(20).optional(),
-  primary_contact: ContactSchema.optional(),
-  notes: z.string().max(5000).optional(),
+  address: z.string().max(500).nullish(),
+  phone: z.string().max(20).nullish(),
+  primary_contact: ContactSchema.nullish(),
+  notes: z.string().max(5000).nullish(),
+  contact_method: z.string().max(255).nullish(),
+  telephone: z.string().max(20).nullish(),
+  id_number: z.string().max(100).nullish(),
+  rate_qualified: z.number().nonnegative().nullish(),
+  rate_certified: z.number().nonnegative().nullish(),
+  rate_qme: z.number().nonnegative().nullish(),
+  miles: z.number().nonnegative().nullish(),
+  reporting_info: z.string().max(50).nullish(),
+  followup_info: z.string().max(50).nullish(),
+  invoice_info: z.string().max(50).nullish(),
   email_intake: EmailIntakeConfigSchema.optional(),
 });
 

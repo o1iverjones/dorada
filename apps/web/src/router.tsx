@@ -40,7 +40,7 @@ import { InvoicesPage } from "./pages/invoices/InvoicesPage.js";
 import { InsuranceCompaniesPage } from "./pages/insurance-companies/InsuranceCompaniesPage.js";
 import { InsuranceCompanyDetailPage } from "./pages/insurance-companies/InsuranceCompanyDetailPage.js";
 
-export const router = createBrowserRouter([
+export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,

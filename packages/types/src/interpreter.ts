@@ -33,7 +33,10 @@ export const InterpreterSchema = z.object({
   is_active: z.boolean(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
-  address: z.string().nullable().optional(),
+  address_line1: z.string().nullable().optional(),
+  address_line2: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
   emergency_contact: EmergencyContactSchema.nullable().optional(),
   notes: z.string().nullable().optional(),
   certificate_number: z.string().nullable().optional(),
@@ -51,7 +54,10 @@ export const CreateInterpreterBodySchema = z.object({
   location: LocationSchema.optional(),
   pay_rate: z.number().nonnegative().nullish(),
   payment_method: z.string().max(100).nullish(),
-  address: z.string().max(500).nullish(),
+  address_line1: z.string().max(500).nullish(),
+  address_line2: z.string().max(500).nullish(),
+  city: z.string().max(100).nullish(),
+  state: z.string().max(100).nullish(),
   emergency_contact: EmergencyContactSchema.optional(),
   clinics_not_allowed: z.array(UuidSchema).optional(),
   notes: z.string().max(5000).nullish(),
@@ -82,7 +88,7 @@ export const InterpreterListQuerySchema = z.object({
   check_availability_on: z.string().datetime().optional(),
   search: z.string().optional(),
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  limit: z.coerce.number().int().min(1).max(500).default(25),
 });
 
 export const InterpreterPreferencesSchema = z.object({

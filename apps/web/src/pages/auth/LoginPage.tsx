@@ -54,7 +54,7 @@ export function LoginPage() {
         navigate("/mfa");
       } else {
         setTokens(res.access_token, res.refresh_token);
-        useAuthStore.getState().setUser(res.admin as AdminUser);
+        useAuthStore.getState().setUser(res.admin as unknown as AdminUser);
         navigate("/");
       }
     } catch (err) {
@@ -67,7 +67,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
-            <img src="/dorada-logo-trans2.png" alt="Dorada" className="h-16 rounded-full object-contain" style={{ width: "3rem" }} />
+            <img src="/fruta-dorada-illustrated3.png" alt="Dorada" className="h-16 rounded-full object-contain" style={{ width: "3rem" }} />
           </div>
           <CardTitle className="text-3xl">Dorada</CardTitle>
           <CardDescription>{t("auth.sign_in_description")}</CardDescription>

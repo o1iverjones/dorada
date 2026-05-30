@@ -9,6 +9,8 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
+import { PhoneInput } from "../../components/ui/PhoneInput.js";
+import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
@@ -40,7 +42,7 @@ export function InsuranceCompanyDetailPage() {
   function startEdit() {
     setForm({
       name: (company.name as string) ?? "",
-      phone: (company.phone as string) ?? "",
+      phone: formatPhoneInput((company.phone as string) ?? ""),
       email: (company.email as string) ?? "",
     });
     setEditing(true);
@@ -62,7 +64,6 @@ export function InsuranceCompanyDetailPage() {
 
   const fields = [
     { key: "name", label: t("insurance_companies.name"), type: "text" },
-    { key: "phone", label: t("insurance_companies.phone"), type: "tel" },
     { key: "email", label: t("insurance_companies.email"), type: "email" },
   ] as const;
 
@@ -108,6 +109,10 @@ export function InsuranceCompanyDetailPage() {
                     />
                   </div>
                 ))}
+                <div className="space-y-1">
+                  <Label>{t("insurance_companies.phone")}</Label>
+                  <PhoneInput value={form.phone ?? ""} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+                </div>
               </div>
             ) : (
               <div className="grid gap-3 text-sm sm:grid-cols-2">
@@ -117,7 +122,7 @@ export function InsuranceCompanyDetailPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("insurance_companies.phone")}</p>
-                  <p className="font-medium">{company.phone as string ?? "—"}</p>
+                  <p className="font-medium">{formatPhone(company.phone as string)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("insurance_companies.email")}</p>
