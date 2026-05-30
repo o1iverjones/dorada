@@ -114,7 +114,11 @@ export function CalendarPage() {
     return d;
   });
 
-  const dayStr = toDateStr(currentDate);
+  // Day-view date string must use org timezone, not browser-local. The browser
+  // (CDT, UTC-6) and the org (PDT, UTC-7) differ by 1 hour, so browser midnight
+  // is the previous evening in org tz. toDateStr() would send the wrong date to
+  // the API, fetching zero appointments for the day that the header actually shows.
+  const dayStr = currentDate.toLocaleDateString("en-CA", { timeZone: tz });
 
   const dateFrom = view === "month" ? monthStart : view === "week" ? toDateStr(weekStart) : dayStr;
   const dateTo   = view === "month" ? monthEnd   : view === "week" ? toDateStr(weekEnd)   : dayStr;
