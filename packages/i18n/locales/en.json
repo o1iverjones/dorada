@@ -19,6 +19,8 @@
     "next": "Next",
     "previous": "Previous",
     "page": "Page",
+    "of": "of",
+    "total": "total",
     "submit": "Submit",
     "close": "Close",
     "view": "View",

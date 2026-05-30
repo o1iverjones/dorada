@@ -13,7 +13,9 @@ import { formatPhone } from "../../lib/phone.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 25;
 
 export function InsuranceCompaniesPage() {
   const { t } = useTranslation();
@@ -23,6 +25,7 @@ export function InsuranceCompaniesPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", email: "" });
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
 
   const allCompanies = (data?.data ?? []) as Array<{ id: string; name: string; phone?: string | null; email?: string | null; is_active?: boolean } & Record<string, unknown>>;
 
@@ -44,6 +47,10 @@ export function InsuranceCompaniesPage() {
       c.email?.toLowerCase().includes(q)
     );
   }, [allCompanies, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pagedCompanies = filteredCompanies.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
   async function handleCreate() {
     try {
@@ -93,7 +100,7 @@ export function InsuranceCompaniesPage() {
         <AutocompleteInput
           options={searchOptions}
           value={search}
-          onChange={setSearch}
+          onChange={(v) => { setSearch(v); setPage(0); }}
           placeholder={t("insurance_companies.search")}
           freeText
         />
@@ -101,13 +108,42 @@ export function InsuranceCompaniesPage() {
       {isLoading ? (
         <LoadingSpinner />
       ) : (
-        <DataTable
-          columns={columns as never}
-          data={filteredCompanies}
-          onRowClick={(row) => navigate(`/insurance-companies/${row.id}`)}
-          emptyMessage={t("insurance_companies.empty")}
-          rowStyle={(row) => row.is_active === false ? { backgroundColor: "#fef2f2" } : {}}
-        />
+        <>
+          <DataTable
+            columns={columns as never}
+            data={pagedCompanies}
+            onRowClick={(row) => navigate(`/insurance-companies/${row.id}`)}
+            emptyMessage={t("insurance_companies.empty")}
+            rowStyle={(row) => row.is_active === false ? { backgroundColor: "#fef2f2" } : {}}
+          />
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                {t("common.page")} {safePage + 1} {t("common.of")} {totalPages}
+                {" · "}
+                {filteredCompanies.length} {t("common.total")}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={safePage === 0}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePage >= totalPages - 1}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
