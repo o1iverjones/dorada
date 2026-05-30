@@ -92,7 +92,7 @@ export function EditAppointmentPage() {
       pre_auth_amount: a.pre_auth_amount as number,
       pre_auth_mileage: a.pre_auth_mileage as number,
     });
-  }, [appt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [appt]); // intentionally omitting other deps
 
   async function onSubmit(data: FormData) {
     try {

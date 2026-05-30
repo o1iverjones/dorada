@@ -91,7 +91,7 @@ export function NewAppointmentPage() {
     if (prefill?.type_id) return;
     const qualifiedType = certQualTypes.find((ty) => ty.name === "Qualified");
     if (qualifiedType) setValue("type_id", qualifiedType.id);
-  }, [settings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings]); // intentionally omitting other deps
 
   async function onSubmit(data: FormData) {
     try {

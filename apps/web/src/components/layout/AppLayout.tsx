@@ -52,8 +52,7 @@ export function AppLayout() {
 
     socket.on("new_message", handleNewMessage);
     return () => { socket.off("new_message", handleNewMessage); };
-  // qc is stable
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // qc is stable — intentionally omitted from deps
   }, []);
 
   return (

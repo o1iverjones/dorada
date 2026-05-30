@@ -14,7 +14,8 @@ type AnyApp = any;
 // Firebase — dynamically imported so the worker boots even if firebase-admin isn't installed
 let fcmApp: AnyApp;
 try {
-  // @ts-ignore — firebase-admin is an optional dependency
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error — firebase-admin is an optional dependency
   const admin = await import("firebase-admin");
   const adminDefault = admin.default ?? admin;
   if (!adminDefault.apps.length) {
