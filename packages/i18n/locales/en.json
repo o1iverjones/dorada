@@ -605,6 +605,7 @@
     "type": "Type",
     "certified": "Certified",
     "qualified": "Qualified",
+    "certified_only": "certified interpreters only",
     "languages": "Languages",
     "pay_rate": "Pay rate",
     "default_rate": "Default rate",

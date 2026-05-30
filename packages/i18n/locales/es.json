@@ -605,6 +605,7 @@
     "type": "Tipo",
     "certified": "Certificado",
     "qualified": "Calificado",
+    "certified_only": "solo intérpretes certificados",
     "languages": "Idiomas",
     "pay_rate": "Tarifa",
     "default_rate": "Tarifa predeterminada",

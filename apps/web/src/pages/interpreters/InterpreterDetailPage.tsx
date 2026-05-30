@@ -280,8 +280,15 @@ export function InterpreterDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader><CardTitle>{t("interpreters.certification")}</CardTitle></CardHeader>
+        <Card className={interp.type !== "certified" ? "opacity-40 pointer-events-none select-none" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {t("interpreters.certification")}
+              {interp.type !== "certified" && (
+                <span className="text-xs font-normal text-muted-foreground">({t("interpreters.certified_only")})</span>
+              )}
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-1">
