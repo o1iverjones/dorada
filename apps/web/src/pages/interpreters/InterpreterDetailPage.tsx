@@ -45,6 +45,10 @@ export function InterpreterDetailPage() {
       emergency_contact_name: ec?.name ?? "",
       emergency_contact_phone: formatPhoneInput(ec?.phone as string ?? ""),
       certificate_number: interp.certificate_number ?? "",
+      address_line1: interp.address_line1 ?? "",
+      address_line2: interp.address_line2 ?? "",
+      city: interp.city ?? "",
+      state: interp.state ?? "",
       zip_code: interp.zip_code ?? "",
       coverage_range_miles: interp.coverage_range_miles ?? "",
     });
@@ -62,6 +66,10 @@ export function InterpreterDetailPage() {
       if (f.pay_rate !== "" && f.pay_rate != null) payload.pay_rate = Number(f.pay_rate);
       payload.notes = (f.notes as string)?.trim() || null;
       payload.certificate_number = (f.certificate_number as string)?.trim() || null;
+      payload.address_line1 = (f.address_line1 as string)?.trim() || null;
+      payload.address_line2 = (f.address_line2 as string)?.trim() || null;
+      payload.city = (f.city as string)?.trim() || null;
+      payload.state = (f.state as string)?.trim() || null;
       payload.zip_code = (f.zip_code as string)?.trim() || null;
       payload.coverage_range_miles = (f.coverage_range_miles as string) !== "" && f.coverage_range_miles != null
         ? Number(f.coverage_range_miles)
@@ -247,10 +255,44 @@ export function InterpreterDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>{t("interpreters.coverage")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("interpreters.address")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("interpreters.address_line1")}</Label>
+                  <Input
+                    value={editForm.address_line1 as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, address_line1: e.target.value }))}
+                    placeholder="e.g. 123 Main St"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.address_line2")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                  <Input
+                    value={editForm.address_line2 as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, address_line2: e.target.value }))}
+                    placeholder="e.g. Apt 4B"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>{t("interpreters.city")}</Label>
+                    <Input
+                      value={editForm.city as string ?? ""}
+                      onChange={(e) => setEditForm(s => ({ ...s, city: e.target.value }))}
+                      placeholder="e.g. Los Angeles"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t("interpreters.state")}</Label>
+                    <Input
+                      value={editForm.state as string ?? ""}
+                      onChange={(e) => setEditForm(s => ({ ...s, state: e.target.value }))}
+                      placeholder="e.g. CA"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-1">
                   <Label>{t("interpreters.zip_code")}</Label>
                   <Input
@@ -259,23 +301,38 @@ export function InterpreterDetailPage() {
                     placeholder="e.g. 90210"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label>{t("interpreters.coverage_range_miles")}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={editForm.coverage_range_miles as number ?? ""}
-                    onChange={(e) => setEditForm(s => ({ ...s, coverage_range_miles: e.target.value }))}
-                    placeholder="e.g. 25"
-                  />
-                </div>
               </div>
             ) : (
               <>
+                <Field label={t("interpreters.address_line1")} value={interp.address_line1 as string ?? "—"} />
+                {(interp.address_line2 as string) && (
+                  <Field label={t("interpreters.address_line2")} value={interp.address_line2 as string} />
+                )}
+                <Field label={t("interpreters.city")} value={interp.city as string ?? "—"} />
+                <Field label={t("interpreters.state")} value={interp.state as string ?? "—"} />
                 <Field label={t("interpreters.zip_code")} value={interp.zip_code as string ?? "—"} />
-                <Field label={t("interpreters.coverage_range_miles")} value={interp.coverage_range_miles != null ? `${interp.coverage_range_miles} mi` : "—"} />
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>{t("interpreters.coverage")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-1">
+                <Label>{t("interpreters.coverage_range_miles")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={editForm.coverage_range_miles as number ?? ""}
+                  onChange={(e) => setEditForm(s => ({ ...s, coverage_range_miles: e.target.value }))}
+                  placeholder="e.g. 25"
+                />
+              </div>
+            ) : (
+              <Field label={t("interpreters.coverage_range_miles")} value={interp.coverage_range_miles != null ? `${interp.coverage_range_miles} mi` : "—"} />
             )}
           </CardContent>
         </Card>

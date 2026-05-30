@@ -20,7 +20,11 @@ const schema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   type: z.enum(["certified", "qualified"]),
   languages: z.array(z.string()).min(1),
-  address: z.string().optional(),
+  address_line1: z.string().optional(),
+  address_line2: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip_code: z.string().optional(),
   pay_rate: z.coerce.number().optional(),
   payment_method: z.string().optional(),
   emergency_contact_name: z.string().optional(),
@@ -56,6 +60,11 @@ export function NewInterpreterPage() {
       const payload = {
         ...rest,
         emergency_contact: emergency_contact_name ? { name: emergency_contact_name, phone: emergency_contact_phone } : undefined,
+        address_line1: rest.address_line1 || undefined,
+        address_line2: rest.address_line2 || undefined,
+        city: rest.city || undefined,
+        state: rest.state || undefined,
+        zip_code: rest.zip_code || undefined,
       };
       const created = await create.mutateAsync(payload) as { id: string };
       toast({ title: t("interpreters.created") });
@@ -99,8 +108,20 @@ export function NewInterpreterPage() {
             <F label={t("interpreters.payment_method")} error={errors.payment_method?.message}>
               <Input {...register("payment_method")} />
             </F>
-            <F label={t("interpreters.address")} error={errors.address?.message}>
-              <Input {...register("address")} />
+            <F label={t("interpreters.address_line1")} error={errors.address_line1?.message}>
+              <Input {...register("address_line1")} placeholder="e.g. 123 Main St" />
+            </F>
+            <F label={`${t("interpreters.address_line2")} (${t("common.optional")})`} error={errors.address_line2?.message}>
+              <Input {...register("address_line2")} placeholder="e.g. Apt 4B" />
+            </F>
+            <F label={t("interpreters.city")} error={errors.city?.message}>
+              <Input {...register("city")} placeholder="e.g. Los Angeles" />
+            </F>
+            <F label={t("interpreters.state")} error={errors.state?.message}>
+              <Input {...register("state")} placeholder="e.g. CA" />
+            </F>
+            <F label={t("interpreters.zip_code")} error={errors.zip_code?.message}>
+              <Input {...register("zip_code")} placeholder="e.g. 90210" />
             </F>
             <F label={t("interpreters.emergency_name")} error={errors.emergency_contact_name?.message}>
               <Input {...register("emergency_contact_name")} />

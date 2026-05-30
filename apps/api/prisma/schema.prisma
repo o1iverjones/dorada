@@ -150,7 +150,10 @@ model Interpreter {
   location_lng            Float?
   pay_rate                Decimal?  @db.Decimal(10, 2)
   payment_method          String?
-  address                 String?
+  address_line1           String?
+  address_line2           String?
+  city                    String?
+  state                   String?
   emergency_contact_name  String?
   emergency_contact_phone String?
   certificate_number      String?
