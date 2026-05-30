@@ -649,6 +649,7 @@
     "deactivate": "Desactivar intérprete",
     "deactivated": "Intérprete desactivado.",
     "empty": "No se encontraron intérpretes.",
+    "show_inactive": "Mostrar desactivados",
     "created": "Intérprete agregado."
   },
   "messages": {

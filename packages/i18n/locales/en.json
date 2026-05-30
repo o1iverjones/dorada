@@ -649,6 +649,7 @@
     "deactivate": "Deactivate interpreter",
     "deactivated": "Interpreter deactivated.",
     "empty": "No interpreters found.",
+    "show_inactive": "Show deactivated",
     "created": "Interpreter added."
   },
   "messages": {

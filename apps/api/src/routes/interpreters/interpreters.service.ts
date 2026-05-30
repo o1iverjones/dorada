@@ -20,7 +20,7 @@ export async function listInterpreters(query: InterpreterListQuery, organization
   const items = await prisma.interpreter.findMany({
     where: {
       organization_id: organizationId,
-      is_active: true,
+      ...(query.include_inactive ? {} : { is_active: true }),
       ...(query.type ? { type: query.type } : {}),
       ...(query.language ? { languages: { has: query.language } } : {}),
       ...(query.search ? { name: { contains: query.search, mode: "insensitive" as const } } : {}),
