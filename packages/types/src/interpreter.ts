@@ -47,7 +47,7 @@ export const InterpreterSchema = z.object({
 
 export const CreateInterpreterBodySchema = z.object({
   name: z.string().min(1).max(255),
-  phone: z.string().min(7).max(20),
+  phone: z.string().min(7).max(20).transform((v) => v.replace(/\D/g, "")),
   email: z.string().email().nullish(),
   type: InterpreterTypeSchema,
   languages: z.array(z.string().min(2).max(10)).min(1),

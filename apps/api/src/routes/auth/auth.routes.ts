@@ -94,8 +94,16 @@ export default async function authRoutes(fastify: FastifyInstance) {
     fastify.get("/dev/otp/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };
       const normalized = phone.replace(/\D/g, "");
-      const otp = await fastify.redis.get(`otp:${normalized}`);
-      if (!otp) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No pending OTP for this number" } });
+      const last10 = normalized.slice(-10);
+      // Find interpreter to get canonical phone key (same logic as requestOtp)
+      const interpreter = await fastify.prisma.interpreter.findFirst({
+        where: { phone: { endsWith: last10 }, is_active: true },
+        select: { phone: true },
+      });
+      if (!interpreter) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No interpreter found for this number" } });
+      const canonicalPhone = interpreter.phone.replace(/\D/g, "");
+      const otp = await fastify.redis.get(`otp:${canonicalPhone}`);
+      if (!otp) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No pending OTP — request one first" } });
       return reply.send({ otp });
     });
   }
