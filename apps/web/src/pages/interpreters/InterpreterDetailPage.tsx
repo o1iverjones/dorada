@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useInterpreter, useUpdateInterpreter, useDeactivateInterpreter } from "../../hooks/useInterpreters.js";
+import { useShowLanguage } from "../../hooks/useSettings.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
@@ -21,6 +22,7 @@ export function InterpreterDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const showLanguage = useShowLanguage();
   const { data, isLoading } = useInterpreter(id!);
   const update = useUpdateInterpreter(id!);
   const deactivate = useDeactivateInterpreter(id!);
@@ -197,7 +199,7 @@ export function InterpreterDetailPage() {
                     {interp.is_active ? t("common.active") : t("common.inactive")}
                   </Badge>
                 } />
-                <Field label={t("interpreters.languages")} value={(interp.languages as string[] ?? []).join(", ")} />
+                {showLanguage && <Field label={t("interpreters.languages")} value={(interp.languages as string[] ?? []).join(", ")} />}
               </div>
             )}
           </CardContent>

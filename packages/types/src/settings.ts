@@ -28,6 +28,7 @@ export const SystemSettingsSchema = z.object({
   languages: z.array(LanguageSchema),
   appointment_types: z.array(AppointmentTypeSettingSchema),
   allow_manual_confirm: z.boolean(),
+  show_language: z.boolean(),
 });
 
 export const UpdateSystemSettingsBodySchema = z.object({
@@ -42,6 +43,7 @@ export const UpdateSystemSettingsBodySchema = z.object({
   }).optional(),
   timezone: z.string().optional(),
   allow_manual_confirm: z.boolean().optional(),
+  show_language: z.boolean().optional(),
 });
 
 export const CreateAppointmentTypeBodySchema = z.object({

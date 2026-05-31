@@ -6,7 +6,7 @@ import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients, useUpdatePatient } from "../../hooks/usePatients.js";
-import { useOrgTimezone, useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useSystemSettings, useInterpreterRates, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz, toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
@@ -45,6 +45,7 @@ export function AppointmentDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
   const { data: settingsData } = useSystemSettings();
   const allowManualConfirm = (settingsData as Record<string, unknown>)?.allow_manual_confirm as boolean ?? false;
   const [selectedInterpreters, setSelectedInterpreters] = useState<string[]>([]);
@@ -356,23 +357,25 @@ export function AppointmentDetailPage() {
             </div>
 
             {/* Language */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <div className="space-y-1.5">
-                  <span className="text-muted-foreground">{t("appointments.language")}</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {LANGUAGES.map((lang) => (
-                      <button key={lang} type="button" onClick={() => set("language", lang)}
-                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.language === lang ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
-                        {lang}
-                      </button>
-                    ))}
+            {showLanguage && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                {editing ? (
+                  <div className="space-y-1.5">
+                    <span className="text-muted-foreground">{t("appointments.language")}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {LANGUAGES.map((lang) => (
+                        <button key={lang} type="button" onClick={() => set("language", lang)}
+                          className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.language === lang ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Field label={t("appointments.language")} value={a.language as string} />
-              )}
-            </div>
+                ) : (
+                  <Field label={t("appointments.language")} value={a.language as string} />
+                )}
+              </div>
+            )}
 
             {/* Interpreter Type */}
             <div className="px-6 py-2.5 even:bg-muted/40">

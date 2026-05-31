@@ -759,6 +759,8 @@
     "super_admin_options": "Super Admin options",
     "allow_manual_confirm": "Allow manual interpreter confirmation",
     "allow_manual_confirm_description": "Enables admins to manually assign and confirm an interpreter from the appointment page without requiring the interpreter to accept via the mobile app. Intended for testing — disable in production.",
+    "show_language": "Show language fields",
+    "show_language_description": "When enabled, language and preferred language fields are shown throughout the platform. Disable for agencies that work with a single language only.",
     "timezone": "Platform timezone",
     "timezone_description": "All appointment times and logs across the platform will be displayed in this timezone, regardless of where each user is located.",
     "timezone_current": "Currently",

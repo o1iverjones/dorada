@@ -59,6 +59,12 @@ export function useOrgTimezone(): string {
   return (data as Record<string, unknown> | undefined)?.timezone as string ?? "America/Los_Angeles";
 }
 
+export function useShowLanguage(): boolean {
+  const { data } = useSystemSettings();
+  const val = (data as Record<string, unknown> | undefined)?.show_language;
+  return val === undefined ? true : Boolean(val);
+}
+
 export function useLocaleStrings(locale: string) {
   return useQuery({
     queryKey: ["locale-strings", locale],

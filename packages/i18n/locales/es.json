@@ -759,6 +759,8 @@
     "super_admin_options": "Opciones de Super Admin",
     "allow_manual_confirm": "Permitir confirmación manual de intérprete",
     "allow_manual_confirm_description": "Permite a los administradores asignar y confirmar manualmente un intérprete desde la página de la cita sin que el intérprete acepte por la app móvil. Destinado a pruebas — desactivar en producción.",
+    "show_language": "Mostrar campos de idioma",
+    "show_language_description": "Cuando está activado, los campos de idioma e idioma preferido se muestran en toda la plataforma. Desactiva para agencias que trabajan con un solo idioma.",
     "timezone": "Zona horaria de la plataforma",
     "timezone_description": "Todos los horarios de citas y registros se mostrarán en esta zona horaria, sin importar dónde se encuentre cada usuario.",
     "timezone_current": "Actualmente",

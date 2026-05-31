@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateAppointment } from "../../hooks/useAppointments.js";
-import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
 import { fromTzDateTimeInput } from "../../lib/timezone.js";
 import { useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
@@ -46,6 +46,7 @@ export function NewAppointmentPage() {
   const location = useLocation();
   const prefill = (location.state as { prefill?: Partial<FormData> } | null)?.prefill;
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
   const create = useCreateAppointment();
 
   const { data: clinics } = useClinics({ limit: "500" });
@@ -89,6 +90,13 @@ export function NewAppointmentPage() {
     const qualifiedType = certQualTypes.find((ty) => ty.name === "Qualified");
     if (qualifiedType) setValue("type_id", qualifiedType.id);
   }, [settings]); // intentionally omitting other deps
+
+  // When language is hidden, auto-select the first available language so the form can still submit
+  useEffect(() => {
+    if (!showLanguage && !prefill?.language) {
+      setValue("language", LANGUAGES[0]);
+    }
+  }, [showLanguage]); // intentionally omitting other deps
 
   async function onSubmit(data: FormData) {
     try {
@@ -149,28 +157,30 @@ export function NewAppointmentPage() {
               )} />
             </div>
 
-            <div className="col-span-full space-y-2">
-              <Label>{t("appointments.language")}</Label>
-              {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
-              <Controller name="language" control={control} render={({ field }) => (
-                <div className="flex flex-wrap gap-2">
-                  {LANGUAGES.map((lang) => (
-                    <button
-                      key={lang}
-                      type="button"
-                      onClick={() => field.onChange(lang)}
-                      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                        field.value === lang
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input hover:bg-accent"
-                      }`}
-                    >
-                      {lang}
-                    </button>
-                  ))}
-                </div>
-              )} />
-            </div>
+            {showLanguage && (
+              <div className="col-span-full space-y-2">
+                <Label>{t("appointments.language")}</Label>
+                {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
+                <Controller name="language" control={control} render={({ field }) => (
+                  <div className="flex flex-wrap gap-2">
+                    {LANGUAGES.map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => field.onChange(lang)}
+                        className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                          field.value === lang
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input hover:bg-accent"
+                        }`}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                )} />
+              </div>
+            )}
 
 
 <FormField label={t("appointments.clinic")} error={errors.clinic_id?.message}>

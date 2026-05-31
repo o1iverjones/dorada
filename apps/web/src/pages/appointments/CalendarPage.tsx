@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinics } from "../../hooks/useClinics.js";
-import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -56,6 +56,7 @@ export function CalendarPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
   // Derive "today" on every render using the org timezone so it's never stale
   // and matches the correct local date even if the browser is in a different zone.
   const today = useMemo(() => {
@@ -323,7 +324,7 @@ export function CalendarPage() {
           </span>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-          {language && <DayRow label={t("appointments.language")} value={language} />}
+          {showLanguage && language && <DayRow label={t("appointments.language")} value={language} />}
           {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
           <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
@@ -738,6 +739,7 @@ function JumpToDatePicker({
 function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: number; y: number }) {
   const { t } = useTranslation();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
 
   const dt = new Date(a.date_time as string);
   const endDt = new Date(dt.getTime() + (a.duration_minutes as number) * 60000);
@@ -771,7 +773,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
         <Row label={t("common.status")} value={<span className="capitalize">{status}</span>} />
         <Row label={t("appointments.date_time")} value={timeStr} />
         <Row label={t("appointments.duration")} value={durationStr} />
-        <Row label={t("appointments.language")} value={language} />
+        {showLanguage && <Row label={t("appointments.language")} value={language} />}
         <Row label={t("appointments.interpreter_type")} value={interpType} />
         <Row label={t("appointments.clinic")} value={clinicName} />
         <Row label={t("appointments.insurance_agency")} value={agencyName} />

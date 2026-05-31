@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinics } from "../../hooks/useClinics.js";
-import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
@@ -22,6 +22,7 @@ export function AppointmentsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
   const [searchParams] = useSearchParams();
 
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
@@ -73,7 +74,7 @@ export function AppointmentsPage() {
     }},
     { key: "insurance_agency", header: t("appointments.insurance_agency"), render: (row: Record<string, unknown>) => (row.insurance_agency as Record<string, unknown>)?.name as string ?? "—" },
     { key: "po_number", header: t("appointments.po_number"), render: (row: Record<string, unknown>) => (row.po_number as string) ?? "—" },
-    { key: "language", header: t("appointments.language") },
+    ...(showLanguage ? [{ key: "language", header: t("appointments.language") }] : []),
     { key: "status", header: t("common.status"), render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} /> },
   ];
 

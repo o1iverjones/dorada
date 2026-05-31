@@ -742,6 +742,7 @@ model SystemSettings {
   follow_up_max_reminders             Int      @default(2)
   timezone                            String   @default("America/Los_Angeles")
   allow_manual_confirm                Boolean  @default(false)
+  show_language                       Boolean  @default(true)
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
