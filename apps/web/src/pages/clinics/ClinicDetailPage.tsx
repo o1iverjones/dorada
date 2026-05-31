@@ -258,22 +258,6 @@ export function ClinicDetailPage() {
         />
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>{t("clinics.billing_config")}</CardTitle></CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
-            <div>
-              <p className="text-muted-foreground">{t("clinics.billing_model")}</p>
-              <p className="font-medium">{(clinic.billing as Record<string, unknown>)?.model as string ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">{t("clinics.billing_rate")}</p>
-              <p className="font-medium">{(clinic.billing as Record<string, unknown>)?.rate ? `$${(clinic.billing as Record<string, unknown>).rate}` : "—"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Excluded Interpreters */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
