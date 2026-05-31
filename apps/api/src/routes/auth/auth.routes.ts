@@ -23,6 +23,7 @@ import {
 } from "./auth.service.js";
 import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
+import { config } from "../../config.js";
 
 export default async function authRoutes(fastify: FastifyInstance) {
   // POST /auth/interpreter/otp/request
@@ -86,6 +87,18 @@ export default async function authRoutes(fastify: FastifyInstance) {
     await logout(payload.sub, payload.type === "interpreter", fastify.prisma);
     return reply.status(204).send();
   });
+
+  // GET /auth/dev/otp/:phone — DEV ONLY: returns the pending OTP from Redis so
+  // we can test interpreter login without a real Twilio integration.
+  if (config.APP_ENV !== "production") {
+    fastify.get("/dev/otp/:phone", async (request, reply) => {
+      const { phone } = request.params as { phone: string };
+      const normalized = phone.replace(/\D/g, "");
+      const otp = await fastify.redis.get(`otp:${normalized}`);
+      if (!otp) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No pending OTP for this number" } });
+      return reply.send({ otp });
+    });
+  }
 
   // POST /auth/admin/password/reset-request
   fastify.post("/admin/password/reset-request", async (request, reply) => {
