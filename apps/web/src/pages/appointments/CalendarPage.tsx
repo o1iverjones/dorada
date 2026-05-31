@@ -326,7 +326,7 @@ export function CalendarPage() {
             {status}
           </span>
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs">
+        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
           {showLanguage && language && <DayRow label={t("appointments.language")} value={language} />}
           {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
           <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} bold />
