@@ -136,7 +136,7 @@ export function AppointmentsPage() {
 
         {/* Clear filters */}
         {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); }}>
+          <Button variant="outline" size="sm" onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); }}>
             {t("common.clear")}
           </Button>
         )}

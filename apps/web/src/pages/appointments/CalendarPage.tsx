@@ -459,7 +459,7 @@ export function CalendarPage() {
         </Button>
 
         {(interpreterFilter || clinicFilter !== "all") && (
-          <Button variant="ghost" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
+          <Button variant="outline" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
         )}
       </div>
 
