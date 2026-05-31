@@ -527,10 +527,10 @@
     "note_type_info": "Info",
     "note_content": "Note content",
     "note_content_placeholder": "Enter a note that interpreters will see before the appointment...",
-    "doctors": "Doctors",
-    "no_doctors": "No doctors added yet.",
-    "add_doctor": "Add doctor",
-    "doctor_name": "Doctor name",
+    "doctors": "Providers",
+    "no_doctors": "No providers added yet.",
+    "add_doctor": "Add provider",
+    "doctor_name": "Provider name",
     "doctor_name_placeholder": "e.g. Dr. Jane Smith"
   },
   "email_intake": {

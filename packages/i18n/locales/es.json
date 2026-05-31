@@ -527,10 +527,10 @@
     "note_type_info": "Información",
     "note_content": "Contenido de la nota",
     "note_content_placeholder": "Escribe una nota que los intérpretes verán antes de la cita...",
-    "doctors": "Médicos",
-    "no_doctors": "Aún no se han agregado médicos.",
-    "add_doctor": "Agregar médico",
-    "doctor_name": "Nombre del médico",
+    "doctors": "Proveedores",
+    "no_doctors": "Aún no se han agregado proveedores.",
+    "add_doctor": "Agregar proveedor",
+    "doctor_name": "Nombre del proveedor",
     "doctor_name_placeholder": "Ej. Dr. Juan Pérez"
   },
   "email_intake": {
