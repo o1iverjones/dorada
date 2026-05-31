@@ -363,12 +363,12 @@ export function PatientDetailPage() {
 
       {/* Add / Edit claim dialog */}
       <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
-        <DialogContent>
-          <form onSubmit={(e) => { e.preventDefault(); handleClaimSave(); }}>
+        <DialogContent className="flex flex-col max-h-[90vh]">
+          <form onSubmit={(e) => { e.preventDefault(); handleClaimSave(); }} className="flex flex-col min-h-0 flex-1">
             <DialogHeader>
               <DialogTitle>{editingClaimId ? t("patients.edit_claim") : t("patients.add_claim")}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 py-4">
+            <div className="space-y-3 py-4 overflow-y-auto flex-1">
               <div className="space-y-1">
                 <Label>{t("patients.case_number")}</Label>
                 <Input
