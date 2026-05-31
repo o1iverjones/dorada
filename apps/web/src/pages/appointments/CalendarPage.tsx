@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinics } from "../../hooks/useClinics.js";
-import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -34,10 +34,17 @@ const BLOCK_COLORS = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-function startOfWeek(d: Date): Date {
+function startOfWeek(d: Date, tz: string): Date {
+  // Find the most-recent Monday in the org timezone.
+  // Using browser-local getDay() would give wrong results when the browser
+  // timezone differs from the org timezone.
+  const dowStr = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(d);
+  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const dow = dowMap[dowStr] ?? 1;
+  const daysBack = dow === 0 ? 6 : dow - 1; // Mon→0, Tue→1, …, Sun→6
   const s = new Date(d);
+  s.setDate(s.getDate() - daysBack);
   s.setHours(0, 0, 0, 0);
-  s.setDate(s.getDate() - s.getDay());
   return s;
 }
 
@@ -49,6 +56,7 @@ export function CalendarPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
   // Derive "today" on every render using the org timezone so it's never stale
   // and matches the correct local date even if the browser is in a different zone.
   const today = useMemo(() => {
@@ -105,7 +113,7 @@ export function CalendarPage() {
   const monthStart = `${year}-${pad(month + 1)}-01`;
   const monthEnd = `${year}-${pad(month + 1)}-${pad(lastDay.getDate())}`;
 
-  const weekStart = startOfWeek(currentDate);
+  const weekStart = startOfWeek(currentDate, tz);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -114,10 +122,14 @@ export function CalendarPage() {
     return d;
   });
 
-  const dayStr = toDateStr(currentDate);
+  // Day-view date string must use org timezone, not browser-local. The browser
+  // (CDT, UTC-6) and the org (PDT, UTC-7) differ by 1 hour, so browser midnight
+  // is the previous evening in org tz. toDateStr() would send the wrong date to
+  // the API, fetching zero appointments for the day that the header actually shows.
+  const dayStr = currentDate.toLocaleDateString("en-CA", { timeZone: tz });
 
-  const dateFrom = view === "month" ? monthStart : view === "week" ? toDateStr(weekStart) : dayStr;
-  const dateTo   = view === "month" ? monthEnd   : view === "week" ? toDateStr(weekEnd)   : dayStr;
+  const dateFrom = view === "month" ? monthStart : view === "week" ? weekStart.toLocaleDateString("en-CA", { timeZone: tz }) : dayStr;
+  const dateTo   = view === "month" ? monthEnd   : view === "week" ? weekEnd.toLocaleDateString("en-CA", { timeZone: tz })   : dayStr;
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -157,17 +169,30 @@ export function CalendarPage() {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function appointmentsForDate(date: Date) {
+    // Both sides must use the org timezone. Cell headers are rendered via formatInTz
+    // (org tz), so the "target" date for a cell must also be derived in org tz.
+    // Using browser-local Date methods (getDate, getMonth, etc.) breaks whenever the
+    // browser timezone differs from the org timezone.
+    const target = date.toLocaleDateString("en-CA", { timeZone: tz });
     return appointments
-      .filter((a) => isSameDay(new Date(a.date_time as string), date))
+      .filter((a) => {
+        const apptDateInOrgTz = new Date(a.date_time as string)
+          .toLocaleDateString("en-CA", { timeZone: tz });
+        return apptDateInOrgTz === target;
+      })
       .sort((a, b) => new Date(a.date_time as string).getTime() - new Date(b.date_time as string).getTime());
   }
 
+
   function blocksForDate(date: Date) {
     if (!showBlocks) return [];
+    // Use org timezone for the cell date, same as appointmentsForDate, so blocks
+    // are shown on the correct day regardless of the browser's local timezone.
+    const target = date.toLocaleDateString("en-CA", { timeZone: tz });
     return availabilityBlocks.filter((b) => {
-      const from = new Date(b.from as string); from.setHours(0,0,0,0);
-      const to   = new Date(b.to   as string); to.setHours(23,59,59,999);
-      return from <= date && to >= date;
+      const fromDate = new Date(b.from as string).toLocaleDateString("en-CA", { timeZone: tz });
+      const toDate   = new Date(b.to   as string).toLocaleDateString("en-CA", { timeZone: tz });
+      return fromDate <= target && toDate >= target;
     });
   }
 
@@ -196,7 +221,8 @@ export function CalendarPage() {
 
   const firstDay = new Date(year, month, 1);
   const cells: Array<Date | null> = [
-    ...Array(firstDay.getDay()).fill(null),
+    // Monday-first: Mon→0 offset, Tue→1, …, Sun→6  ((getDay()+6)%7 maps Sun(0)→6, Mon(1)→0, …, Sat(6)→5)
+    ...Array((firstDay.getDay() + 6) % 7).fill(null),
     ...Array.from({ length: lastDay.getDate() }, (_, i) => new Date(year, month, i + 1)),
   ];
   while (cells.length % 7 !== 0) cells.push(null);
@@ -290,21 +316,23 @@ export function CalendarPage() {
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <p className="text-base font-bold leading-tight">{patientName}</p>
+            <p className="text-base leading-tight truncate">
+              <span className="font-bold">{patientName}</span>
+              {poNumber && <span className="font-normal text-sm ml-2 opacity-75">{poNumber}</span>}
+            </p>
             <p className="text-sm font-medium mt-0.5">{timeStr} · {a.duration_minutes as number} min</p>
           </div>
           <span className="shrink-0 text-xs font-semibold capitalize px-2 py-0.5 rounded-full border border-current/30 bg-white/40">
             {status}
           </span>
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-          {language && <DayRow label={t("appointments.language")} value={language} />}
+        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
+          {showLanguage && language && <DayRow label={t("appointments.language")} value={language} />}
           {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
-          <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} />
+          <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} bold />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
-          {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} />}
+          {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} bold />}
           {physician && <DayRow label={t("appointments.provider")} value={physician} />}
-          {poNumber && <DayRow label={t("appointments.po_number")} value={poNumber} />}
         </div>
       </button>
     );
@@ -434,7 +462,7 @@ export function CalendarPage() {
         </Button>
 
         {(interpreterFilter || clinicFilter !== "all") && (
-          <Button variant="ghost" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
+          <Button variant="outline" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
         )}
       </div>
 
@@ -442,7 +470,7 @@ export function CalendarPage() {
       {view === "month" && (
         <div className="rounded-md border">
           <div className="grid grid-cols-7 border-b bg-muted/50">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
               <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
             ))}
           </div>
@@ -713,6 +741,7 @@ function JumpToDatePicker({
 function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: number; y: number }) {
   const { t } = useTranslation();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
 
   const dt = new Date(a.date_time as string);
   const endDt = new Date(dt.getTime() + (a.duration_minutes as number) * 60000);
@@ -746,7 +775,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
         <Row label={t("common.status")} value={<span className="capitalize">{status}</span>} />
         <Row label={t("appointments.date_time")} value={timeStr} />
         <Row label={t("appointments.duration")} value={durationStr} />
-        <Row label={t("appointments.language")} value={language} />
+        {showLanguage && <Row label={t("appointments.language")} value={language} />}
         <Row label={t("appointments.interpreter_type")} value={interpType} />
         <Row label={t("appointments.clinic")} value={clinicName} />
         <Row label={t("appointments.insurance_agency")} value={agencyName} />
@@ -766,11 +795,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function DayRow({ label, value, italic }: { label: string; value: string; italic?: boolean }) {
+function DayRow({ label, value, italic, bold }: { label: string; value: string; italic?: boolean; bold?: boolean }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-current/60 font-normal">{label}</span>
-      <span className={`font-medium truncate ${italic ? "italic opacity-70" : ""}`}>{value}</span>
+    <div className="flex items-baseline gap-1.5 min-w-0">
+      <span className="text-current/60 font-normal shrink-0">{label}:</span>
+      <span className={`truncate ${bold ? "font-bold" : "font-medium"} ${italic ? "italic opacity-70" : ""}`}>{value}</span>
     </div>
   );
 }

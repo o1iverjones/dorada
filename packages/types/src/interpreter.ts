@@ -41,7 +41,7 @@ export const InterpreterSchema = z.object({
   notes: z.string().nullable().optional(),
   certificate_number: z.string().nullable().optional(),
   zip_code: z.string().nullable().optional(),
-  coverage_range_miles: z.number().nonnegative().nullable().optional(),
+  preferred_cities: z.array(z.string()).optional(),
   availability_blocks: z.array(AvailabilityBlockSchema).optional(),
 });
 
@@ -63,7 +63,7 @@ export const CreateInterpreterBodySchema = z.object({
   notes: z.string().max(5000).nullish(),
   certificate_number: z.string().max(100).nullish(),
   zip_code: z.string().max(10).nullish(),
-  coverage_range_miles: z.number().nonnegative().nullish(),
+  preferred_cities: z.array(z.string()).optional(),
 });
 
 export const UpdateInterpreterBodySchema = CreateInterpreterBodySchema.partial();
@@ -89,6 +89,7 @@ export const InterpreterListQuerySchema = z.object({
   search: z.string().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(25),
+  include_inactive: z.coerce.boolean().optional(),
 });
 
 export const InterpreterPreferencesSchema = z.object({

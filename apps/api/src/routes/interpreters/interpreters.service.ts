@@ -20,7 +20,7 @@ export async function listInterpreters(query: InterpreterListQuery, organization
   const items = await prisma.interpreter.findMany({
     where: {
       organization_id: organizationId,
-      is_active: true,
+      ...(query.include_inactive ? {} : { is_active: true }),
       ...(query.type ? { type: query.type } : {}),
       ...(query.language ? { languages: { has: query.language } } : {}),
       ...(query.search ? { name: { contains: query.search, mode: "insensitive" as const } } : {}),
@@ -68,7 +68,7 @@ function formatInterpreter(i: {
   clinics_not_allowed: { clinic: { id: string; name: string } }[];
   address_line1?: string | null; address_line2?: string | null; city?: string | null; state?: string | null;
   emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
-  notes?: string | null; certificate_number?: string | null; zip_code?: string | null; coverage_range_miles?: unknown;
+  notes?: string | null; certificate_number?: string | null; zip_code?: string | null; preferred_cities?: string[];
 }) {
   return {
     id: i.id,
@@ -95,7 +95,7 @@ function formatInterpreter(i: {
     ...(i.notes !== undefined ? { notes: i.notes } : {}),
     ...(i.certificate_number !== undefined ? { certificate_number: i.certificate_number } : {}),
     ...(i.zip_code !== undefined ? { zip_code: i.zip_code } : {}),
-    ...(i.coverage_range_miles !== undefined ? { coverage_range_miles: i.coverage_range_miles != null ? Number(i.coverage_range_miles) : null } : {}),
+    ...(i.preferred_cities !== undefined ? { preferred_cities: i.preferred_cities } : {}),
   };
 }
 
@@ -108,7 +108,7 @@ export async function getInterpreter(id: string, organizationId: string, prisma:
     },
   });
   ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
-  return formatInterpreter({ ...interpreter!, address_line1: interpreter!.address_line1, address_line2: interpreter!.address_line2, city: interpreter!.city, state: interpreter!.state, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, zip_code: interpreter!.zip_code, coverage_range_miles: interpreter!.coverage_range_miles });
+  return formatInterpreter({ ...interpreter!, address_line1: interpreter!.address_line1, address_line2: interpreter!.address_line2, city: interpreter!.city, state: interpreter!.state, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, zip_code: interpreter!.zip_code, preferred_cities: interpreter!.preferred_cities });
 }
 
 function normalizePhone(phone: string): string {
@@ -146,7 +146,7 @@ export async function createInterpreter(body: CreateInterpreterBody, organizatio
       notes: body.notes ?? null,
       certificate_number: body.certificate_number ?? null,
       zip_code: body.zip_code ?? null,
-      coverage_range_miles: body.coverage_range_miles ?? null,
+      preferred_cities: body.preferred_cities ?? [],
       ...(body.clinics_not_allowed?.length
         ? { clinics_not_allowed: { create: body.clinics_not_allowed.map((id) => ({ clinic_id: id })) } }
         : {}),
@@ -194,7 +194,7 @@ export async function updateInterpreter(
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
       ...(body.certificate_number !== undefined ? { certificate_number: body.certificate_number } : {}),
       ...(body.zip_code !== undefined ? { zip_code: body.zip_code } : {}),
-      ...(body.coverage_range_miles !== undefined ? { coverage_range_miles: body.coverage_range_miles } : {}),
+      ...(body.preferred_cities !== undefined ? { preferred_cities: body.preferred_cities } : {}),
     },
     include: { clinics_not_allowed: { include: { clinic: { select: { id: true, name: true } } } } },
   });

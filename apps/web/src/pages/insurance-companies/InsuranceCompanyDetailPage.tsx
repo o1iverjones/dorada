@@ -43,7 +43,12 @@ export function InsuranceCompanyDetailPage() {
     setForm({
       name: (company.name as string) ?? "",
       phone: formatPhoneInput((company.phone as string) ?? ""),
+      fax: formatPhoneInput((company.fax as string) ?? ""),
       email: (company.email as string) ?? "",
+      address: (company.address as string) ?? "",
+      city: (company.city as string) ?? "",
+      state: (company.state as string) ?? "",
+      zip_code: (company.zip_code as string) ?? "",
     });
     setEditing(true);
   }
@@ -53,7 +58,12 @@ export function InsuranceCompanyDetailPage() {
       const body: Record<string, unknown> = {};
       if (form.name) body.name = form.name;
       body.phone = form.phone || null;
+      body.fax = form.fax || null;
       body.email = form.email || null;
+      body.address = form.address || null;
+      body.city = form.city || null;
+      body.state = form.state || null;
+      body.zip_code = form.zip_code || null;
       await update.mutateAsync(body);
       toast({ title: t("common.saved") });
       setEditing(false);
@@ -62,9 +72,13 @@ export function InsuranceCompanyDetailPage() {
     }
   }
 
-  const fields = [
+  const textFields = [
     { key: "name", label: t("insurance_companies.name"), type: "text" },
     { key: "email", label: t("insurance_companies.email"), type: "email" },
+    { key: "address", label: t("insurance_companies.address"), type: "text" },
+    { key: "city", label: t("insurance_companies.city"), type: "text" },
+    { key: "state", label: t("insurance_companies.state"), type: "text" },
+    { key: "zip_code", label: t("insurance_companies.zip_code"), type: "text" },
   ] as const;
 
   return (
@@ -99,7 +113,7 @@ export function InsuranceCompanyDetailPage() {
           <CardContent>
             {editing ? (
               <div className="grid gap-3 sm:grid-cols-2">
-                {fields.map(({ key, label, type }) => (
+                {textFields.map(({ key, label, type }) => (
                   <div key={key} className="space-y-1">
                     <Label>{label}</Label>
                     <Input
@@ -113,6 +127,10 @@ export function InsuranceCompanyDetailPage() {
                   <Label>{t("insurance_companies.phone")}</Label>
                   <PhoneInput value={form.phone ?? ""} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
                 </div>
+                <div className="space-y-1">
+                  <Label>{t("insurance_companies.fax")}</Label>
+                  <PhoneInput value={form.fax ?? ""} onChange={(v) => setForm(s => ({ ...s, fax: v }))} />
+                </div>
               </div>
             ) : (
               <div className="grid gap-3 text-sm sm:grid-cols-2">
@@ -125,8 +143,28 @@ export function InsuranceCompanyDetailPage() {
                   <p className="font-medium">{formatPhone(company.phone as string)}</p>
                 </div>
                 <div>
+                  <p className="text-muted-foreground">{t("insurance_companies.fax")}</p>
+                  <p className="font-medium">{formatPhone(company.fax as string)}</p>
+                </div>
+                <div>
                   <p className="text-muted-foreground">{t("insurance_companies.email")}</p>
                   <p className="font-medium">{company.email as string ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">{t("insurance_companies.address")}</p>
+                  <p className="font-medium">{company.address as string ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">{t("insurance_companies.city")}</p>
+                  <p className="font-medium">{company.city as string ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">{t("insurance_companies.state")}</p>
+                  <p className="font-medium">{company.state as string ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">{t("insurance_companies.zip_code")}</p>
+                  <p className="font-medium">{company.zip_code as string ?? "—"}</p>
                 </div>
               </div>
             )}

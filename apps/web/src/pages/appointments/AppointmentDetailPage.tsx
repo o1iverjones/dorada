@@ -6,7 +6,7 @@ import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { usePatients, useUpdatePatient } from "../../hooks/usePatients.js";
-import { useOrgTimezone, useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useSystemSettings, useInterpreterRates, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz, toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
@@ -45,6 +45,7 @@ export function AppointmentDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
   const { data: settingsData } = useSystemSettings();
   const allowManualConfirm = (settingsData as Record<string, unknown>)?.allow_manual_confirm as boolean ?? false;
   const [selectedInterpreters, setSelectedInterpreters] = useState<string[]>([]);
@@ -107,6 +108,24 @@ export function AppointmentDetailPage() {
   const excludedFromClinic = new Set(
     ((clinicData as Record<string, unknown>)?.interpreters_not_allowed as Array<{ id: string }> ?? []).map((i) => i.id),
   );
+
+  const clinicRaw = clinicData as Record<string, unknown> | undefined;
+  const clinicCityRaw = (clinicRaw?.city as string | null | undefined)?.trim()
+    || extractCityFromAddress(clinicRaw?.address as string | null | undefined);
+  const clinicCity = clinicCityRaw?.toLowerCase() ?? null;
+  const clinicCityDisplay = clinicCityRaw ?? null;
+  const allInterpreterList = (interpreters?.data ?? []) as Array<Record<string, unknown>>;
+  const cityMatchedInterpreters = clinicCity
+    ? allInterpreterList.filter((i) =>
+        ((i.preferred_cities as string[] | undefined) ?? []).some(
+          (c) => c.trim().toLowerCase() === clinicCity,
+        ),
+      )
+    : allInterpreterList;
+  // Fall back to all interpreters if none match the clinic city
+  const interpretersForOffer = cityMatchedInterpreters.length > 0 ? cityMatchedInterpreters : allInterpreterList;
+  const cityFilterApplied = clinicCity !== null && cityMatchedInterpreters.length > 0;
+  const cityFilterNoMatch = clinicCity !== null && cityMatchedInterpreters.length === 0;
 
   if (isLoading) return <LoadingSpinner />;
   if (!appt || !a) return <p>{t("common.not_found")}</p>;
@@ -338,23 +357,25 @@ export function AppointmentDetailPage() {
             </div>
 
             {/* Language */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <div className="space-y-1.5">
-                  <span className="text-muted-foreground">{t("appointments.language")}</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {LANGUAGES.map((lang) => (
-                      <button key={lang} type="button" onClick={() => set("language", lang)}
-                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.language === lang ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
-                        {lang}
-                      </button>
-                    ))}
+            {showLanguage && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                {editing ? (
+                  <div className="space-y-1.5">
+                    <span className="text-muted-foreground">{t("appointments.language")}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {LANGUAGES.map((lang) => (
+                        <button key={lang} type="button" onClick={() => set("language", lang)}
+                          className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.language === lang ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Field label={t("appointments.language")} value={a.language as string} />
-              )}
-            </div>
+                ) : (
+                  <Field label={t("appointments.language")} value={a.language as string} />
+                )}
+              </div>
+            )}
 
             {/* Interpreter Type */}
             <div className="px-6 py-2.5 even:bg-muted/40">
@@ -509,10 +530,22 @@ export function AppointmentDetailPage() {
 
       {a.status === "pending_offer" && (
         <Card>
-          <CardHeader><CardTitle>{t("appointments.select_interpreters")}</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>{t("appointments.select_interpreters")}</CardTitle>
+            {cityFilterApplied && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("appointments.city_filter_active").replace("{{city}}", clinicCityDisplay ?? "")}
+              </p>
+            )}
+            {cityFilterNoMatch && (
+              <p className="text-xs text-amber-600 mt-1">
+                {t("appointments.city_filter_no_match").replace("{{city}}", clinicCityDisplay ?? "")}
+              </p>
+            )}
+          </CardHeader>
           <CardContent className="space-y-4">
             <InterpreterSearch
-              interpreters={(interpreters?.data ?? []) as Array<Record<string, unknown>>}
+              interpreters={interpretersForOffer}
               offers={(a.offers as Array<Record<string, unknown>>) ?? []}
               excludedFromClinic={excludedFromClinic}
               selectedInterpreters={selectedInterpreters}
@@ -963,6 +996,28 @@ function InterpreterSearch({
       </div>
     </>
   );
+}
+
+/** Best-effort city extraction from a US address string like
+ *  "Street, City, CA, 93940" or "Street, City, IL 62701" */
+function extractCityFromAddress(address: string | null | undefined): string | null {
+  if (!address) return null;
+  const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  const last = parts[parts.length - 1];
+  // "IL 62701" or "CA 93940" — state + zip combined
+  if (/^[A-Za-z]{2}\s+\d{5}(-\d{4})?$/.test(last)) {
+    return parts[parts.length - 2] ?? null;
+  }
+  // Pure zip "93940"
+  if (/^\d{5}(-\d{4})?$/.test(last) && parts.length >= 3) {
+    return parts[parts.length - 3] ?? null;
+  }
+  // State-only last part (e.g. "California" or "CA")
+  if (/^[A-Za-z]+$/.test(last) && parts.length >= 2) {
+    return parts[parts.length - 2] ?? null;
+  }
+  return null;
 }
 
 function InlineRow({ label, children }: { label: string; children: React.ReactNode }) {

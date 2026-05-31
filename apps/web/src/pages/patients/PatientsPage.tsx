@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useShowLanguage } from "../../hooks/useSettings.js";
 import { usePatients, useCreatePatient } from "../../hooks/usePatients.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
@@ -17,6 +18,7 @@ import { formatPhone } from "../../lib/phone.js";
 export function PatientsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const showLanguage = useShowLanguage();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", email: "", preferred_language: "" });
@@ -128,7 +130,7 @@ export function PatientsPage() {
               {([
                 { key: "name", label: t("patients.name") },
                 { key: "email", label: t("patients.email") },
-                { key: "preferred_language", label: t("patients.preferred_language") },
+                ...(showLanguage ? [{ key: "preferred_language" as const, label: t("patients.preferred_language") }] : []),
               ] as const).map(({ key, label }) => (
                 <div key={key} className="space-y-1">
                   <Label>{label}</Label>

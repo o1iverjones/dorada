@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +14,7 @@ import { PhoneInput } from "../../components/ui/PhoneInput.js";
 import { Label } from "../../components/ui/label.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { toast } from "../../hooks/use-toast.js";
+import { X } from "lucide-react";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -29,6 +31,7 @@ const schema = z.object({
   payment_method: z.string().optional(),
   emergency_contact_name: z.string().optional(),
   emergency_contact_phone: z.string().optional(),
+  preferred_cities: z.array(z.string()).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -42,10 +45,23 @@ export function NewInterpreterPage() {
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { type: "qualified", languages: [] },
+    defaultValues: { type: "qualified", languages: [], preferred_cities: [] },
   });
 
   const selectedLangs = watch("languages") ?? [];
+  const preferredCities = watch("preferred_cities") ?? [];
+  const [cityInput, setCityInput] = useState("");
+
+  function addCity() {
+    const city = cityInput.trim();
+    if (!city || preferredCities.includes(city)) return;
+    setValue("preferred_cities", [...preferredCities, city]);
+    setCityInput("");
+  }
+
+  function removeCity(city: string) {
+    setValue("preferred_cities", preferredCities.filter((c) => c !== city));
+  }
 
   function toggleLanguage(lang: string) {
     setValue(
@@ -65,6 +81,7 @@ export function NewInterpreterPage() {
         city: rest.city || undefined,
         state: rest.state || undefined,
         zip_code: rest.zip_code || undefined,
+        preferred_cities: rest.preferred_cities ?? [],
       };
       const created = await create.mutateAsync(payload) as { id: string };
       toast({ title: t("interpreters.created") });
@@ -131,6 +148,31 @@ export function NewInterpreterPage() {
                 <PhoneInput value={field.value ?? ""} onChange={field.onChange} />
               )} />
             </F>
+
+            <div className="col-span-full space-y-2">
+              <Label>{t("interpreters.preferred_cities")}</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={cityInput}
+                  onChange={(e) => setCityInput(e.target.value)}
+                  placeholder={t("interpreters.preferred_cities_placeholder")}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCity(); } }}
+                />
+                <Button type="button" variant="outline" onClick={addCity}>{t("common.add")}</Button>
+              </div>
+              {preferredCities.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {preferredCities.map((city) => (
+                    <span key={city} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                      {city}
+                      <button type="button" onClick={() => removeCity(city)} className="ml-1 text-muted-foreground hover:text-foreground">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="col-span-full space-y-2">
               <Label>{t("interpreters.languages")}</Label>

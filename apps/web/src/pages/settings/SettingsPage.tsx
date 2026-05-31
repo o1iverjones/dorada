@@ -288,6 +288,27 @@ export function SettingsPage() {
               </Button>
             )}
           </div>
+          {hasPermission("manage_system_settings") && (
+            <div className="border-t pt-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.show_language")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.show_language_description")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={((settings as Record<string, unknown>)?.show_language ?? true) as boolean}
+                onClick={() => update.mutate({ show_language: !(((settings as Record<string, unknown>)?.show_language) ?? true) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

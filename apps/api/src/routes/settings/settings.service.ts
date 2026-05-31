@@ -30,6 +30,7 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
     },
     timezone: settings?.timezone ?? "America/Los_Angeles",
     allow_manual_confirm: settings?.allow_manual_confirm ?? false,
+    show_language: settings?.show_language ?? true,
     languages,
     appointment_types: appointmentTypes,
   };
@@ -50,6 +51,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       } : {}),
       ...(body.timezone ? { timezone: body.timezone } : {}),
       ...(body.allow_manual_confirm !== undefined ? { allow_manual_confirm: body.allow_manual_confirm } : {}),
+      ...(body.show_language !== undefined ? { show_language: body.show_language } : {}),
     },
     create: {
       organization_id: organizationId,
@@ -60,6 +62,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       follow_up_max_reminders: body.follow_up_config?.max_reminders ?? 2,
       timezone: body.timezone ?? "America/Los_Angeles",
       allow_manual_confirm: body.allow_manual_confirm ?? false,
+      show_language: body.show_language ?? true,
     },
   });
 

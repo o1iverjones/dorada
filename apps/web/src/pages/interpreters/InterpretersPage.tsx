@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
@@ -16,11 +16,26 @@ export function InterpretersPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
 
-  const params: Record<string, string> = { limit: "100" };
-  if (search) params.search = search;
+  const params: Record<string, string> = { limit: "500" };
+  if (showInactive) params.include_inactive = "true";
 
   const { data, isLoading } = useInterpreters(params);
+
+  const allInterpreters = (data?.data ?? []) as Array<{ id: string } & Record<string, unknown>>;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allInterpreters;
+    return allInterpreters.filter((i) => {
+      const nameMatch = (i.name as string)?.toLowerCase().includes(q);
+      const cityMatch = ((i.preferred_cities as string[] | undefined) ?? []).some((c) =>
+        c.toLowerCase().includes(q),
+      );
+      return nameMatch || cityMatch;
+    });
+  }, [allInterpreters, search]);
 
   const columns = [
     {
@@ -55,20 +70,37 @@ export function InterpretersPage() {
           </Button>
         }
       />
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-4">
         <Input
           placeholder={t("common.search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground select-none">
+          <div
+            role="switch"
+            aria-checked={showInactive}
+            onClick={() => setShowInactive((v) => !v)}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${
+              showInactive ? "bg-primary" : "bg-input"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+                showInactive ? "translate-x-4" : "translate-x-0"
+              }`}
+            />
+          </div>
+          {t("interpreters.show_inactive")}
+        </label>
       </div>
       {isLoading ? (
         <LoadingSpinner />
       ) : (
         <DataTable
           columns={columns as never}
-          data={(data?.data ?? []) as Array<{ id: string } & Record<string, unknown>>}
+          data={filtered}
           onRowClick={(row) => navigate(`/interpreters/${row.id}`)}
           emptyMessage={t("interpreters.empty")}
         />

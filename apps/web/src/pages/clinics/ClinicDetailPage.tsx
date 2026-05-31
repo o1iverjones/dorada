@@ -69,6 +69,9 @@ export function ClinicDetailPage() {
     setForm({
       name: (clinic.name as string) ?? "",
       address: (clinic.address as string) ?? "",
+      city: (clinic.city as string) ?? "",
+      state: (clinic.state as string) ?? "",
+      zip_code: (clinic.zip_code as string) ?? "",
       phone: formatPhoneInput((clinic.phone as string) ?? ""),
       primary_contact_name: contact?.name ?? "",
       primary_contact_email: contact?.email ?? "",
@@ -164,7 +167,7 @@ export function ClinicDetailPage() {
     }
   }
 
-  const fields = ["name", "address", "primary_contact_name", "primary_contact_email"] as const;
+  const fields = ["name", "address", "city", "state", "zip_code", "primary_contact_name", "primary_contact_email"] as const;
   const interpreterList = (allInterpreters?.data ?? []) as Array<{ id: string; name: string; type: string }>;
 
   return (
@@ -220,6 +223,18 @@ export function ClinicDetailPage() {
                   <p className="font-medium">{clinic.address as string ?? "—"}</p>
                 </div>
                 <div>
+                  <p className="text-muted-foreground">{t("clinics.city")}</p>
+                  <p className="font-medium">{clinic.city as string ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">{t("clinics.state")}</p>
+                  <p className="font-medium">{clinic.state as string ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">{t("clinics.zip_code")}</p>
+                  <p className="font-medium">{clinic.zip_code as string ?? "—"}</p>
+                </div>
+                <div>
                   <p className="text-muted-foreground">{t("clinics.phone")}</p>
                   <p className="font-medium">{formatPhone(clinic.phone as string)}</p>
                 </div>
@@ -242,22 +257,6 @@ export function ClinicDetailPage() {
           parking={clinic.parking as string | null}
         />
       </div>
-
-      <Card>
-        <CardHeader><CardTitle>{t("clinics.billing_config")}</CardTitle></CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
-            <div>
-              <p className="text-muted-foreground">{t("clinics.billing_model")}</p>
-              <p className="font-medium">{(clinic.billing as Record<string, unknown>)?.model as string ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">{t("clinics.billing_rate")}</p>
-              <p className="font-medium">{(clinic.billing as Record<string, unknown>)?.rate ? `$${(clinic.billing as Record<string, unknown>).rate}` : "—"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Excluded Interpreters */}
       <Card>

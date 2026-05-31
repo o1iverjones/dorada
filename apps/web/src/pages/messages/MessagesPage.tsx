@@ -4,6 +4,8 @@ import type { Socket } from "socket.io-client";
 import { getSocket } from "../../lib/socket.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConversations, useMessages, useSendMessage } from "../../hooks/useMessages.js";
+import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { formatInTz } from "../../lib/timezone.js";
 import { api } from "../../lib/api.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
@@ -31,6 +33,7 @@ interface Conversation {
 
 export function MessagesPage() {
   const { t } = useTranslation();
+  const tz = useOrgTimezone();
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -255,7 +258,7 @@ export function MessagesPage() {
                     >
                       <p>{msg.body}</p>
                       <p className={cn("mt-1 text-xs", msg.sender_type === "admin" ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                        {new Date(msg.sent_at).toLocaleTimeString()}
+                        {formatInTz(msg.sent_at, { hour: "2-digit", minute: "2-digit" }, tz)}
                       </p>
                     </div>
                   </div>

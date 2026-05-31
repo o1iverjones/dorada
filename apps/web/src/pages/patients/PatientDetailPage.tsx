@@ -6,7 +6,7 @@ import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
 import { useInsuranceCompanies } from "../../hooks/useInsuranceCompanies.js";
 import { useAppointments } from "../../hooks/useAppointments.js";
-import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
@@ -62,6 +62,7 @@ export function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const tz = useOrgTimezone();
+  const showLanguage = useShowLanguage();
   const isMobile = useIsMobile();
   const { data, isLoading } = usePatient(id!);
   const navigate = useNavigate();
@@ -184,7 +185,7 @@ export function PatientDetailPage() {
         { key: "name", label: t("patients.name"), type: "text" },
         { key: "date_of_birth", label: t("appointments.dob"), type: "date" },
         { key: "email", label: t("patients.email"), type: "email" },
-        { key: "preferred_language", label: t("patients.preferred_language"), type: "text" },
+        ...(showLanguage ? [{ key: "preferred_language" as const, label: t("patients.preferred_language"), type: "text" }] : []),
       ] as const).map(({ key, label, type }) => (
         <div key={key} className="space-y-1">
           <Label>{label}</Label>
@@ -236,7 +237,7 @@ export function PatientDetailPage() {
                 [t("appointments.dob"), p.date_of_birth ? new Date(p.date_of_birth as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) : null],
                 [t("patients.phone"), formatPhone(p.phone as string)],
                 [t("patients.email"), p.email],
-                [t("patients.preferred_language"), p.preferred_language],
+                ...(showLanguage ? [[t("patients.preferred_language"), p.preferred_language]] : []),
                 [t("patients.preferred_interpreter"), preferredInterpreter?.name ?? null],
               ].map(([label, value]) => (
                 <div key={label as string} className="flex justify-between gap-4">
@@ -363,12 +364,12 @@ export function PatientDetailPage() {
 
       {/* Add / Edit claim dialog */}
       <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
-        <DialogContent>
-          <form onSubmit={(e) => { e.preventDefault(); handleClaimSave(); }}>
+        <DialogContent className="flex flex-col max-h-[90vh]">
+          <form onSubmit={(e) => { e.preventDefault(); handleClaimSave(); }} className="flex flex-col min-h-0 flex-1">
             <DialogHeader>
               <DialogTitle>{editingClaimId ? t("patients.edit_claim") : t("patients.add_claim")}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 py-4">
+            <div className="space-y-3 py-4 overflow-y-auto flex-1">
               <div className="space-y-1">
                 <Label>{t("patients.case_number")}</Label>
                 <Input

@@ -158,7 +158,7 @@ model Interpreter {
   emergency_contact_phone String?
   certificate_number      String?
   zip_code                String?
-  coverage_range_miles    Decimal?  @db.Decimal(8, 2)
+  preferred_cities        String[]  @default([])
   // "push" | "sms"
   follow_up_channel       String    @default("push")
   fcm_token               String?
@@ -205,6 +205,9 @@ model Clinic {
   organization_id       String
   name                  String
   address               String?
+  city                  String?
+  state                 String?
+  zip_code              String?
   location_lat          Float?
   location_lng          Float?
   parking               String?
@@ -343,7 +346,12 @@ model InsuranceCompany {
   organization_id String
   name            String
   phone           String?
+  fax             String?
   email           String?
+  address         String?
+  city            String?
+  state           String?
+  zip_code        String?
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
@@ -734,6 +742,7 @@ model SystemSettings {
   follow_up_max_reminders             Int      @default(2)
   timezone                            String   @default("America/Los_Angeles")
   allow_manual_confirm                Boolean  @default(false)
+  show_language                       Boolean  @default(true)
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
