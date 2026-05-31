@@ -316,21 +316,23 @@ export function CalendarPage() {
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <p className="text-base font-bold leading-tight">{patientName}</p>
+            <p className="text-base leading-tight truncate">
+              <span className="font-bold">{patientName}</span>
+              {poNumber && <span className="font-normal text-sm ml-2 opacity-75">{poNumber}</span>}
+            </p>
             <p className="text-sm font-medium mt-0.5">{timeStr} · {a.duration_minutes as number} min</p>
           </div>
           <span className="shrink-0 text-xs font-semibold capitalize px-2 py-0.5 rounded-full border border-current/30 bg-white/40">
             {status}
           </span>
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs">
           {showLanguage && language && <DayRow label={t("appointments.language")} value={language} />}
           {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
-          <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} />
+          <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} bold />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
-          {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} />}
+          {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} bold />}
           {physician && <DayRow label={t("appointments.provider")} value={physician} />}
-          {poNumber && <DayRow label={t("appointments.po_number")} value={poNumber} />}
         </div>
       </button>
     );
@@ -793,11 +795,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function DayRow({ label, value, italic }: { label: string; value: string; italic?: boolean }) {
+function DayRow({ label, value, italic, bold }: { label: string; value: string; italic?: boolean; bold?: boolean }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-current/60 font-normal">{label}</span>
-      <span className={`font-medium truncate ${italic ? "italic opacity-70" : ""}`}>{value}</span>
+    <div className="flex items-baseline gap-1.5 min-w-0">
+      <span className="text-current/60 font-normal shrink-0">{label}:</span>
+      <span className={`truncate ${bold ? "font-bold" : "font-medium"} ${italic ? "italic opacity-70" : ""}`}>{value}</span>
     </div>
   );
 }
