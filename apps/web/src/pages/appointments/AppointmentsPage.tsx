@@ -2,41 +2,57 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAppointments } from "../../hooks/useAppointments.js";
+import { useInterpreters } from "../../hooks/useInterpreters.js";
+import { useClinics } from "../../hooks/useClinics.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
 import { StatusBadge } from "../../components/shared/StatusBadge.js";
+import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
-import { Plus, Search, TriangleAlert } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
+import { Plus, TriangleAlert } from "lucide-react";
+
+const NOT_COMPLETED = "pending_offer,confirmed,in_progress,cancelled";
 
 export function AppointmentsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
   const [searchParams] = useSearchParams();
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "not_completed");
-  // dateFrom: open-ended "from this date onwards" (no date_to); dateExact: single-day filter (date_from = date_to)
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
-  const initialDateFrom = searchParams.get("date_from") && !searchParams.get("date_to")
-    ? searchParams.get("date_from")!
-    : !searchParams.get("date_from") ? todayStr : "";
-  const initialDateExact = searchParams.get("date_from") && searchParams.get("date_to") ? searchParams.get("date_from")! : "";
-  const [dateFrom, setDateFrom] = useState(initialDateFrom);
-  const [dateFilter, setDateFilter] = useState(initialDateExact);
 
-  const NOT_COMPLETED = "pending_offer,confirmed,in_progress,cancelled";
-  const params: Record<string, string> = { limit: "50" };
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+
+  const [dateFilter, setDateFilter] = useState(searchParams.get("date_from") ?? "");
+  const [interpreterFilter, setInterpreterFilter] = useState("");
+  const [clinicFilter, setClinicFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "not_completed");
+
+  const params: Record<string, string> = { limit: "100" };
   if (statusFilter === "not_completed") params.status = NOT_COMPLETED;
-  else if (statusFilter) params.status = statusFilter;
+  else if (statusFilter !== "all") params.status = statusFilter;
   if (dateFilter) { params.date_from = dateFilter; params.date_to = dateFilter; }
-  else if (dateFrom) { params.date_from = dateFrom; }
+  else { params.date_from = todayStr; }
+  if (interpreterFilter) params.interpreter_id = interpreterFilter;
+  if (clinicFilter !== "all") params.clinic_id = clinicFilter;
 
   const { data, isLoading } = useAppointments(params);
+  const { data: interpretersData } = useInterpreters({ limit: "500" });
+  const { data: clinicsData } = useClinics({ limit: "200" });
 
-  const STATUSES = ["pending_offer", "confirmed", "in_progress", "completed", "cancelled"];
+  const interpreterOptions = ((interpretersData?.data ?? []) as Array<{ id: string; name: string }>).map((i) => ({
+    value: i.id,
+    label: i.name,
+  }));
+  const clinicOptions = ((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({
+    value: c.id,
+    label: c.name,
+  }));
+
+  const hasFilters = !!(dateFilter || interpreterFilter || clinicFilter !== "all");
 
   const columns = [
     { key: "date_time", header: t("appointments.date_time"), render: (row: Record<string, unknown>) => formatInTz(row.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) },
@@ -73,36 +89,57 @@ export function AppointmentsPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        {dateFrom && (
-          <div className="flex items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-sm">
-            <span className="text-muted-foreground">From: <span className="font-medium text-foreground">{dateFrom}</span></span>
-            <button onClick={() => setDateFrom("")} className="ml-1 text-muted-foreground hover:text-foreground">✕</button>
-          </div>
-        )}
-        {dateFilter && (
-          <div className="flex items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1 text-sm">
-            <span className="text-muted-foreground">Date: <span className="font-medium text-foreground">{dateFilter}</span></span>
-            <button onClick={() => setDateFilter("")} className="ml-1 text-muted-foreground hover:text-foreground">✕</button>
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button variant={statusFilter === "not_completed" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("not_completed")}>
-            {t("appointments.not_completed")}
-          </Button>
-          <Button variant={statusFilter === "" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("")}>
-            {t("common.all")}
-          </Button>
-          {STATUSES.map((s) => (
-            <Button
-              key={s}
-              variant={statusFilter === s ? "default" : "outline"}
-              size="sm"
-              onClick={() => setStatusFilter(s)}
-            >
-              {s.replace(/_/g, " ")}
-            </Button>
-          ))}
+        {/* Date picker */}
+        <Input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          className="w-40"
+          title={t("appointments.date_time")}
+        />
+
+        {/* Interpreter filter */}
+        <div className="w-52">
+          <AutocompleteInput
+            options={interpreterOptions}
+            value={interpreterFilter}
+            onChange={setInterpreterFilter}
+            placeholder={t("appointments.filter_interpreter")}
+          />
         </div>
+
+        {/* Clinic filter */}
+        <div className="w-52">
+          <AutocompleteInput
+            options={clinicOptions}
+            value={clinicFilter === "all" ? "" : clinicFilter}
+            onChange={(v) => setClinicFilter(v || "all")}
+            placeholder={t("appointments.clinic")}
+          />
+        </div>
+
+        {/* Status dropdown */}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder={t("common.status")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="not_completed">{t("appointments.not_completed")}</SelectItem>
+            <SelectItem value="all">{t("common.all")}</SelectItem>
+            <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
+            <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
+            <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
+            <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
+            <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Clear filters */}
+        {hasFilters && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); }}>
+            {t("common.clear")}
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
