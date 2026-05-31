@@ -18,6 +18,7 @@ import {
 import { addMinutes, diffMinutes } from "@dorada/utils";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { distanceMiles } from "../../lib/geo.js";
+import { sendExpoPushNotifications } from "../../lib/push.js";
 
 async function logActivity(
   appointmentId: string,
@@ -445,6 +446,27 @@ export async function offerAppointment(
   const created = await Promise.all(offers);
   const names = created.map((o) => o.interpreter.name).join(", ");
   await logActivity(id, organizationId, "offer_sent", actor.name, actor.id, `Offered to: ${names}`, prisma, null, appt!.po_number);
+
+  // Send push notifications to each offered interpreter
+  const interpreterIds = created.map((o) => o.interpreter_id);
+  const tokens = await prisma.interpreter.findMany({
+    where: { id: { in: interpreterIds }, fcm_token: { not: null } },
+    select: { fcm_token: true },
+  });
+  const apptDate = new Date(appt!.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const messages = tokens
+    .map((t) => t.fcm_token!)
+    .filter((token) => token.startsWith("ExponentPushToken"))
+    .map((token) => ({
+      to: token,
+      title: "New Appointment Offer",
+      body: `You have a new appointment offer for ${apptDate}. Tap to view details.`,
+      data: { appointmentId: id, type: "offer" },
+      sound: "default" as const,
+      priority: "high" as const,
+    }));
+  await sendExpoPushNotifications(messages);
+
   return { offers: created };
 }
 
