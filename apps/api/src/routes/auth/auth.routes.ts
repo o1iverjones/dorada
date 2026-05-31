@@ -106,6 +106,28 @@ export default async function authRoutes(fastify: FastifyInstance) {
       if (!otp) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No pending OTP — request one first" } });
       return reply.send({ otp });
     });
+
+    // DELETE /auth/dev/reset/:phone — clears rate limit + OTP so you can retry immediately
+    fastify.delete("/dev/reset/:phone", async (request, reply) => {
+      const { phone } = request.params as { phone: string };
+      const normalized = phone.replace(/\D/g, "");
+      const last10 = normalized.slice(-10);
+      const interpreter = await fastify.prisma.interpreter.findFirst({
+        where: { phone: { endsWith: last10 }, is_active: true },
+        select: { phone: true },
+      });
+      const canonicalPhone = interpreter ? interpreter.phone.replace(/\D/g, "") : normalized;
+      await fastify.redis.del(
+        `otp:rate:${normalized}`,
+        `otp:rate:${canonicalPhone}`,
+        `otp:${canonicalPhone}`,
+        `otp:lock:${normalized}`,
+        `otp:lock:${canonicalPhone}`,
+        `otp:attempts:${normalized}`,
+        `otp:attempts:${canonicalPhone}`,
+      );
+      return reply.send({ cleared: true });
+    });
   }
 
   // POST /auth/admin/password/reset-request
