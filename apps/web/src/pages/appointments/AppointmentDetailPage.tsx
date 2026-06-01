@@ -956,9 +956,12 @@ function InterpreterSearch({
             const alreadyOffered = offers.some(
               (o) => o.interpreter_id === interp.id && o.status === "pending",
             );
+            const declined = offers.some(
+              (o) => o.interpreter_id === interp.id && o.status === "declined",
+            );
             const unavailable = interp.is_available === false;
             const excluded = excludedFromClinic.has(interp.id as string);
-            const disabled = alreadyOffered || unavailable || excluded;
+            const disabled = alreadyOffered || declined || unavailable || excluded;
             return (
               <label
                 key={interp.id as string}
@@ -978,15 +981,18 @@ function InterpreterSearch({
                     )
                   }
                 />
-                <span className="text-sm font-medium">{interp.name as string}</span>
+                <span className={`text-sm font-medium ${declined ? "line-through" : ""}`}>{interp.name as string}</span>
                 <span className="text-sm text-muted-foreground capitalize">{interp.type as string}</span>
                 {alreadyOffered && (
                   <span className="ml-auto text-xs text-muted-foreground">{t("appointments.offer_pending")}</span>
                 )}
-                {excluded && (
+                {declined && (
+                  <span className="ml-auto text-xs font-medium text-destructive">{t("appointments.offer_declined")}</span>
+                )}
+                {excluded && !declined && (
                   <span className="ml-auto text-xs font-medium text-destructive">{t("clinics.excluded_from_clinic")}</span>
                 )}
-                {unavailable && !alreadyOffered && !excluded && (
+                {unavailable && !alreadyOffered && !declined && !excluded && (
                   <span className="ml-auto text-xs font-medium text-amber-600">{t("appointments.unavailable")}</span>
                 )}
               </label>

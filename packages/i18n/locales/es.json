@@ -419,6 +419,7 @@
     "follow_up_dismissed": "Seguimiento descartado.",
     "pending_offers": "Ofertas pendientes",
     "offer_pending": "Esperando respuesta",
+    "offer_declined": "Rechazó",
     "manually_confirm": "Confirmar manualmente",
     "manually_confirmed": "Intérprete confirmado manualmente",
     "unavailable": "No disponible",

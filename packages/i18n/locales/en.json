@@ -419,6 +419,7 @@
     "follow_up_dismissed": "Follow-up dismissed.",
     "pending_offers": "Pending offers",
     "offer_pending": "Awaiting response",
+    "offer_declined": "Declined",
     "manually_confirm": "Manually confirm",
     "manually_confirmed": "Interpreter manually confirmed",
     "unavailable": "Unavailable",
