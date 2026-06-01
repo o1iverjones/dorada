@@ -347,6 +347,7 @@ export function DashboardPage() {
                               in_progress:   "bg-blue-100 border-blue-300 text-blue-800",
                               completed:     "bg-green-100 border-green-300 text-green-800",
                               cancelled:     "bg-red-100 border-red-300 text-red-800",
+                              declined:      "bg-gray-100 border-red-400 text-red-700",
                             };
                             const colorClass = statusColors[status] ?? "bg-muted border-gray-300 text-muted-foreground";
                             return (

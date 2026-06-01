@@ -25,6 +25,7 @@ export const AppointmentStatusSchema = z.enum([
   "in_progress",
   "completed",
   "cancelled",
+  "declined",
 ]);
 
 export const InterpreterTypeSchema = z.enum(["certified", "qualified"]);

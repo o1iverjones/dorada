@@ -22,6 +22,7 @@ const STATUS_COLORS: Record<string, string> = {
   in_progress: "bg-blue-100 border-blue-300 text-blue-800",
   completed: "bg-green-100 border-green-300 text-green-800",
   cancelled: "bg-red-100 border-red-300 text-red-800",
+  declined: "bg-gray-100 border-red-400 text-red-700",
 };
 
 const BLOCK_COLORS = [
@@ -231,8 +232,8 @@ export function CalendarPage() {
 
   function apptColorClass(a: Record<string, unknown>) {
     const status = a.status as string;
-    // Cancelled/completed always use their status colour regardless of interpreter
-    if (status === "cancelled" || status === "completed") {
+    // Cancelled/completed/declined always use their status colour regardless of interpreter
+    if (status === "cancelled" || status === "completed" || status === "declined") {
       return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
     }
     const hasInterpreter = !!(a.interpreter as Record<string, unknown> | null)?.id;
@@ -452,6 +453,7 @@ export function CalendarPage() {
             <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
             <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
             <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
+            <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
           </SelectContent>
         </Select>
 

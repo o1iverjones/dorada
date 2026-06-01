@@ -16,7 +16,7 @@ import { Input } from "../../components/ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { Plus, TriangleAlert } from "lucide-react";
 
-const NOT_COMPLETED = "pending_offer,confirmed,in_progress,cancelled";
+const NOT_COMPLETED = "pending_offer,confirmed,in_progress,cancelled,declined";
 
 export function AppointmentsPage() {
   const { t } = useTranslation();
@@ -132,6 +132,7 @@ export function AppointmentsPage() {
             <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
             <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
             <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
+            <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
           </SelectContent>
         </Select>
 

@@ -462,6 +462,7 @@
     "status_in_progress": "In Progress",
     "status_completed": "Completed",
     "status_cancelled": "Cancelled",
+    "status_declined": "Declined",
     "month": "Month",
     "week": "Week",
     "day": "Day",

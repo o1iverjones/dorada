@@ -445,6 +445,12 @@ export async function offerAppointment(
 
   const created = await Promise.all(offers);
   const names = created.map((o) => o.interpreter.name).join(", ");
+
+  // If the appointment was declined (all prior offers rejected), reset it to pending_offer
+  if (created.length > 0 && appt!.status === "declined") {
+    await prisma.appointment.update({ where: { id }, data: { status: "pending_offer" } });
+  }
+
   await logActivity(id, organizationId, "offer_sent", actor.name, actor.id, `Offered to: ${names}`, prisma, null, appt!.po_number);
 
   // Send push notifications to each offered interpreter
@@ -559,6 +565,17 @@ export async function declineOffer(
     where: { id: offerId },
     data: { status: "declined", responded_at: new Date() },
   });
+
+  // If no other pending offers exist, flip the appointment status to "declined"
+  const remainingPending = await prisma.appointmentOffer.count({
+    where: { appointment_id: appointmentId, status: "pending" },
+  });
+  if (remainingPending === 0) {
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: "declined" },
+    });
+  }
 
   return { offer: { id: offerId, status: "declined" } };
 }

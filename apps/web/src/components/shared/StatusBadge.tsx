@@ -6,6 +6,7 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
   pending_offer: "warning",
   in_progress: "default",
   cancelled: "destructive",
+  declined: "destructive",
   no_show: "destructive",
   pending_review: "warning",
   pending_email_review: "warning",
