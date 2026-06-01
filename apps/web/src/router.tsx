@@ -34,7 +34,6 @@ import { RolesPage } from "./pages/admin-users/RolesPage.js";
 import { SettingsPage } from "./pages/settings/SettingsPage.js";
 import { LocalizationPage } from "./pages/settings/LocalizationPage.js";
 import { AccountPage } from "./pages/account/AccountPage.js";
-import { ImportPage } from "./pages/import/ImportPage.js";
 import { IconGalleryPage } from "./pages/icons/IconGalleryPage.js";
 import { InvoicesPage } from "./pages/invoices/InvoicesPage.js";
 import { InsuranceCompaniesPage } from "./pages/insurance-companies/InsuranceCompaniesPage.js";
@@ -157,10 +156,6 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       {
         path: "settings/localization",
         element: <PermissionGuard permission="manage_system_settings"><LocalizationPage /></PermissionGuard>,
-      },
-      {
-        path: "import",
-        element: <PermissionGuard permission="manage_interpreters"><ImportPage /></PermissionGuard>,
       },
       {
         path: "invoices",

@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils.js";
 import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
   ShieldCheck, UserSquare2, BarChart3, MessageSquare, Mail,
-  Settings, User, Upload, Receipt, Landmark, Menu, X, Bell,
+  Settings, User, Receipt, Landmark, Menu, X, Bell,
   type LucideIcon,
 } from "lucide-react";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
@@ -64,7 +64,6 @@ export function Sidebar() {
     { label: t("nav.email_intake"), to: "/email-intake", icon: Mail, permission: "manage_appointments" },
     { label: t("nav.admin_users"), to: "/admin-users", icon: Users, permission: "manage_admin_users" },
     { label: t("nav.settings"), to: "/settings", icon: Settings, permission: "manage_system_settings" },
-    { label: "CSV Import", to: "/import", icon: Upload, permission: "manage_interpreters" },
   ];
 
   const visible = navItems.filter(
