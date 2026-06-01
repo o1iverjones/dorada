@@ -102,13 +102,18 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("dashboard.welcome", { name: user?.name })} />
+      <PageHeader title={t("nav.dashboard")} />
 
-      {/* Clock */}
-      <div className="flex justify-end">
+      {/* Greeting + Clock */}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xl font-semibold">{t("dashboard.welcome", { name: user?.name })}</p>
+        </div>
+        <div className="flex justify-end">
         <div className="text-right">
           <p className="text-3xl font-semibold tabular-nums">{formatInTz(now, { hour: "numeric", minute: "2-digit" }, tz)}</p>
           <p className="text-sm text-muted-foreground">{formatInTz(now, { weekday: "long", month: "long", day: "numeric" }, tz)}</p>
+        </div>
         </div>
       </div>
 
