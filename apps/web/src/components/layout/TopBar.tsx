@@ -31,7 +31,7 @@ export function TopBar() {
       {/* Left: page title + actions portal target */}
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {title && (
-          <h1 className="truncate text-xl font-semibold tracking-tight">
+          <h1 className="truncate text-2xl font-semibold tracking-tight">
             {title}
           </h1>
         )}

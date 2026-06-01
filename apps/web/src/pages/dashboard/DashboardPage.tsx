@@ -9,6 +9,7 @@ import { formatInTz } from "../../lib/timezone.js";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
 import { getSocket } from "../../lib/socket.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
+import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Badge } from "../../components/ui/badge.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Calendar, Clock, AlertTriangle, Bell, ClipboardList, Receipt, CheckCheck } from "lucide-react";
@@ -101,14 +102,13 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t("dashboard.welcome", { name: user?.name })}</h1>
-          <p className="text-muted-foreground">{t("dashboard.subtitle")}</p>
-        </div>
+      <PageHeader title={t("dashboard.welcome", { name: user?.name })} />
+
+      {/* Clock */}
+      <div className="flex justify-end">
         <div className="text-right">
           <p className="text-3xl font-semibold tabular-nums">{formatInTz(now, { hour: "numeric", minute: "2-digit" }, tz)}</p>
-          <p className="text-sm text-muted-foreground">(PST) {formatInTz(now, { weekday: "long", month: "long", day: "numeric" }, tz)}</p>
+          <p className="text-sm text-muted-foreground">{formatInTz(now, { weekday: "long", month: "long", day: "numeric" }, tz)}</p>
         </div>
       </div>
 
