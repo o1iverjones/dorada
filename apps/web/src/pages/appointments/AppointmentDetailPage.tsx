@@ -570,7 +570,7 @@ export function AppointmentDetailPage() {
         </Card>
       )}
 
-      <Card>
+      {(a.status === "confirmed" || a.status === "in_progress" || a.status === "completed") && <Card>
         <CardHeader>
           <CardTitle>{t("appointments.time_tracking")}</CardTitle>
         </CardHeader>
@@ -728,7 +728,7 @@ export function AppointmentDetailPage() {
             </>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {((mediaData as Array<Record<string, unknown>>) ?? []).length > 0 && (
         <Card>
