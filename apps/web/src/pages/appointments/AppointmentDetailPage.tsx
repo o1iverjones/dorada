@@ -65,9 +65,7 @@ export function AppointmentDetailPage() {
 
   useEffect(() => {
     const socket = getSocket();
-    console.log("[Socket] registering appointment:offer_updated listener for", id, "connected:", socket.connected);
     const handler = (data: { appointmentId: string }) => {
-      console.log("[Socket] appointment:offer_updated received", data);
       if (data.appointmentId === id) refetch();
     };
     socket.on("appointment:offer_updated", handler);
