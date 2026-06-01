@@ -10,7 +10,7 @@ import { generateReport, getReportStatus, listReports } from "./reports.service.
 import { getQueues } from "../../workers/queues.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
 
-const LOCAL_REPORTS_DIR = path.join(os.tmpdir(), "pulpito-reports");
+const LOCAL_REPORTS_DIR = path.join(os.tmpdir(), "dorada-reports");
 
 export default async function reportRoutes(fastify: FastifyInstance) {
   const preHandler = [authenticateAdmin, requirePermission("view_reports")];
