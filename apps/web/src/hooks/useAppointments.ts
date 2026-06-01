@@ -14,6 +14,7 @@ export function useAppointment(id: string) {
     queryKey: ["appointments", id],
     queryFn: () => api.get(`/appointments/${id}`),
     enabled: !!id,
+    refetchInterval: 5000, // poll every 5s so offer status updates without refresh
   });
 }
 
