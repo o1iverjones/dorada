@@ -20,7 +20,7 @@ const schema = z.object({
   name: z.string().min(1),
   phone: z.string().min(1),
   email: z.string().email().optional().or(z.literal("")),
-  type: z.enum(["certified", "qualified"]),
+  type: z.enum(["qualified", "certified", "qualified_and_certified"]),
   languages: z.array(z.string()).min(1),
   address_line1: z.string().optional(),
   address_line2: z.string().optional(),
@@ -28,6 +28,7 @@ const schema = z.object({
   state: z.string().optional(),
   zip_code: z.string().optional(),
   pay_rate: z.coerce.number().optional(),
+  pay_rate_certified: z.coerce.number().optional(),
   payment_method: z.string().optional(),
   emergency_contact_name: z.string().optional(),
   emergency_contact_phone: z.string().optional(),
@@ -50,6 +51,8 @@ export function NewInterpreterPage() {
 
   const selectedLangs = watch("languages") ?? [];
   const preferredCities = watch("preferred_cities") ?? [];
+  const watchedType = watch("type");
+  const isCertifiedType = watchedType === "certified" || watchedType === "qualified_and_certified";
   const [cityInput, setCityInput] = useState("");
 
   function addCity() {
@@ -113,14 +116,25 @@ export function NewInterpreterPage() {
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="certified">{t("interpreters.certified")}</SelectItem>
                     <SelectItem value="qualified">{t("interpreters.qualified")}</SelectItem>
+                    <SelectItem value="certified">{t("interpreters.certified")}</SelectItem>
+                    <SelectItem value="qualified_and_certified">{t("interpreters.qualified_and_certified")}</SelectItem>
                   </SelectContent>
                 </Select>
               )} />
             </F>
-            <F label={t("interpreters.pay_rate")} error={errors.pay_rate?.message}>
+            <F label={t("interpreters.pay_rate_qualified")} error={errors.pay_rate?.message}>
               <Input type="number" step="0.01" min={0} {...register("pay_rate")} />
+            </F>
+            <F label={t("interpreters.pay_rate_certified")} error={errors.pay_rate_certified?.message}>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                disabled={!isCertifiedType}
+                className={!isCertifiedType ? "opacity-40 cursor-not-allowed" : ""}
+                {...register("pay_rate_certified")}
+              />
             </F>
             <F label={t("interpreters.payment_method")} error={errors.payment_method?.message}>
               <Input {...register("payment_method")} />

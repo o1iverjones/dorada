@@ -153,6 +153,7 @@ model Interpreter {
   location_lat            Float?
   location_lng            Float?
   pay_rate                Decimal?  @db.Decimal(10, 2)
+  pay_rate_certified      Decimal?  @db.Decimal(10, 2)
   payment_method          String?
   address_line1           String?
   address_line2           String?
@@ -161,6 +162,7 @@ model Interpreter {
   emergency_contact_name  String?
   emergency_contact_phone String?
   certificate_number      String?
+  certificate_date        DateTime?
   zip_code                String?
   preferred_cities        String[]  @default([])
   // "push" | "sms"

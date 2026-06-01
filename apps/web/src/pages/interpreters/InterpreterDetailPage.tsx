@@ -45,6 +45,8 @@ export function InterpreterDetailPage() {
       email: interp.email ?? "",
       type: interp.type,
       pay_rate: interp.pay_rate,
+      pay_rate_certified: interp.pay_rate_certified,
+      certificate_date: (interp.certificate_date as string | null | undefined) ?? "",
       notes: interp.notes ?? "",
       emergency_contact_name: ec?.name ?? "",
       emergency_contact_phone: formatPhoneInput(ec?.phone as string ?? ""),
@@ -68,6 +70,8 @@ export function InterpreterDetailPage() {
       if (f.type) payload.type = f.type;
       payload.email = (f.email as string)?.trim() || null;
       if (f.pay_rate !== "" && f.pay_rate != null) payload.pay_rate = Number(f.pay_rate);
+      payload.pay_rate_certified = (f.pay_rate_certified !== "" && f.pay_rate_certified != null) ? Number(f.pay_rate_certified) : null;
+      payload.certificate_date = (f.certificate_date as string)?.trim() || null;
       payload.notes = (f.notes as string)?.trim() || null;
       payload.certificate_number = (f.certificate_number as string)?.trim() || null;
       payload.address_line1 = (f.address_line1 as string)?.trim() || null;
@@ -182,15 +186,18 @@ export function InterpreterDetailPage() {
                     value={editForm.type as string ?? ""}
                     onChange={(e) => setEditForm(s => ({ ...s, type: e.target.value }))}
                   >
-                    <option value="certified">{t("interpreters.certified")}</option>
                     <option value="qualified">{t("interpreters.qualified")}</option>
+                    <option value="certified">{t("interpreters.certified")}</option>
+                    <option value="qualified_and_certified">{t("interpreters.qualified_and_certified")}</option>
                   </select>
                 </div>
               </div>
             ) : (
               <div className="space-y-3 text-sm">
                 <Field label={t("interpreters.type")} value={
-                  <Badge variant={interp.type === "certified" ? "default" : "secondary"}>{interp.type as string}</Badge>
+                  <Badge variant={interp.type === "qualified" ? "secondary" : "default"}>
+                    {t(`interpreters.${interp.type as string}`, { defaultValue: interp.type as string })}
+                  </Badge>
                 } />
                 <Field label={t("interpreters.phone")} value={formatPhone(interp.phone as string)} />
                 <Field label={t("interpreters.email")} value={interp.email as string} />
@@ -209,18 +216,34 @@ export function InterpreterDetailPage() {
           <CardHeader><CardTitle>{t("interpreters.compensation")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
-              <div className="space-y-1">
-                <Label>{t("interpreters.pay_rate")}</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editForm.pay_rate as number ?? ""}
-                  onChange={(e) => setEditForm(s => ({ ...s, pay_rate: parseFloat(e.target.value) }))}
-                />
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("interpreters.pay_rate_qualified")}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editForm.pay_rate as number ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, pay_rate: parseFloat(e.target.value) }))}
+                  />
+                </div>
+                {/* Pay rate Certified — enabled for certified and qualified_and_certified */}
+                <div className={`space-y-1 ${editForm.type !== "certified" && editForm.type !== "qualified_and_certified" ? "opacity-40 pointer-events-none select-none" : ""}`}>
+                  <Label>{t("interpreters.pay_rate_certified")}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    disabled={editForm.type !== "certified" && editForm.type !== "qualified_and_certified"}
+                    value={editForm.pay_rate_certified as number ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, pay_rate_certified: parseFloat(e.target.value) }))}
+                  />
+                </div>
               </div>
             ) : (
               <>
-                <Field label={t("interpreters.pay_rate")} value={interp.pay_rate ? `$${interp.pay_rate}/hr` : t("interpreters.default_rate")} />
+                <Field label={t("interpreters.pay_rate_qualified")} value={interp.pay_rate ? `$${interp.pay_rate}/hr` : t("interpreters.default_rate")} />
+                {(interp.type === "certified" || interp.type === "qualified_and_certified") && (
+                  <Field label={t("interpreters.pay_rate_certified")} value={interp.pay_rate_certified ? `$${interp.pay_rate_certified}/hr` : t("interpreters.default_rate")} />
+                )}
                 <Field label={t("interpreters.payment_method")} value={interp.payment_method as string ?? "—"} />
               </>
             )}
@@ -393,30 +416,53 @@ export function InterpreterDetailPage() {
         </Card>
 
         {/* Use editForm.type in edit mode so the card activates immediately when the user changes type */}
-        <Card className={(editing ? editForm.type : interp.type) !== "certified" ? "opacity-40 pointer-events-none select-none" : ""}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {t("interpreters.certification")}
-              {(editing ? editForm.type : interp.type) !== "certified" && (
-                <span className="text-xs font-normal text-muted-foreground">({t("interpreters.certified_only")})</span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {editing ? (
-              <div className="space-y-1">
-                <Label>{t("interpreters.certificate_number")}</Label>
-                <Input
-                  value={editForm.certificate_number as string ?? ""}
-                  onChange={(e) => setEditForm(s => ({ ...s, certificate_number: e.target.value }))}
-                  placeholder={t("common.optional")}
-                />
-              </div>
-            ) : (
-              <Field label={t("interpreters.certificate_number")} value={interp.certificate_number as string ?? "—"} />
-            )}
-          </CardContent>
-        </Card>
+        {(() => {
+          const activeType = (editing ? editForm.type : interp.type) as string;
+          const isCertifiedType = activeType === "certified" || activeType === "qualified_and_certified";
+          return (
+            <Card className={!isCertifiedType ? "opacity-40 pointer-events-none select-none" : ""}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {t("interpreters.certification")}
+                  {!isCertifiedType && (
+                    <span className="text-xs font-normal text-muted-foreground">({t("interpreters.certified_only")})</span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {editing ? (
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label>{t("interpreters.certificate_number")}</Label>
+                      <Input
+                        value={editForm.certificate_number as string ?? ""}
+                        onChange={(e) => setEditForm(s => ({ ...s, certificate_number: e.target.value }))}
+                        placeholder={t("common.optional")}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>{t("interpreters.certificate_date")}</Label>
+                      <Input
+                        type="date"
+                        value={editForm.certificate_date as string ?? ""}
+                        onChange={(e) => setEditForm(s => ({ ...s, certificate_date: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Field label={t("interpreters.certificate_number")} value={interp.certificate_number as string ?? "—"} />
+                    <Field label={t("interpreters.certificate_date")} value={
+                      interp.certificate_date
+                        ? new Date(interp.certificate_date as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
+                        : "—"
+                    } />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {(editing || interp.notes) && (
           <Card>

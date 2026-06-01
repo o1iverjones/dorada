@@ -29,7 +29,7 @@ export const AppointmentStatusSchema = z.enum([
   "declined",
 ]);
 
-export const InterpreterTypeSchema = z.enum(["certified", "qualified"]);
+export const InterpreterTypeSchema = z.enum(["qualified", "certified", "qualified_and_certified"]);
 
 export const PayModelSchema = z.enum(["hourly", "flat", "flat_rate"]);
 
