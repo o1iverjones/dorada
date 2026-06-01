@@ -977,7 +977,11 @@ function InterpreterSearch({
               <label
                 key={interp.id as string}
                 className={`flex items-center gap-3 rounded-md border p-3 ${
-                  disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                  declined
+                    ? "cursor-not-allowed bg-red-50 border-red-200"
+                    : disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
                 }`}
               >
                 <input
@@ -992,13 +996,13 @@ function InterpreterSearch({
                     )
                   }
                 />
-                <span className={`text-sm font-medium ${declined ? "line-through" : ""}`}>{interp.name as string}</span>
+                <span className={`text-sm font-medium ${declined ? "line-through text-muted-foreground" : ""}`}>{interp.name as string}</span>
                 <span className="text-sm text-muted-foreground capitalize">{interp.type as string}</span>
                 {alreadyOffered && (
                   <span className="ml-auto text-xs text-muted-foreground">{t("appointments.offer_pending")}</span>
                 )}
                 {declined && (
-                  <span className="ml-auto text-sm font-bold text-destructive">{t("appointments.offer_declined")}</span>
+                  <span className="flex-1 text-center text-sm font-bold text-destructive">{t("appointments.offer_declined")}</span>
                 )}
                 {excluded && !declined && (
                   <span className="ml-auto text-xs font-medium text-destructive">{t("clinics.excluded_from_clinic")}</span>
