@@ -243,6 +243,10 @@ export function CalendarPage() {
       if (hasPendingOffer) return "bg-orange-100 border-orange-300 text-orange-900";
       return "bg-gray-100 border-gray-300 text-gray-500";
     }
+    // Confirmed + billing pending approval → blue
+    if (status === "confirmed" && (a.billing_approval_status as string) === "pending_approval") {
+      return "bg-blue-100 border-blue-400 text-blue-900";
+    }
     return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
   }
 
