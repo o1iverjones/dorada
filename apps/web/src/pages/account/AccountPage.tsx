@@ -137,6 +137,9 @@ export function AccountPage() {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+  const roleName = user?.role
+    ? typeof user.role === "object" ? user.role.name : user.role
+    : "";
 
   return (
     <div className="space-y-6">
@@ -179,7 +182,7 @@ export function AccountPage() {
             <div className="space-y-0.5">
               <p className="font-semibold text-base">{displayName}</p>
               <p className="text-sm text-muted-foreground">{profile?.email ?? user?.email}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+              <p className="text-xs text-muted-foreground capitalize">{roleName}</p>
             </div>
           </div>
 
