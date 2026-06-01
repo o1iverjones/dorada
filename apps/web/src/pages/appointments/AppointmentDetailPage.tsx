@@ -544,20 +544,25 @@ export function AppointmentDetailPage() {
 
       {(a.status === "unassigned" || a.status === "pending_offer" || a.status === "declined") && (
         <Card>
-          <CardHeader>
-            <CardTitle>{t("appointments.select_interpreters")}</CardTitle>
-            {cityFilterApplied && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("appointments.city_filter_active").replace("{{city}}", clinicCityDisplay ?? "")}
-              </p>
-            )}
-            {cityFilterNoMatch && (
-              <p className="text-xs text-amber-600 mt-1">
-                {t("appointments.city_filter_no_match").replace("{{city}}", clinicCityDisplay ?? "")}
-              </p>
-            )}
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <div>
+              <CardTitle>{t("appointments.select_interpreters")}</CardTitle>
+              {cityFilterApplied && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("appointments.city_filter_active").replace("{{city}}", clinicCityDisplay ?? "")}
+                </p>
+              )}
+              {cityFilterNoMatch && (
+                <p className="text-xs text-amber-600 mt-1">
+                  {t("appointments.city_filter_no_match").replace("{{city}}", clinicCityDisplay ?? "")}
+                </p>
+              )}
+            </div>
+            <Button onClick={handleOffer} disabled={offer.isPending || !selectedInterpreters.length} className="shrink-0">
+              {t("appointments.offer_to_interpreters")}
+            </Button>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <InterpreterSearch
               interpreters={interpretersForOffer}
               offers={(a.offers as Array<Record<string, unknown>>) ?? []}
@@ -566,9 +571,6 @@ export function AppointmentDetailPage() {
               setSelectedInterpreters={setSelectedInterpreters}
               t={t}
             />
-            <Button onClick={handleOffer} disabled={offer.isPending || !selectedInterpreters.length}>
-              {t("appointments.offer_to_interpreters")}
-            </Button>
           </CardContent>
         </Card>
       )}
