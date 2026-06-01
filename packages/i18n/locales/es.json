@@ -317,6 +317,8 @@
     "name": "Nombre completo",
     "email": "Correo electrónico",
     "role": "Rol",
+    "phone": "Número de teléfono",
+    "phone_ext": "Extensión",
     "language": "Idioma",
     "current_password": "Contraseña actual",
     "new_password": "Nueva contraseña",
@@ -329,7 +331,14 @@
     "logout_confirm_title": "Cerrar sesión",
     "logout_confirm_body": "¿Está seguro de que desea cerrar sesión?",
     "notification_preference": "Canal de notificación de seguimiento",
-    "follow_up_channel_hint": "¿Cómo desea recibir notificaciones sobre citas de seguimiento?"
+    "follow_up_channel_hint": "¿Cómo desea recibir notificaciones sobre citas de seguimiento?",
+    "session": "Sesión",
+    "change_avatar": "Cambiar foto de perfil",
+    "avatar_updated": "Foto de perfil actualizada.",
+    "notif_immediate_push": "Notificación push inmediata",
+    "notif_immediate_email": "Correo electrónico inmediato",
+    "notif_digest_email": "Resumen diario por correo",
+    "notif_queue_only": "Solo en cola (sin notificación)"
   },
   "admin_users": {
     "title": "Usuarios administradores",

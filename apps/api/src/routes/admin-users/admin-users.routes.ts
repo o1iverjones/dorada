@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { extname } from "path";
+import { randomUUID } from "crypto";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
@@ -22,6 +24,12 @@ const UpdateUserBody = z.object({
   password: z.string().min(10).optional(),
   role_id: z.string().uuid().optional(),
   is_active: z.boolean().optional(),
+});
+
+const UpdateProfileBody = z.object({
+  name: z.string().min(1).optional(),
+  phone: z.string().nullish(),
+  phone_ext: z.string().nullish(),
 });
 
 const CreateRoleBody = z.object({
@@ -72,5 +80,65 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
     const role = await createRole(body, payload.organization_id, fastify.prisma);
     await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: role.id, entityName: role.name, action: "role_created", adminId: payload.sub, adminName: payload.name ?? "Admin" });
     return reply.status(201).send(role);
+  });
+
+  // PATCH /admin-users/me/profile — update own profile (name, phone, phone_ext)
+  fastify.patch("/admin-users/me/profile", { preHandler: [authenticateAdmin] }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    const body = UpdateProfileBody.parse(req.body);
+    const user = await fastify.prisma.user.update({
+      where: { id: payload.sub },
+      data: {
+        ...(body.name ? { name: body.name } : {}),
+        phone: body.phone ?? null,
+        phone_ext: body.phone_ext ?? null,
+      },
+      select: { id: true, name: true, email: true, phone: true, phone_ext: true, profile_picture_url: true },
+    });
+    return reply.send(user);
+  });
+
+  // POST /admin-users/me/avatar — upload profile picture
+  fastify.post("/admin-users/me/avatar", { preHandler: [authenticateAdmin] }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    const data = await req.file({ limits: { fileSize: 5 * 1024 * 1024 } });
+    if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of data.file) chunks.push(chunk);
+    const buffer = Buffer.concat(chunks);
+
+    const ext = extname(data.filename || "") || (data.mimetype === "image/png" ? ".png" : data.mimetype === "image/webp" ? ".webp" : ".jpg");
+    const filename = `avatars/${payload.sub}/${randomUUID()}${ext}`;
+
+    // Store as a data URL or upload to GCS if configured
+    let publicUrl: string;
+    if (config.GCP_PROJECT_ID) {
+      const { uploadBuffer } = await import("../../integrations/gcs.js");
+      await uploadBuffer(filename, buffer, data.mimetype);
+      // Use a public GCS URL
+      publicUrl = `https://storage.googleapis.com/${config.GCS_BUCKET}/${filename}`;
+    } else {
+      // Dev fallback: store as base64 data URL
+      publicUrl = `data:${data.mimetype};base64,${buffer.toString("base64")}`;
+    }
+
+    const user = await fastify.prisma.user.update({
+      where: { id: payload.sub },
+      data: { profile_picture_url: publicUrl },
+      select: { id: true, profile_picture_url: true },
+    });
+
+    return reply.send(user);
+  });
+
+  // GET /admin-users/me — get current user's profile
+  fastify.get("/admin-users/me", { preHandler: [authenticateAdmin] }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    const user = await fastify.prisma.user.findUniqueOrThrow({
+      where: { id: payload.sub },
+      select: { id: true, name: true, email: true, phone: true, phone_ext: true, profile_picture_url: true },
+    });
+    return reply.send(user);
   });
 }

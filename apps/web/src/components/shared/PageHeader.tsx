@@ -1,25 +1,36 @@
-import { cn } from "../../lib/utils.js";
+import { useLayoutEffect, useRef } from "react";
+import { usePageHeader } from "../../contexts/PageHeaderContext.js";
 
 interface PageHeaderProps {
   title: React.ReactNode;
   description?: string;
   actions?: React.ReactNode;
+  /** @deprecated no longer needed — kept for API compatibility */
   className?: string;
 }
 
-export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
-  return (
-    <div className={cn(
-      "sticky top-0 z-20 -mx-6 px-6 -mt-6 pt-5 pb-4 mb-6",
-      "bg-background border-b border-border",
-      "flex items-center justify-between gap-4",
-      className,
-    )}>
-      <div>
-        <h1 className="text-[2em] font-bold tracking-tight leading-tight">{title}</h1>
-        {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
-      </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-    </div>
-  );
+/**
+ * PageHeader writes its title, description and actions into the
+ * PageHeaderContext so they render inside the sticky TopBar at the top of the
+ * page.  The component itself renders nothing in the page body.
+ *
+ * Using useLayoutEffect means the header updates synchronously after every
+ * render, so there is no visible flash of the old title.
+ */
+export function PageHeader({ title, description, actions }: PageHeaderProps) {
+  const { setHeader } = usePageHeader();
+  const propsRef = useRef({ title, description, actions });
+  propsRef.current = { title, description, actions };
+
+  // Run after every render so actions (which often change reference) stay current
+  useLayoutEffect(() => {
+    setHeader({ title: propsRef.current.title, description: propsRef.current.description, actions: propsRef.current.actions });
+  });
+
+  // Clear when page unmounts
+  useLayoutEffect(() => {
+    return () => setHeader({ title: "" });
+  }, [setHeader]);
+
+  return null;
 }

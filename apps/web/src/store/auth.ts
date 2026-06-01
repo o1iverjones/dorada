@@ -8,6 +8,9 @@ export interface AdminUser {
   role: string;
   permissions: string[];
   organization_id: string;
+  phone?: string | null;
+  phone_ext?: string | null;
+  profile_picture_url?: string | null;
 }
 
 interface AuthState {

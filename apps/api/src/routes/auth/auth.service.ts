@@ -171,7 +171,7 @@ export async function adminLogin(
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      admin: { id: user.id, name: user.name, email: user.email, role: { id: user.role.id, name: user.role.name }, permissions },
+      admin: { id: user.id, name: user.name, email: user.email, role: { id: user.role.id, name: user.role.name }, permissions, phone: user.phone, phone_ext: user.phone_ext, profile_picture_url: user.profile_picture_url },
     };
   }
 
@@ -246,6 +246,9 @@ export async function adminMfaVerify(
       email: user.email,
       role: { id: user.role.id, name: user.role.name },
       permissions,
+      phone: user.phone,
+      phone_ext: user.phone_ext,
+      profile_picture_url: user.profile_picture_url,
     },
   };
 }

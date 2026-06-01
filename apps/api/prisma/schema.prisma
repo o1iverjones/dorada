@@ -57,11 +57,14 @@ model User {
   name            String
   email           String
   password_hash   String
-  totp_secret     String?
-  mfa_enabled     Boolean   @default(false)
-  language        String    @default("en")
-  fcm_token       String?
-  is_active       Boolean   @default(true)
+  totp_secret         String?
+  mfa_enabled         Boolean   @default(false)
+  language            String    @default("en")
+  fcm_token           String?
+  phone               String?
+  phone_ext           String?
+  profile_picture_url String?
+  is_active           Boolean   @default(true)
   failed_attempts Int       @default(0)
   locked_until    DateTime?
   created_at      DateTime  @default(now())

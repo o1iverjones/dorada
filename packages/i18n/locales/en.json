@@ -317,6 +317,8 @@
     "name": "Full name",
     "email": "Email address",
     "role": "Role",
+    "phone": "Phone number",
+    "phone_ext": "Extension",
     "language": "Language",
     "current_password": "Current password",
     "new_password": "New password",
@@ -329,7 +331,14 @@
     "logout_confirm_title": "Log out",
     "logout_confirm_body": "Are you sure you want to log out?",
     "notification_preference": "Follow-up notification channel",
-    "follow_up_channel_hint": "How would you like to be notified about follow-up appointments?"
+    "follow_up_channel_hint": "How would you like to be notified about follow-up appointments?",
+    "session": "Session",
+    "change_avatar": "Change profile picture",
+    "avatar_updated": "Profile picture updated.",
+    "notif_immediate_push": "Immediate push notification",
+    "notif_immediate_email": "Immediate email",
+    "notif_digest_email": "Daily digest email",
+    "notif_queue_only": "Queue only (no notification)"
   },
   "admin_users": {
     "title": "Admin Users",
