@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getSocket } from "../../lib/socket.js";
 import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
@@ -61,6 +62,16 @@ export function AppointmentDetailPage() {
   const [confirmUnassign, setConfirmUnassign] = useState(false);
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const handler = (data: { appointmentId: string }) => {
+      if (data.appointmentId === id) refetch();
+    };
+    socket.on("appointment:offer_updated", handler);
+    return () => { socket.off("appointment:offer_updated", handler); };
+  }, [id, refetch]);
+
   const cancel = useCancelAppointment(id!);
   const offer = useOfferAppointment(id!);
   const update = useUpdateAppointment(id!);

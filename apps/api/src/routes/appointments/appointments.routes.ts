@@ -214,14 +214,18 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
   fastify.post("/:id/offers/:offer_id/confirm", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id, offer_id } = req.params as { id: string; offer_id: string };
     const payload = req.user as JwtPayload;
-    return reply.send(await confirmOffer(id, offer_id, payload.sub, fastify.prisma));
+    const result = await confirmOffer(id, offer_id, payload.sub, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "confirmed" });
+    return reply.send(result);
   });
 
   // POST /appointments/:id/offers/:offer_id/decline
   fastify.post("/:id/offers/:offer_id/decline", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id, offer_id } = req.params as { id: string; offer_id: string };
     const payload = req.user as JwtPayload;
-    return reply.send(await declineOffer(id, offer_id, payload.sub, fastify.prisma));
+    const result = await declineOffer(id, offer_id, payload.sub, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "declined" });
+    return reply.send(result);
   });
 
   // POST /appointments/:id/manual-confirm — admin manually assigns an interpreter (feature-flagged)
