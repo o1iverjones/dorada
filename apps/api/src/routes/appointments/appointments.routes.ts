@@ -103,7 +103,35 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     }).parse(req.body);
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
-    return reply.send(await patchClockTimes(id, body, payload.organization_id, actor, fastify.prisma));
+    const result = await patchClockTimes(id, body, payload.organization_id, actor, fastify.prisma);
+
+    // Schedule long-appointment alert when clock_in is set (and clock_out is not yet set)
+    if (body.clock_in_time && !body.clock_out_time) {
+      const settings = await fastify.prisma.systemSettings.findUnique({
+        where: { organization_id: payload.organization_id },
+        select: { long_appointment_alert_minutes: true },
+      });
+      const alertMinutes = settings?.long_appointment_alert_minutes ?? 105;
+      const clockInMs = new Date(body.clock_in_time).getTime();
+      const delay = clockInMs + alertMinutes * 60_000 - Date.now();
+      if (delay > 0) {
+        const { getQueues } = await import("../../workers/queues.js");
+        await getQueues().adminAlertQueue.add(
+          "long-appointment",
+          { appointmentId: id, organizationId: payload.organization_id, alertMinutes },
+          { delay, jobId: `long-appt:${id}`, removeOnComplete: true },
+        );
+      }
+    }
+
+    // Cancel pending long-appointment alert if clock_out is being set
+    if (body.clock_out_time) {
+      const { getQueues } = await import("../../workers/queues.js");
+      const job = await getQueues().adminAlertQueue.getJob(`long-appt:${id}`);
+      if (job) await job.remove();
+    }
+
+    return reply.send(result);
   });
 
   // DELETE /appointments/:id
@@ -225,6 +253,21 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const payload = req.user as JwtPayload;
     const result = await declineOffer(id, offer_id, payload.sub, fastify.prisma);
     fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "declined" });
+
+    // Create admin alert for declined offer
+    const appt = await fastify.prisma.appointment.findUnique({ where: { id }, select: { date_time: true, po_number: true } });
+    const dateStr = appt ? new Date(appt.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+    const poStr = appt?.po_number ? ` (PO: ${appt.po_number})` : "";
+    const alert = await fastify.prisma.adminAlert.create({
+      data: {
+        organization_id: payload.organization_id,
+        type: "offer_declined",
+        appointment_id: id,
+        message: `An interpreter declined the offer for the ${dateStr} appointment${poStr}. Consider re-offering.`,
+      },
+    });
+    fastify.io.to(`notify:${payload.organization_id}`).emit("alert:new", { alert });
+
     return reply.send(result);
   });
 

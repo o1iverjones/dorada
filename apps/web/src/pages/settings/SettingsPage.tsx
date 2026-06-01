@@ -123,6 +123,8 @@ export function SettingsPage() {
     follow_up_reminder_window_minutes: 60,
     follow_up_max_reminders: 2,
     timezone: "America/Los_Angeles",
+    long_appointment_alert_hours: 1,
+    long_appointment_alert_mins: 45,
   });
 
   useEffect(() => {
@@ -130,12 +132,15 @@ export function SettingsPage() {
       const s = settings as Record<string, unknown>;
       const rates = s.default_pay_rates as Record<string, number> | undefined;
       const followUp = s.follow_up_config as Record<string, number> | undefined;
+      const alertMinutes = (s.long_appointment_alert_minutes as number) ?? 105;
       setForm({
         default_certified_rate: rates?.certified ?? 0,
         default_qualified_rate: rates?.qualified ?? 0,
         follow_up_reminder_window_minutes: followUp?.non_response_window_minutes ?? 60,
         follow_up_max_reminders: followUp?.max_reminders ?? 2,
         timezone: (s.timezone as string) ?? "America/Los_Angeles",
+        long_appointment_alert_hours: Math.floor(alertMinutes / 60),
+        long_appointment_alert_mins: alertMinutes % 60,
       });
     }
   }, [settings]);
@@ -177,6 +182,7 @@ export function SettingsPage() {
           max_reminders: form.follow_up_max_reminders,
         },
         timezone: form.timezone,
+        long_appointment_alert_minutes: form.long_appointment_alert_hours * 60 + form.long_appointment_alert_mins,
       });
       toast({ title: t("common.saved") });
     } catch (err) {
@@ -441,6 +447,42 @@ export function SettingsPage() {
                   (settings as Record<string, unknown>)?.allow_manual_confirm ? "translate-x-6" : "translate-x-1"
                 }`} />
               </button>
+            </div>
+
+            <div className="border-t" />
+
+            {/* Long appointment alert threshold */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t("settings.long_appointment_alert")}</p>
+              <p className="text-xs text-muted-foreground">{t("settings.long_appointment_alert_description")}</p>
+              <div className="flex items-center gap-3">
+                <div className="relative w-24">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={form.long_appointment_alert_hours}
+                    onChange={(e) => setForm(s => ({ ...s, long_appointment_alert_hours: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    className="pr-10"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+                    {t("settings.hours_abbr")}
+                  </span>
+                </div>
+                <div className="relative w-24">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={form.long_appointment_alert_mins}
+                    onChange={(e) => setForm(s => ({ ...s, long_appointment_alert_mins: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                    className="pr-10"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+                    {t("settings.mins_abbr")}
+                  </span>
+                </div>
+              </div>
             </div>
 
           </CardContent>

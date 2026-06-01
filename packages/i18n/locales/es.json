@@ -289,7 +289,12 @@
     "email_intake_queue": "Correo entrante",
     "no_pending_emails": "No hay borradores de correo pendientes.",
     "activity_log": "Registro de actividad",
-    "pending_invoices": "Facturas Pendientes"
+    "pending_invoices": "Facturas Pendientes",
+    "alerts": "Alertas",
+    "no_alerts": "Sin alertas — todo al día.",
+    "mark_all_read": "Marcar todo como leído",
+    "mark_read": "Marcar como leído",
+    "view_appointment": "Ver cita"
   },
   "notifications": {
     "newOffer": "Nueva oferta de cita",
@@ -803,7 +808,11 @@
     "rate_title": "Nombre de tarifa",
     "rate_amount": "Monto ($)",
     "remove_languages": "Eliminar idiomas",
-    "languages_done": "Listo"
+    "languages_done": "Listo",
+    "long_appointment_alert": "Umbral de alerta por cita prolongada",
+    "long_appointment_alert_description": "Envía una alerta si una cita sigue en curso después de este tiempo. La alerta se activa cuando el tiempo de entrada más este umbral transcurre sin un registro de salida.",
+    "hours_abbr": "hrs",
+    "mins_abbr": "min"
   },
   "invoices": {
     "pending_approval": "Pendiente de Aprobación",

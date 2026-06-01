@@ -289,7 +289,12 @@
     "email_intake_queue": "Email Intake",
     "no_pending_emails": "No pending email drafts.",
     "activity_log": "Activity log",
-    "pending_invoices": "Pending Invoices"
+    "pending_invoices": "Pending Invoices",
+    "alerts": "Alerts",
+    "no_alerts": "No alerts — you're all caught up.",
+    "mark_all_read": "Mark all read",
+    "mark_read": "Mark read",
+    "view_appointment": "View appointment"
   },
   "notifications": {
     "newOffer": "New appointment offer",
@@ -803,7 +808,11 @@
     "rate_title": "Rate title",
     "rate_amount": "Amount ($)",
     "remove_languages": "Remove languages",
-    "languages_done": "Finished"
+    "languages_done": "Finished",
+    "long_appointment_alert": "Long appointment alert threshold",
+    "long_appointment_alert_description": "Send an alert if an appointment is still in progress after this duration. The alert fires when the clock-in time plus this threshold passes without a clock-out.",
+    "hours_abbr": "hrs",
+    "mins_abbr": "min"
   },
   "invoices": {
     "pending_approval": "Pending Approval",

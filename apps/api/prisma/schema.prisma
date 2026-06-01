@@ -44,6 +44,7 @@ model Organization {
   report_jobs          ReportJob[]
   invoices             Invoice[]
   insurance_companies  InsuranceCompany[]
+  admin_alerts         AdminAlert[]
 
   @@map("organizations")
 }
@@ -743,11 +744,27 @@ model SystemSettings {
   timezone                            String   @default("America/Los_Angeles")
   allow_manual_confirm                Boolean  @default(false)
   show_language                       Boolean  @default(true)
+  long_appointment_alert_minutes      Int      @default(105)
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("system_settings")
+}
+
+model AdminAlert {
+  id              String    @id @default(uuid())
+  organization_id String
+  type            String
+  appointment_id  String?
+  message         String
+  is_read         Boolean   @default(false)
+  created_at      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, is_read])
+  @@map("admin_alerts")
 }
 
 model InterpreterRate {

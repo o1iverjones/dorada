@@ -65,6 +65,30 @@ export function useShowLanguage(): boolean {
   return val === undefined ? true : Boolean(val);
 }
 
+export function useAlerts() {
+  return useQuery({
+    queryKey: ["alerts"],
+    queryFn: () => api.get<{ data: unknown[]; unread_count: number }>("/alerts"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useMarkAlertRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/alerts/${id}/read`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+  });
+}
+
+export function useMarkAllAlertsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.patch("/alerts/read-all", {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+  });
+}
+
 export function useLocaleStrings(locale: string) {
   return useQuery({
     queryKey: ["locale-strings", locale],
