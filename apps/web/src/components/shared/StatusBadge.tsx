@@ -6,7 +6,6 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
   pending_offer: "warning",
   in_progress: "default",
   cancelled: "destructive",
-  declined: "destructive",
   no_show: "destructive",
   pending_review: "warning",
   pending_email_review: "warning",
@@ -19,6 +18,13 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
 };
 
 export function StatusBadge({ status }: { status: string }) {
+  if (status === "declined") {
+    return (
+      <Badge variant="outline" className="bg-gray-100 border-red-400 text-red-700">
+        declined
+      </Badge>
+    );
+  }
   const variant = STATUS_VARIANTS[status] ?? "outline";
   return <Badge variant={variant}>{status.replace(/_/g, " ")}</Badge>;
 }
