@@ -871,11 +871,10 @@ function BillingCard({ appointmentId, appointment }: { appointmentId: string; ap
   }
 
   const checkboxes: { field: keyof BillingFields; label: string }[] = [
-    { field: "billing_billed",               label: t("appointments.billing_billed") },
     { field: "billing_invoiced",             label: t("appointments.billing_invoiced") },
-    { field: "billing_lost",                 label: t("appointments.billing_lost") },
+    { field: "billing_billed",               label: t("appointments.billing_billed") },
     { field: "billing_payment_under_claim",  label: t("appointments.billing_payment_under_claim") },
-    { field: "billing_pending_auth",         label: t("appointments.billing_pending_auth") },
+    { field: "billing_lost",                 label: t("appointments.billing_lost") },
     { field: "billing_retro",                label: t("appointments.billing_retro") },
   ];
 
