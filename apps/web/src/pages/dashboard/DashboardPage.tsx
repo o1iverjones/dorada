@@ -49,8 +49,13 @@ export function DashboardPage() {
   const { data: alertsData, refetch: refetchAlerts } = useAlerts();
   const markAlertRead = useMarkAlertRead();
   const markAllRead = useMarkAllAlertsRead();
-  const alerts = (alertsData?.data ?? []) as Array<Record<string, unknown>>;
-  const unreadCount = alertsData?.unread_count ?? 0;
+  const allAlerts = (alertsData?.data ?? []) as Array<Record<string, unknown>>;
+  // Dashboard panel: only show alerts created today (in org timezone)
+  const alerts = allAlerts.filter((a) => {
+    const alertDate = new Date(a.created_at as string).toLocaleDateString("en-CA", { timeZone: tz });
+    return alertDate === todayStr;
+  });
+  const unreadCount = alerts.filter((a) => !a.is_read).length;
   const qc = useQueryClient();
 
   // Real-time: refetch alerts when a new one arrives via socket
@@ -182,11 +187,11 @@ export function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       {apptId && (
                         <Link
                           to={`/appointments/${apptId}`}
-                          className="text-xs text-primary hover:underline whitespace-nowrap"
+                          className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
                         >
                           {t("dashboard.view_appointment")}
                         </Link>
@@ -194,10 +199,10 @@ export function DashboardPage() {
                       {isUnread && (
                         <button
                           onClick={() => markAlertRead.mutate(alert.id as string)}
-                          className="text-xs text-muted-foreground hover:text-foreground"
+                          className="text-muted-foreground hover:text-foreground"
                           title={t("dashboard.mark_read")}
                         >
-                          <CheckCheck className="h-3.5 w-3.5" />
+                          <CheckCheck className="h-5 w-5" />
                         </button>
                       )}
                     </div>

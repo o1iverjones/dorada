@@ -998,7 +998,7 @@ function InterpreterSearch({
                   <span className="ml-auto text-xs text-muted-foreground">{t("appointments.offer_pending")}</span>
                 )}
                 {declined && (
-                  <span className="ml-auto text-xs font-medium text-destructive">{t("appointments.offer_declined")}</span>
+                  <span className="ml-auto text-sm font-bold text-destructive">{t("appointments.offer_declined")}</span>
                 )}
                 {excluded && !declined && (
                   <span className="ml-auto text-xs font-medium text-destructive">{t("clinics.excluded_from_clinic")}</span>
