@@ -173,6 +173,9 @@ export function usePatchBilling(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Partial<BillingFields>) => api.patch(`/appointments/${id}/billing`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments", id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+    },
   });
 }
