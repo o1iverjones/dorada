@@ -145,7 +145,7 @@ export async function reviewEmailIntakeDraft(
   const appointment = await prisma.appointment.create({
     data: {
       organization_id: organizationId,
-      status: "pending_offer",
+      status: "unassigned",
       date_time: new Date(body.date_time!),
       duration_minutes: 60,
       type_id: body.type_id!,
@@ -170,7 +170,7 @@ export async function reviewEmailIntakeDraft(
 
   return {
     draft_status: "approved",
-    appointment: { id: appointment.id, status: "pending_offer", po_number: draft.po_number, date_time: appointment.date_time.toISOString() },
+    appointment: { id: appointment.id, status: "unassigned", po_number: draft.po_number, date_time: appointment.date_time.toISOString() },
   };
 }
 

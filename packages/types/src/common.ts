@@ -20,6 +20,7 @@ export const ErrorResponseSchema = z.object({
 });
 
 export const AppointmentStatusSchema = z.enum([
+  "unassigned",
   "pending_offer",
   "confirmed",
   "in_progress",

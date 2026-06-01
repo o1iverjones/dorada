@@ -539,7 +539,7 @@ export function AppointmentDetailPage() {
         </Card>
       )}
 
-      {(a.status === "pending_offer" || a.status === "declined") && (
+      {(a.status === "unassigned" || a.status === "pending_offer" || a.status === "declined") && (
         <Card>
           <CardHeader>
             <CardTitle>{t("appointments.select_interpreters")}</CardTitle>

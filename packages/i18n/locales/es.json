@@ -461,6 +461,7 @@
     "status_confirmed": "Confirmada",
     "status_in_progress": "En progreso",
     "status_completed": "Completada",
+    "status_unassigned": "Sin asignar",
     "status_cancelled": "Cancelada",
     "status_declined": "Rechazada",
     "month": "Mes",

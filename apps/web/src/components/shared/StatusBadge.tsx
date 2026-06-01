@@ -25,6 +25,13 @@ export function StatusBadge({ status }: { status: string }) {
       </Badge>
     );
   }
+  if (status === "unassigned") {
+    return (
+      <Badge variant="outline" className="bg-gray-100 border-gray-400 text-gray-600">
+        unassigned
+      </Badge>
+    );
+  }
   const variant = STATUS_VARIANTS[status] ?? "outline";
   return <Badge variant={variant}>{status.replace(/_/g, " ")}</Badge>;
 }

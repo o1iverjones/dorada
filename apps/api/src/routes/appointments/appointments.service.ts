@@ -207,7 +207,7 @@ export async function createAppointment(
       pre_auth_amount: body.pre_auth_amount,
       pre_auth_mileage: body.pre_auth_mileage,
       po_number: body.po_number ?? null,
-      status: "pending_offer",
+      status: "unassigned",
       source: "manual",
     },
     include: {
@@ -366,14 +366,14 @@ export async function unassignInterpreter(id: string, organizationId: string, ac
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
 
   if (!appt!.interpreter_id) throw new ConflictError("NO_INTERPRETER", "Appointment has no interpreter assigned");
-  if (!["confirmed", "pending_offer"].includes(appt!.status)) {
+  if (!["confirmed", "pending_offer", "unassigned"].includes(appt!.status)) {
     throw new ValidationError("INVALID_STATUS_TRANSITION", "Cannot unassign interpreter from an appointment that is in progress or completed");
   }
 
   await prisma.$transaction([
     prisma.appointment.update({
       where: { id },
-      data: { interpreter_id: null, status: "pending_offer" },
+      data: { interpreter_id: null, status: "unassigned" },
     }),
     prisma.appointmentOffer.updateMany({
       where: { appointment_id: id },
@@ -446,8 +446,8 @@ export async function offerAppointment(
   const created = await Promise.all(offers);
   const names = created.map((o) => o.interpreter.name).join(", ");
 
-  // If the appointment was declined (all prior offers rejected), reset it to pending_offer
-  if (created.length > 0 && appt!.status === "declined") {
+  // If the appointment was unassigned or declined, move it to pending_offer now that an offer exists
+  if (created.length > 0 && (appt!.status === "declined" || appt!.status === "unassigned")) {
     await prisma.appointment.update({ where: { id }, data: { status: "pending_offer" } });
   }
 
@@ -523,7 +523,7 @@ export async function manualConfirmInterpreter(
   if (!appointment || appointment.organization_id !== organizationId) {
     throw new NotFoundError("APPOINTMENT_NOT_FOUND", "Appointment not found");
   }
-  if (appointment.status !== "pending_offer") {
+  if (!["pending_offer", "unassigned"].includes(appointment.status)) {
     throw new ConflictError("INVALID_STATUS", "Appointment is not in pending_offer status");
   }
   if (appointment.interpreter_id) {
@@ -948,7 +948,7 @@ export async function reviewFollowUpDraft(
   const appointment = await prisma.appointment.create({
     data: {
       organization_id: organizationId,
-      status: "pending_offer",
+      status: "unassigned",
       date_time: new Date(body.date_time),
       duration_minutes: src.duration_minutes,
       type_id: src.type_id,
@@ -971,7 +971,7 @@ export async function reviewFollowUpDraft(
 
   return {
     draft_status: "scheduled",
-    appointment: { id: appointment.id, status: "pending_offer", date_time: appointment.date_time.toISOString() },
+    appointment: { id: appointment.id, status: "unassigned", date_time: appointment.date_time.toISOString() },
   };
 }
 

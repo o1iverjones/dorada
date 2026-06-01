@@ -570,7 +570,7 @@ export async function importAppointments(
           pre_auth_mileage: row["pre_auth_mileage"] ? parseInt(row["pre_auth_mileage"], 10) : 0,
           po_number: poNumber,
           source: "import",
-          status: "pending_offer",
+          status: "unassigned",
         },
       });
       result.created++;

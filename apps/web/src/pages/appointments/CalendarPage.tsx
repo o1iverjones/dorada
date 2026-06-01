@@ -17,6 +17,7 @@ import { api } from "../../lib/api.js";
 type View = "month" | "week" | "day";
 
 const STATUS_COLORS: Record<string, string> = {
+  unassigned: "bg-gray-100 border-gray-300 text-gray-500",
   confirmed: "bg-green-100 border-green-300 text-green-800",
   pending_offer: "bg-yellow-100 border-yellow-300 text-yellow-800",
   in_progress: "bg-blue-100 border-blue-300 text-blue-800",
@@ -232,8 +233,8 @@ export function CalendarPage() {
 
   function apptColorClass(a: Record<string, unknown>) {
     const status = a.status as string;
-    // Cancelled/completed/declined always use their status colour regardless of interpreter
-    if (status === "cancelled" || status === "completed" || status === "declined") {
+    // Certain terminal/non-active statuses always use their status colour regardless of interpreter
+    if (status === "cancelled" || status === "completed" || status === "declined" || status === "unassigned") {
       return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
     }
     const hasInterpreter = !!(a.interpreter as Record<string, unknown> | null)?.id;
@@ -448,6 +449,7 @@ export function CalendarPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("common.all")}</SelectItem>
+            <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
             <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
             <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
             <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
