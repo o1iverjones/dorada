@@ -1,30 +1,38 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
-interface PageHeaderState {
+interface PageHeaderContextValue {
   title: ReactNode;
   description?: string;
-  actions?: ReactNode;
-}
-
-interface PageHeaderContextValue {
-  header: PageHeaderState;
-  setHeader: (state: PageHeaderState) => void;
+  /** Called by TopBar to register the DOM node where actions will be portaled into */
+  setActionsTarget: (el: HTMLElement | null) => void;
+  actionsTarget: HTMLElement | null;
+  setTitle: (title: ReactNode, description?: string) => void;
 }
 
 const PageHeaderContext = createContext<PageHeaderContextValue>({
-  header: { title: "" },
-  setHeader: () => {},
+  title: "",
+  description: undefined,
+  actionsTarget: null,
+  setActionsTarget: () => {},
+  setTitle: () => {},
 });
 
 export function PageHeaderProvider({ children }: { children: ReactNode }) {
-  const [header, setHeaderState] = useState<PageHeaderState>({ title: "" });
+  const [title, setTitleState] = useState<ReactNode>("");
+  const [description, setDescriptionState] = useState<string | undefined>(undefined);
+  const [actionsTarget, setActionsTargetState] = useState<HTMLElement | null>(null);
 
-  const setHeader = useCallback((state: PageHeaderState) => {
-    setHeaderState(state);
+  const setTitle = useCallback((t: ReactNode, d?: string) => {
+    setTitleState(t);
+    setDescriptionState(d);
+  }, []);
+
+  const setActionsTarget = useCallback((el: HTMLElement | null) => {
+    setActionsTargetState(el);
   }, []);
 
   return (
-    <PageHeaderContext.Provider value={{ header, setHeader }}>
+    <PageHeaderContext.Provider value={{ title, description, actionsTarget, setActionsTarget, setTitle }}>
       {children}
     </PageHeaderContext.Provider>
   );

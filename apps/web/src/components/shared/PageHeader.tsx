@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { usePageHeader } from "../../contexts/PageHeaderContext.js";
 
 interface PageHeaderProps {
@@ -10,27 +11,23 @@ interface PageHeaderProps {
 }
 
 /**
- * PageHeader writes its title, description and actions into the
- * PageHeaderContext so they render inside the sticky TopBar at the top of the
- * page.  The component itself renders nothing in the page body.
- *
- * Using useLayoutEffect means the header updates synchronously after every
- * render, so there is no visible flash of the old title.
+ * PageHeader pushes title + description into the sticky TopBar via context
+ * (stable string values → no render loop).  Actions are rendered directly
+ * into the TopBar's reserved DOM node via createPortal — no state update
+ * involved, so there is no infinite-update cycle.
  */
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
-  const { setHeader } = usePageHeader();
-  const propsRef = useRef({ title, description, actions });
-  propsRef.current = { title, description, actions };
+  const { setTitle, actionsTarget } = usePageHeader();
 
-  // Run after every render so actions (which often change reference) stay current
-  useLayoutEffect(() => {
-    setHeader({ title: propsRef.current.title, description: propsRef.current.description, actions: propsRef.current.actions });
-  });
+  // Only runs when title / description actually change — safe, no loop.
+  useEffect(() => {
+    setTitle(title, description);
+    return () => setTitle("", undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description]);
 
-  // Clear when page unmounts
-  useLayoutEffect(() => {
-    return () => setHeader({ title: "" });
-  }, [setHeader]);
-
-  return null;
+  // Render actions into the TopBar portal target.
+  // createPortal does NOT call setState so it never triggers a re-render loop.
+  if (!actions || !actionsTarget) return null;
+  return createPortal(actions, actionsTarget);
 }

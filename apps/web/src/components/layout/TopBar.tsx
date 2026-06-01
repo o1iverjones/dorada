@@ -1,11 +1,21 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth.js";
 import { usePageHeader } from "../../contexts/PageHeaderContext.js";
 
 export function TopBar() {
-  const { header } = usePageHeader();
+  const { title, description, setActionsTarget } = usePageHeader();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  // This div is the portal target for <PageHeader actions={…} />
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setActionsTarget(actionsRef.current);
+    return () => setActionsTarget(null);
+  // setActionsTarget is stable (useCallback) — intentionally run once
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const initials = user?.name
     ? user.name
@@ -18,23 +28,20 @@ export function TopBar() {
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-6">
-      {/* Left: page title + actions */}
+      {/* Left: page title + actions portal target */}
       <div className="flex min-w-0 flex-1 items-center gap-4">
-        {header.title && (
+        {title && (
           <h1 className="truncate text-xl font-semibold tracking-tight">
-            {header.title}
+            {title}
           </h1>
         )}
-        {header.description && (
+        {description && (
           <p className="hidden truncate text-sm text-muted-foreground sm:block">
-            {header.description}
+            {description}
           </p>
         )}
-        {header.actions && (
-          <div className="flex shrink-0 items-center gap-2">
-            {header.actions}
-          </div>
-        )}
+        {/* PageHeader portals actions into this div */}
+        <div ref={actionsRef} className="flex shrink-0 items-center gap-2" />
       </div>
 
       {/* Right: user avatar chip → My Account */}
