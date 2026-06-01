@@ -327,17 +327,24 @@ export function InterpreterDetailPage() {
                   />
                 </div>
               </div>
-            ) : (
-              <>
-                <Field label={t("interpreters.address_line1")} value={interp.address_line1 as string ?? "—"} />
-                {(interp.address_line2 as string) && (
-                  <Field label={t("interpreters.address_line2")} value={interp.address_line2 as string} />
-                )}
-                <Field label={t("interpreters.city")} value={interp.city as string ?? "—"} />
-                <Field label={t("interpreters.state")} value={interp.state as string ?? "—"} />
-                <Field label={t("interpreters.zip_code")} value={interp.zip_code as string ?? "—"} />
-              </>
-            )}
+            ) : (() => {
+              const line1 = (interp.address_line1 as string | null) || null;
+              const line2 = (interp.address_line2 as string | null) || null;
+              const city = (interp.city as string | null) || null;
+              const state = (interp.state as string | null) || null;
+              const zip = (interp.zip_code as string | null) || null;
+              const cityStateZip = [city, [state, zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+              const hasAddress = line1 || city || state || zip;
+              return hasAddress ? (
+                <address className="not-italic text-sm leading-6 font-medium">
+                  {line1 && <div>{line1}</div>}
+                  {line2 && <div>{line2}</div>}
+                  {cityStateZip && <div>{cityStateZip}</div>}
+                </address>
+              ) : (
+                <p className="text-sm text-muted-foreground">—</p>
+              );
+            })()}
           </CardContent>
         </Card>
 
