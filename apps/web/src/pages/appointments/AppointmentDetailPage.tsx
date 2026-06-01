@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getSocket } from "../../lib/socket.js";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
@@ -472,7 +472,10 @@ export function AppointmentDetailPage() {
           </CardContent>
         </Card>
 
-        <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
+        <div className="space-y-6">
+          <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
+          <BillingCard appointmentId={id!} appointment={a} />
+        </div>
 
         {a.shift_notes && (
           <Card>
@@ -857,6 +860,98 @@ export function AppointmentDetailPage() {
   );
 }
 
+function BillingCard({ appointmentId, appointment }: { appointmentId: string; appointment: Record<string, unknown> }) {
+  const { t } = useTranslation();
+  const patch = usePatchBilling(appointmentId);
+
+  const b = appointment as unknown as BillingFields & Record<string, unknown>;
+
+  function toggle(field: keyof BillingFields, value: boolean | string) {
+    patch.mutate({ [field]: value } as Partial<BillingFields>);
+  }
+
+  const checkboxes: { field: keyof BillingFields; label: string }[] = [
+    { field: "billing_billed",               label: t("appointments.billing_billed") },
+    { field: "billing_invoiced",             label: t("appointments.billing_invoiced") },
+    { field: "billing_lost",                 label: t("appointments.billing_lost") },
+    { field: "billing_payment_under_claim",  label: t("appointments.billing_payment_under_claim") },
+    { field: "billing_pending_auth",         label: t("appointments.billing_pending_auth") },
+    { field: "billing_retro",                label: t("appointments.billing_retro") },
+  ];
+
+  const paymentStatus = (b.billing_payment_status as string) ?? "not_paid";
+  const approvalStatus = (b.billing_approval_status as string) ?? "pending_approval";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle>{t("appointments.billing")}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-4">
+        {/* Checkboxes */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+          {checkboxes.map(({ field, label }) => (
+            <label key={field} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 accent-primary"
+                checked={!!b[field]}
+                onChange={(e) => toggle(field, e.target.checked)}
+                disabled={patch.isPending}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="border-t" />
+
+        {/* Payment status toggle */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{t("appointments.billing_payment")}</span>
+          <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+            <button
+              onClick={() => toggle("billing_payment_status", "not_paid")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${paymentStatus === "not_paid" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_not_paid")}
+            </button>
+            <button
+              onClick={() => toggle("billing_payment_status", "paid")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${paymentStatus === "paid" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_paid")}
+            </button>
+          </div>
+        </div>
+
+        {/* Approval status toggle */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{t("appointments.billing_approval")}</span>
+          <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+            <button
+              onClick={() => toggle("billing_approval_status", "pending_approval")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${approvalStatus === "pending_approval" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_pending_approval")}
+            </button>
+            <button
+              onClick={() => toggle("billing_approval_status", "approved")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${approvalStatus === "approved" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_approved")}
+            </button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; physician: string | null }) {
   const { t } = useTranslation();
   const address = clinic?.address as string | null;
@@ -867,7 +962,7 @@ function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; 
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
         <CardTitle>{t("appointments.location")}</CardTitle>
         {mapsUrl && (
           <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
@@ -875,17 +970,17 @@ function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; 
           </a>
         )}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 px-4 pb-4">
         {embedUrl ? (
           <div className="overflow-hidden rounded-md border">
-            <iframe src={embedUrl} width="100%" height="180" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
+            <iframe src={embedUrl} width="100%" height="130" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
           </div>
         ) : (
-          <div className="flex h-24 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
+          <div className="flex h-16 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
             {t("appointments.no_address")}
           </div>
         )}
-        <div className="space-y-1.5 text-sm">
+        <div className="space-y-1 text-sm">
           {physician && <p className="font-semibold">{physician}</p>}
           <p className="font-semibold">{clinicName}</p>
           {address && (

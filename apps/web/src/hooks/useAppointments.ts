@@ -157,3 +157,22 @@ export function useAppointmentMedia(id: string) {
     enabled: !!id,
   });
 }
+
+export interface BillingFields {
+  billing_billed: boolean;
+  billing_invoiced: boolean;
+  billing_lost: boolean;
+  billing_payment_under_claim: boolean;
+  billing_pending_auth: boolean;
+  billing_retro: boolean;
+  billing_payment_status: "not_paid" | "paid";
+  billing_approval_status: "pending_approval" | "approved";
+}
+
+export function usePatchBilling(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Partial<BillingFields>) => api.patch(`/appointments/${id}/billing`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments", id] }),
+  });
+}

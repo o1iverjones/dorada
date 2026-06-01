@@ -134,6 +134,35 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     return reply.send(result);
   });
 
+  // PATCH /appointments/:id/billing
+  fastify.patch("/:id/billing", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    const body = z.object({
+      billing_billed: z.boolean().optional(),
+      billing_invoiced: z.boolean().optional(),
+      billing_lost: z.boolean().optional(),
+      billing_payment_under_claim: z.boolean().optional(),
+      billing_pending_auth: z.boolean().optional(),
+      billing_retro: z.boolean().optional(),
+      billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
+      billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
+    }).parse(req.body);
+    const appt = await fastify.prisma.appointment.findUnique({ where: { id } });
+    if (!appt || appt.organization_id !== payload.organization_id) return reply.status(404).send();
+    const updated = await fastify.prisma.appointment.update({ where: { id }, data: body });
+    return reply.send({ ok: true, billing: {
+      billing_billed: updated.billing_billed,
+      billing_invoiced: updated.billing_invoiced,
+      billing_lost: updated.billing_lost,
+      billing_payment_under_claim: updated.billing_payment_under_claim,
+      billing_pending_auth: updated.billing_pending_auth,
+      billing_retro: updated.billing_retro,
+      billing_payment_status: updated.billing_payment_status,
+      billing_approval_status: updated.billing_approval_status,
+    }});
+  });
+
   // DELETE /appointments/:id
   fastify.delete("/:id", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
