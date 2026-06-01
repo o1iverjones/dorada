@@ -255,15 +255,24 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "declined" });
 
     // Create admin alert for declined offer
-    const appt = await fastify.prisma.appointment.findUnique({ where: { id }, select: { date_time: true, po_number: true } });
+    const [appt, interpreter] = await Promise.all([
+      fastify.prisma.appointment.findUnique({
+        where: { id },
+        select: { date_time: true, po_number: true, patient: { select: { name: true } } },
+      }),
+      fastify.prisma.interpreter.findUnique({ where: { id: payload.sub }, select: { name: true } }),
+    ]);
     const dateStr = appt ? new Date(appt.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-    const poStr = appt?.po_number ? ` (PO: ${appt.po_number})` : "";
+    const interpName = interpreter?.name ?? payload.name ?? "An interpreter";
+    const patientStr = appt?.patient?.name ? `${appt.patient.name}` : "";
+    const poStr = appt?.po_number ? `PO: ${appt.po_number}` : "";
+    const apptRef = [patientStr, poStr].filter(Boolean).join(" — ");
     const alert = await fastify.prisma.adminAlert.create({
       data: {
         organization_id: payload.organization_id,
         type: "offer_declined",
         appointment_id: id,
-        message: `An interpreter declined the offer for the ${dateStr} appointment${poStr}. Consider re-offering.`,
+        message: `${interpName} declined the offer for the ${dateStr} appointment${apptRef ? ` (${apptRef})` : ""}.`,
       },
     });
     fastify.io.to(`notify:${payload.organization_id}`).emit("alert:new", { alert });
