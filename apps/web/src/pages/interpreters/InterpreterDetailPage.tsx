@@ -251,35 +251,6 @@ export function InterpreterDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>{t("interpreters.emergency_contact")}</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {editing ? (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label>{t("interpreters.emergency_name")}</Label>
-                  <Input
-                    value={editForm.emergency_contact_name as string ?? ""}
-                    onChange={(e) => setEditForm(s => ({ ...s, emergency_contact_name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>{t("interpreters.emergency_phone")}</Label>
-                  <PhoneInput
-                    value={editForm.emergency_contact_phone as string ?? ""}
-                    onChange={(v) => setEditForm(s => ({ ...s, emergency_contact_phone: v }))}
-                  />
-                </div>
-              </div>
-            ) : (
-              <>
-                <Field label={t("interpreters.emergency_name")} value={(interp.emergency_contact as Record<string, unknown>)?.name as string ?? "—"} />
-                <Field label={t("interpreters.emergency_phone")} value={formatPhone((interp.emergency_contact as Record<string, unknown>)?.phone as string)} />
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
           <CardHeader><CardTitle>{t("interpreters.address")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
@@ -418,6 +389,35 @@ export function InterpreterDetailPage() {
                   </div>
                 )}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>{t("interpreters.emergency_contact")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {editing ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("interpreters.emergency_name")}</Label>
+                  <Input
+                    value={editForm.emergency_contact_name as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, emergency_contact_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.emergency_phone")}</Label>
+                  <PhoneInput
+                    value={editForm.emergency_contact_phone as string ?? ""}
+                    onChange={(v) => setEditForm(s => ({ ...s, emergency_contact_phone: v }))}
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Field label={t("interpreters.emergency_name")} value={(interp.emergency_contact as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("interpreters.emergency_phone")} value={formatPhone((interp.emergency_contact as Record<string, unknown>)?.phone as string)} />
+              </>
             )}
           </CardContent>
         </Card>
