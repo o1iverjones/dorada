@@ -508,36 +508,56 @@ export function AppointmentDetailPage() {
         );
       })()}
 
-      {((a.offers as Array<Record<string, unknown>>) ?? []).filter((o) => o.status === "pending").length > 0 && (
+      {((a.offers as Array<Record<string, unknown>>) ?? []).some((o) => o.status === "pending" || o.status === "declined") && (
         <Card>
           <CardHeader><CardTitle>{t("appointments.pending_offers")}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {((a.offers as Array<Record<string, unknown>>) ?? [])
-              .filter((o) => o.status === "pending")
-              .map((o) => (
-                <div key={o.id as string} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                  <span className="font-medium">{(o.interpreter as Record<string, unknown>)?.name as string}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground">{t("appointments.offer_pending")}</span>
-                    {allowManualConfirm && (
-                      <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
-                          disabled={manualConfirm.isPending}
-                          onChange={() => {
-                            manualConfirm.mutate((o.interpreter as Record<string, unknown>)?.id as string, {
-                              onSuccess: () => toast({ title: t("appointments.manually_confirmed") }),
-                              onError: () => toast({ title: t("common.error"), variant: "destructive" }),
-                            });
-                          }}
-                        />
-                        {t("appointments.manually_confirm")}
-                      </label>
-                    )}
+              .filter((o) => o.status === "pending" || o.status === "declined")
+              .map((o) => {
+                const isDeclined = o.status === "declined";
+                return (
+                  <div
+                    key={o.id as string}
+                    className={`flex items-center justify-between rounded-md border p-3 text-sm ${
+                      isDeclined
+                        ? "bg-red-50 border-red-200 opacity-75"
+                        : "bg-yellow-50 border-yellow-300"
+                    }`}
+                  >
+                    <span className={`font-medium ${isDeclined ? "text-muted-foreground line-through" : "text-yellow-900"}`}>
+                      {(o.interpreter as Record<string, unknown>)?.name as string}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {isDeclined ? (
+                        <span className="rounded-full bg-red-100 border border-red-300 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                          {t("appointments.offer_declined")}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-yellow-700 text-xs font-medium">{t("appointments.offer_pending")}</span>
+                          {allowManualConfirm && (
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                                disabled={manualConfirm.isPending}
+                                onChange={() => {
+                                  manualConfirm.mutate((o.interpreter as Record<string, unknown>)?.id as string, {
+                                    onSuccess: () => toast({ title: t("appointments.manually_confirmed") }),
+                                    onError: () => toast({ title: t("common.error"), variant: "destructive" }),
+                                  });
+                                }}
+                              />
+                              {t("appointments.manually_confirm")}
+                            </label>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </CardContent>
         </Card>
       )}
@@ -1059,23 +1079,21 @@ function InterpreterSearch({
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">{t("common.no_results")}</p>
         ) : (
-          filtered.map((interp) => {
+          filtered
+            // Declined interpreters are shown in the Pending Offers card — exclude from this list
+            .filter((interp) => !offers.some((o) => o.interpreter_id === interp.id && o.status === "declined"))
+            .map((interp) => {
             const alreadyOffered = offers.some(
               (o) => o.interpreter_id === interp.id && o.status === "pending",
             );
-            const declined = offers.some(
-              (o) => o.interpreter_id === interp.id && o.status === "declined",
-            );
             const unavailable = interp.is_available === false;
             const excluded = excludedFromClinic.has(interp.id as string);
-            const disabled = alreadyOffered || declined || unavailable || excluded;
+            const disabled = alreadyOffered || unavailable || excluded;
             return (
               <label
                 key={interp.id as string}
                 className={`flex items-center gap-3 rounded-md border p-3 ${
-                  declined
-                    ? "cursor-not-allowed bg-red-50 border-red-200"
-                    : disabled
+                  disabled
                     ? "cursor-not-allowed opacity-50"
                     : "cursor-pointer"
                 }`}
@@ -1092,18 +1110,15 @@ function InterpreterSearch({
                     )
                   }
                 />
-                <span className={`text-sm font-medium ${declined ? "line-through text-muted-foreground" : ""}`}>{interp.name as string}</span>
+                <span className="text-sm font-medium">{interp.name as string}</span>
                 <span className="text-sm text-muted-foreground capitalize">{interp.type as string}</span>
                 {alreadyOffered && (
                   <span className="ml-auto text-xs text-muted-foreground">{t("appointments.offer_pending")}</span>
                 )}
-                {declined && (
-                  <span className="flex-1 text-center text-sm font-bold text-destructive">{t("appointments.offer_declined")}</span>
-                )}
-                {excluded && !declined && (
+                {excluded && (
                   <span className="ml-auto text-xs font-medium text-destructive">{t("clinics.excluded_from_clinic")}</span>
                 )}
-                {unavailable && !alreadyOffered && !declined && !excluded && (
+                {unavailable && !alreadyOffered && !excluded && (
                   <span className="ml-auto text-xs font-medium text-amber-600">{t("appointments.unavailable")}</span>
                 )}
               </label>
