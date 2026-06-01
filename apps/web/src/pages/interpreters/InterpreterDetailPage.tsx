@@ -299,21 +299,20 @@ export function InterpreterDetailPage() {
                 </div>
               </div>
             ) : (() => {
-              const line1 = (interp.address_line1 as string | null) || null;
-              const line2 = (interp.address_line2 as string | null) || null;
-              const city = (interp.city as string | null) || null;
-              const state = (interp.state as string | null) || null;
-              const zip = (interp.zip_code as string | null) || null;
+              const line1 = (interp.address_line1 as string | null | undefined) || "";
+              const line2 = (interp.address_line2 as string | null | undefined) || "";
+              const city  = (interp.city  as string | null | undefined) || "";
+              const state = (interp.state as string | null | undefined) || "";
+              const zip   = (interp.zip_code as string | null | undefined) || "";
               const cityStateZip = [city, [state, zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
               const hasAddress = line1 || city || state || zip;
-              return hasAddress ? (
-                <address className="not-italic text-sm leading-6 font-medium">
-                  {line1 && <div>{line1}</div>}
-                  {line2 && <div>{line2}</div>}
-                  {cityStateZip && <div>{cityStateZip}</div>}
-                </address>
-              ) : (
-                <p className="text-sm text-muted-foreground">—</p>
+              if (!hasAddress) return <p className="text-sm text-muted-foreground">—</p>;
+              return (
+                <div className="text-sm font-medium leading-6">
+                  {line1 && <p>{line1}</p>}
+                  {line2 && <p>{line2}</p>}
+                  {cityStateZip && <p>{cityStateZip}</p>}
+                </div>
               );
             })()}
           </CardContent>
