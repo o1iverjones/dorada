@@ -76,7 +76,8 @@
     "insurance_companies": "Insurance Companies",
     "availability": "Schedule",
     "profile": "Profile",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "alerts": "Alerts"
   },
   "auth": {
     "login": "Log in",
@@ -294,7 +295,9 @@
     "no_alerts": "No alerts — you're all caught up.",
     "mark_all_read": "Mark all read",
     "mark_read": "Mark read",
-    "view_appointment": "View appointment"
+    "view_appointment": "View appointment",
+    "view_all": "View all",
+    "view_all_alerts": "View all {{count}} alerts today →"
   },
   "notifications": {
     "newOffer": "New appointment offer",

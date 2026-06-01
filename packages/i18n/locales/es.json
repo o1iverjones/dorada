@@ -76,7 +76,8 @@
     "insurance_companies": "Aseguradoras",
     "availability": "Horario",
     "profile": "Perfil",
-    "invoices": "Facturas"
+    "invoices": "Facturas",
+    "alerts": "Alertas"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -294,7 +295,9 @@
     "no_alerts": "Sin alertas — todo al día.",
     "mark_all_read": "Marcar todo como leído",
     "mark_read": "Marcar como leído",
-    "view_appointment": "Ver cita"
+    "view_appointment": "Ver cita",
+    "view_all": "Ver todo",
+    "view_all_alerts": "Ver las {{count}} alertas de hoy →"
   },
   "notifications": {
     "newOffer": "Nueva oferta de cita",

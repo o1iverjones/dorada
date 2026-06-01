@@ -50,12 +50,15 @@ export function DashboardPage() {
   const markAlertRead = useMarkAlertRead();
   const markAllRead = useMarkAllAlertsRead();
   const allAlerts = (alertsData?.data ?? []) as Array<Record<string, unknown>>;
-  // Dashboard panel: only show alerts created today (in org timezone)
-  const alerts = allAlerts.filter((a) => {
+  // Stat card: total unread across all time
+  const unreadCount = alertsData?.unread_count ?? 0;
+  // Dashboard panel: today's alerts only, capped at 3
+  const todayAlerts = allAlerts.filter((a) => {
     const alertDate = new Date(a.created_at as string).toLocaleDateString("en-CA", { timeZone: tz });
     return alertDate === todayStr;
   });
-  const unreadCount = alerts.filter((a) => !a.is_read).length;
+  const alerts = todayAlerts.slice(0, 3);
+  const hasMore = todayAlerts.length > 3;
   const qc = useQueryClient();
 
   // Real-time: refetch alerts when a new one arrives via socket
@@ -132,7 +135,7 @@ export function DashboardPage() {
           icon={<Bell className={`h-5 w-5 ${unreadCount > 0 ? "text-red-500" : "text-muted-foreground"}`} />}
           label={t("dashboard.alerts")}
           value={unreadCount}
-          href="#alerts"
+          href="/alerts"
           highlight={unreadCount > 0}
         />
         <StatCard
@@ -153,63 +156,77 @@ export function DashboardPage() {
               <Badge className="bg-red-500 text-white text-xs px-1.5 py-0">{unreadCount}</Badge>
             )}
           </CardTitle>
-          {alerts.length > 0 && (
-            <button
-              onClick={() => markAllRead.mutate()}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <CheckCheck className="h-3.5 w-3.5" />
-              {t("dashboard.mark_all_read")}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {alerts.length > 0 && (
+              <button
+                onClick={() => markAllRead.mutate()}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+                {t("dashboard.mark_all_read")}
+              </button>
+            )}
+            <Link to="/alerts" className="text-xs font-medium text-primary hover:underline">
+              {t("dashboard.view_all")}
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           {!alerts.length ? (
             <p className="text-sm text-muted-foreground">{t("dashboard.no_alerts")}</p>
           ) : (
-            <ul className="space-y-2">
-              {alerts.map((alert) => {
-                const isUnread = !alert.is_read;
-                const apptId = alert.appointment_id as string | null;
-                return (
-                  <li
-                    key={alert.id as string}
-                    className={`flex items-start justify-between gap-3 rounded-md border p-3 text-sm transition-colors ${isUnread ? "bg-red-50 border-red-200" : "bg-muted/30"}`}
-                  >
-                    <div className="flex items-start gap-2 min-w-0">
-                      <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${isUnread ? "text-red-500" : "text-muted-foreground"}`} />
-                      <div className="min-w-0">
-                        <p className={`leading-snug ${isUnread ? "font-medium" : "text-muted-foreground"}`}>
-                          {alert.message as string}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatInTz(alert.created_at as string, { dateStyle: "short", timeStyle: "short" }, tz)}
-                        </p>
+            <>
+              <ul className="space-y-2">
+                {alerts.map((alert) => {
+                  const isUnread = !alert.is_read;
+                  const apptId = alert.appointment_id as string | null;
+                  return (
+                    <li
+                      key={alert.id as string}
+                      className={`flex items-start justify-between gap-3 rounded-md border p-3 text-sm transition-colors ${isUnread ? "bg-red-50 border-red-200" : "bg-muted/30"}`}
+                    >
+                      <div className="flex items-start gap-2 min-w-0">
+                        <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${isUnread ? "text-red-500" : "text-muted-foreground"}`} />
+                        <div className="min-w-0">
+                          <p className={`leading-snug ${isUnread ? "font-medium" : "text-muted-foreground"}`}>
+                            {alert.message as string}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatInTz(alert.created_at as string, { dateStyle: "short", timeStyle: "short" }, tz)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {apptId && (
-                        <Link
-                          to={`/appointments/${apptId}`}
-                          className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
-                        >
-                          {t("dashboard.view_appointment")}
-                        </Link>
-                      )}
-                      {isUnread && (
-                        <button
-                          onClick={() => markAlertRead.mutate(alert.id as string)}
-                          className="text-muted-foreground hover:text-foreground"
-                          title={t("dashboard.mark_read")}
-                        >
-                          <CheckCheck className="h-5 w-5" />
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {apptId && (
+                          <Link
+                            to={`/appointments/${apptId}`}
+                            className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
+                          >
+                            {t("dashboard.view_appointment")}
+                          </Link>
+                        )}
+                        {isUnread && (
+                          <button
+                            onClick={() => markAlertRead.mutate(alert.id as string)}
+                            className="text-muted-foreground hover:text-foreground"
+                            title={t("dashboard.mark_read")}
+                          >
+                            <CheckCheck className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {hasMore && (
+                <div className="mt-3 text-center">
+                  <Link to="/alerts" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    {t("dashboard.view_all_alerts", { count: todayAlerts.length })}
+                  </Link>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

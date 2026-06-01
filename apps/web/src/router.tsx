@@ -39,6 +39,7 @@ import { IconGalleryPage } from "./pages/icons/IconGalleryPage.js";
 import { InvoicesPage } from "./pages/invoices/InvoicesPage.js";
 import { InsuranceCompaniesPage } from "./pages/insurance-companies/InsuranceCompaniesPage.js";
 import { InsuranceCompanyDetailPage } from "./pages/insurance-companies/InsuranceCompanyDetailPage.js";
+import { AlertsPage } from "./pages/alerts/AlertsPage.js";
 
 export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
   {
@@ -63,6 +64,7 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "dashboard", element: <DashboardPage /> },
+      { path: "alerts", element: <AlertsPage /> },
       { path: "calendar", element: <CalendarPage /> },
       {
         path: "appointments",

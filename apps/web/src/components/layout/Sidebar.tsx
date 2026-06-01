@@ -9,10 +9,11 @@ import { cn } from "../../lib/utils.js";
 import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
   ShieldCheck, UserSquare2, BarChart3, MessageSquare, Mail,
-  Settings, User, Upload, Receipt, Landmark, Menu, X,
+  Settings, User, Upload, Receipt, Landmark, Menu, X, Bell,
   type LucideIcon,
 } from "lucide-react";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
+import { useAlerts } from "../../hooks/useSettings.js";
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -37,6 +38,8 @@ export function Sidebar() {
   const canManageInvoices = hasPermission("manage_invoices");
   const { data: invoiceStats } = useInvoiceStats(canManageInvoices);
   const pendingInvoices = invoiceStats?.submitted_count ?? 0;
+  const { data: alertsData } = useAlerts();
+  const unreadAlerts = alertsData?.unread_count ?? 0;
   const now = useClock();
   const tz = useOrgTimezone();
   const location = useLocation();
@@ -47,6 +50,7 @@ export function Sidebar() {
 
   const navItems: NavItem[] = [
     { label: t("nav.dashboard"), to: "/dashboard", icon: LayoutDashboard },
+    { label: t("nav.alerts"), to: "/alerts", icon: Bell },
     { label: t("nav.calendar"), to: "/calendar", icon: Calendar },
     { label: t("nav.appointments"), to: "/appointments", icon: ClipboardList, permission: "manage_appointments" },
     { label: t("nav.interpreters"), to: "/interpreters", icon: Users, permission: "manage_interpreters" },
@@ -103,6 +107,9 @@ export function Sidebar() {
           >
             <div className="relative shrink-0">
               <item.icon className="h-4 w-4" />
+              {item.to === "/alerts" && unreadAlerts > 0 && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500" />
+              )}
               {item.to === "/messages" && unreadCount > 0 && (
                 <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-orange-500" />
               )}
