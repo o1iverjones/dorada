@@ -33,6 +33,7 @@ export const AppointmentSchema = z.object({
   pre_auth_amount: z.number().nonnegative(),
   pre_auth_mileage: z.number().int().nonnegative(),
   po_number: z.string().nullable(),
+  billing_interpreter: z.string().nullable(),
   source: z.enum(["manual", "email_intake", "follow_up"]),
   clock_in: z.string().datetime().nullable(),
   clock_out: z.string().datetime().nullable(),
@@ -56,6 +57,7 @@ export const CreateAppointmentBodySchema = z.object({
   pre_auth_amount: z.coerce.number().nonnegative(),
   pre_auth_mileage: z.coerce.number().int().nonnegative(),
   po_number: z.string().max(100).optional(),
+  billing_interpreter: z.string().max(255).nullish(),
 });
 
 export const UpdateAppointmentBodySchema = CreateAppointmentBodySchema.partial().extend({

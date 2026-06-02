@@ -413,6 +413,7 @@ model Appointment {
   pre_auth_amount            Decimal   @db.Decimal(10, 2)
   pre_auth_mileage           Int       @default(0)
   po_number                  String?
+  billing_interpreter        String?
   source                     String    @default("manual")
   clock_in_time              DateTime?
   clock_in_lat               Float?

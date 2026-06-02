@@ -10,6 +10,7 @@ import { toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
 import { useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useAgencies } from "../../hooks/useAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
+import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
@@ -35,6 +36,7 @@ const schema = z.object({
   patient_id: z.string().min(1),
   referring_physician: z.string().optional(),
   po_number: z.string().optional(),
+  billing_interpreter: z.string().optional(),
   pre_auth_amount: z.coerce.number().default(0),
   pre_auth_mileage: z.coerce.number().default(0),
 });
@@ -52,6 +54,7 @@ export function EditAppointmentPage() {
   const { data: clinics } = useClinics({ limit: "500" });
   const { data: agencies } = useAgencies({ limit: "500" });
   const { data: patients } = usePatients({ limit: "500" });
+  const { data: interpreters } = useInterpreters({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
 
@@ -67,6 +70,8 @@ export function EditAppointmentPage() {
   const patientOptions = ((patients?.data ?? []) as Array<{ id: string; name: string }>).map((p) => ({ value: p.id, label: p.name }));
   const providerOptions = ((clinicDoctors ?? []) as Array<{ id: string; name: string }>)
     .map((d) => ({ value: d.name, label: d.name }));
+  const interpreterOptions = ((interpreters?.data ?? []) as Array<{ id: string; name: string }>)
+    .map((i) => ({ value: i.name, label: i.name }));
 
   const { register, control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -88,6 +93,7 @@ export function EditAppointmentPage() {
       patient_id: (a.patient as Record<string, unknown>)?.id as string,
       referring_physician: (a.referring_physician as string) ?? "",
       po_number: (a.po_number as string) ?? "",
+      billing_interpreter: (a.billing_interpreter as string) ?? "",
       pre_auth_amount: a.pre_auth_amount as number,
       pre_auth_mileage: a.pre_auth_mileage as number,
     });
@@ -101,6 +107,7 @@ export function EditAppointmentPage() {
         pre_auth_mileage: Math.round(data.pre_auth_mileage),
         referring_physician: data.referring_physician || undefined,
         po_number: data.po_number || undefined,
+        billing_interpreter: data.billing_interpreter || null,
       });
       toast({ title: t("appointments.updated") });
       navigate(`/appointments/${id}`);
@@ -216,6 +223,18 @@ export function EditAppointmentPage() {
 
             <FormField label={t("appointments.po_number")} error={errors.po_number?.message}>
               <Input {...register("po_number")} placeholder="—" />
+            </FormField>
+
+            <FormField label={t("appointments.billing_interpreter")} error={errors.billing_interpreter?.message}>
+              <Controller name="billing_interpreter" control={control} render={({ field }) => (
+                <AutocompleteInput
+                  options={interpreterOptions}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder="—"
+                  freeText
+                />
+              )} />
             </FormField>
 
             <FormField label={t("settings.interpreter_rates")} error={errors.pre_auth_amount?.message}>

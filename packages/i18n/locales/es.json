@@ -394,6 +394,7 @@
     "provider": "Proveedor",
     "select_clinic_first": "Selecciona una clínica primero",
     "po_number": "Número de PO",
+    "billing_interpreter": "Intérprete de Facturación",
     "pre_auth_amount": "Monto preautorizado",
     "pre_auth_mileage": "Millaje preautorizado",
     "shift_notes": "Notas del turno",

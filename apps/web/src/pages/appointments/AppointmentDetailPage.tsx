@@ -36,6 +36,7 @@ type FormState = {
   patient_id: string;
   referring_physician: string;
   po_number: string;
+  billing_interpreter: string;
   pre_auth_amount: number;
   pre_auth_mileage: number;
   dob: string; // "YYYY-MM-DD" or ""
@@ -153,6 +154,7 @@ export function AppointmentDetailPage() {
       patient_id: (a!.patient as Record<string, unknown>)?.id as string ?? "",
       referring_physician: a!.referring_physician as string ?? "",
       po_number: a!.po_number as string ?? "",
+      billing_interpreter: a!.billing_interpreter as string ?? "",
       pre_auth_amount: Number(a!.pre_auth_amount ?? 0),
       pre_auth_mileage: Number(a!.pre_auth_mileage ?? 0),
       dob: ((a!.patient as Record<string, unknown>)?.date_of_birth as string | null)?.slice(0, 10) ?? "",
@@ -178,6 +180,7 @@ export function AppointmentDetailPage() {
           ...(form.patient_id ? { patient_id: form.patient_id } : {}),
           referring_physician: form.referring_physician || undefined,
           po_number: form.po_number || undefined,
+          billing_interpreter: form.billing_interpreter || null,
           pre_auth_amount: form.pre_auth_amount,
           pre_auth_mileage: Math.round(form.pre_auth_mileage),
         }),
@@ -317,6 +320,23 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.po_number")} value={(a.po_number as string) ?? "—"} />
+              )}
+            </div>
+
+            {/* Billing Interpreter */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing ? (
+                <InlineRow label={t("appointments.billing_interpreter")}>
+                  <AutocompleteInput
+                    options={allInterpreterList.map((i) => ({ value: i.name as string, label: i.name as string }))}
+                    value={form.billing_interpreter}
+                    onChange={(v) => set("billing_interpreter", v)}
+                    placeholder="—"
+                    freeText
+                  />
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.billing_interpreter")} value={(a.billing_interpreter as string) ?? "—"} />
               )}
             </div>
 

@@ -22,7 +22,9 @@
     "transform:agencies": "tsx scripts/transform-agencies.ts",
     "seed:agencies": "tsx apps/api/scripts/seed-agencies.ts",
     "transform:interp-agencies": "tsx scripts/transform-interp-agencies.ts",
-    "seed:interp-agencies": "tsx apps/api/scripts/seed-interp-agencies.ts"
+    "seed:interp-agencies": "tsx apps/api/scripts/seed-interp-agencies.ts",
+    "transform:appointments": "tsx scripts/transform-appointments.ts",
+    "seed:appointments": "tsx apps/api/scripts/seed-appointments.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
