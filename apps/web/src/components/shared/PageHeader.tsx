@@ -23,7 +23,6 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
   useEffect(() => {
     setTitle(title, description);
     return () => setTitle("", undefined);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description]);
 
   // Render actions into the TopBar portal target.

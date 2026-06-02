@@ -14,7 +14,6 @@ export function TopBar() {
     setActionsTarget(actionsRef.current);
     return () => setActionsTarget(null);
   // setActionsTarget is stable (useCallback) — intentionally run once
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initials = user?.name
