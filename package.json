@@ -16,7 +16,9 @@
     "dev:web": "pnpm --filter @dorada/web dev",
     "dev:mobile": "pnpm --filter @dorada/mobile start",
     "transform:interpreters": "tsx scripts/transform-interpreters.ts",
-    "seed:interpreters": "tsx apps/api/scripts/seed-interpreters.ts"
+    "seed:interpreters": "tsx apps/api/scripts/seed-interpreters.ts",
+    "transform:clinics": "tsx scripts/transform-clinics.ts",
+    "seed:clinics": "tsx apps/api/scripts/seed-clinics.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
