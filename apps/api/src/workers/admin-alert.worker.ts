@@ -10,7 +10,7 @@ interface LongAppointmentJobData {
 }
 
 export function createAdminAlertWorker(prisma: PrismaClient) {
-  const emitter = new Emitter(redisConnection as unknown as Parameters<typeof Emitter>[0]);
+  const emitter = new Emitter(redisConnection as unknown as ConstructorParameters<typeof Emitter>[0]);
 
   return new Worker<LongAppointmentJobData>(
     "admin-alert",
