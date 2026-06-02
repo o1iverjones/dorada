@@ -165,6 +165,9 @@ model Interpreter {
   certificate_date        DateTime?
   zip_code                String?
   preferred_cities        String[]  @default([])
+  // "high" | "medium" | null
+  priority                String?
+  extra_rates             Json?
   // "push" | "sms"
   follow_up_channel       String    @default("push")
   fcm_token               String?
