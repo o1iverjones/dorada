@@ -18,13 +18,16 @@
     "transform:interpreters": "tsx scripts/transform-interpreters.ts",
     "seed:interpreters": "tsx apps/api/scripts/seed-interpreters.ts",
     "transform:clinics": "tsx scripts/transform-clinics.ts",
-    "seed:clinics": "tsx apps/api/scripts/seed-clinics.ts"
+    "seed:clinics": "tsx apps/api/scripts/seed-clinics.ts",
+    "transform:agencies": "tsx scripts/transform-agencies.ts",
+    "seed:agencies": "tsx apps/api/scripts/seed-agencies.ts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "xlsx": "^0.18.5"
   }
 }

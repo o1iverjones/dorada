@@ -274,6 +274,10 @@ model InsuranceAgency {
   organization_id                    String
   name                               String
   address                            String?
+  city                               String?
+  state                              String?
+  zip_code                           String?
+  fax                                String?
   phone                              String?
   primary_contact_name               String?
   primary_contact_phone              String?
