@@ -47,12 +47,13 @@ export const InterpreterSchema = z.object({
 
 export const CreateInterpreterBodySchema = z.object({
   name: z.string().min(1).max(255),
-  phone: z.string().min(7).max(20),
+  phone: z.string().min(7).max(20).transform((v) => v.replace(/\D/g, "")),
   email: z.string().email().nullish(),
   type: InterpreterTypeSchema,
   languages: z.array(z.string().min(2).max(10)).min(1),
   location: LocationSchema.optional(),
   pay_rate: z.number().nonnegative().nullish(),
+  pay_rate_certified: z.number().nonnegative().nullish(),
   payment_method: z.string().max(100).nullish(),
   address_line1: z.string().max(500).nullish(),
   address_line2: z.string().max(500).nullish(),
@@ -62,6 +63,7 @@ export const CreateInterpreterBodySchema = z.object({
   clinics_not_allowed: z.array(UuidSchema).optional(),
   notes: z.string().max(5000).nullish(),
   certificate_number: z.string().max(100).nullish(),
+  certificate_date: z.string().nullish(),
   zip_code: z.string().max(10).nullish(),
   preferred_cities: z.array(z.string()).optional(),
 });

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const ConfigSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_ENV: z.enum(["dev", "production"]).default("production"),
   PORT: z.coerce.number().default(3000),
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
 

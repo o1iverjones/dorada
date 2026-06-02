@@ -9,10 +9,11 @@ import { cn } from "../../lib/utils.js";
 import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
   ShieldCheck, UserSquare2, BarChart3, MessageSquare, Mail,
-  Settings, User, Upload, Receipt, Landmark, Menu, X,
+  Settings, User, Receipt, Landmark, Menu, X, Bell,
   type LucideIcon,
 } from "lucide-react";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
+import { useAlerts } from "../../hooks/useSettings.js";
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -37,6 +38,8 @@ export function Sidebar() {
   const canManageInvoices = hasPermission("manage_invoices");
   const { data: invoiceStats } = useInvoiceStats(canManageInvoices);
   const pendingInvoices = invoiceStats?.submitted_count ?? 0;
+  const { data: alertsData } = useAlerts();
+  const unreadAlerts = alertsData?.unread_count ?? 0;
   const now = useClock();
   const tz = useOrgTimezone();
   const location = useLocation();
@@ -47,11 +50,12 @@ export function Sidebar() {
 
   const navItems: NavItem[] = [
     { label: t("nav.dashboard"), to: "/dashboard", icon: LayoutDashboard },
+    { label: t("nav.alerts"), to: "/alerts", icon: Bell },
     { label: t("nav.calendar"), to: "/calendar", icon: Calendar },
     { label: t("nav.appointments"), to: "/appointments", icon: ClipboardList, permission: "manage_appointments" },
     { label: t("nav.interpreters"), to: "/interpreters", icon: Users, permission: "manage_interpreters" },
     { label: t("nav.clinics"), to: "/clinics", icon: Building2, permission: "manage_clinics" },
-    { label: t("nav.insurance_agencies"), to: "/insurance-agencies", icon: ShieldCheck, permission: "manage_clinics" },
+    { label: t("nav.agencies"), to: "/agencies", icon: ShieldCheck, permission: "manage_clinics" },
     { label: t("nav.insurance_companies"), to: "/insurance-companies", icon: Landmark, permission: "manage_clinics" },
     { label: t("nav.patients"), to: "/patients", icon: UserSquare2, permission: "manage_appointments" },
     { label: t("nav.reports"), to: "/reports", icon: BarChart3, permission: "view_reports" },
@@ -60,7 +64,6 @@ export function Sidebar() {
     { label: t("nav.email_intake"), to: "/email-intake", icon: Mail, permission: "manage_appointments" },
     { label: t("nav.admin_users"), to: "/admin-users", icon: Users, permission: "manage_admin_users" },
     { label: t("nav.settings"), to: "/settings", icon: Settings, permission: "manage_system_settings" },
-    { label: "CSV Import", to: "/import", icon: Upload, permission: "manage_interpreters" },
   ];
 
   const visible = navItems.filter(
@@ -103,6 +106,9 @@ export function Sidebar() {
           >
             <div className="relative shrink-0">
               <item.icon className="h-4 w-4" />
+              {item.to === "/alerts" && unreadAlerts > 0 && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500" />
+              )}
               {item.to === "/messages" && unreadCount > 0 && (
                 <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-orange-500" />
               )}

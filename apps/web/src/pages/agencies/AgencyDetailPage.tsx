@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useInsuranceAgency, useUpdateInsuranceAgency } from "../../hooks/useInsuranceAgencies.js";
+import { useAgency, useUpdateAgency } from "../../hooks/useAgencies.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
@@ -59,11 +59,11 @@ interface AgencyData {
   } | null;
 }
 
-export function InsuranceAgencyDetailPage() {
+export function AgencyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
-  const { data, isLoading } = useInsuranceAgency(id!);
-  const update = useUpdateInsuranceAgency(id!);
+  const { data, isLoading } = useAgency(id!);
+  const update = useUpdateAgency(id!);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, unknown>>({});
 
@@ -159,33 +159,33 @@ export function InsuranceAgencyDetailPage() {
 
         {/* General info */}
         <Card>
-          <CardHeader><CardTitle>{t("insurance_agencies.details")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("agencies.details")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.name")}</Label>
+                  <Label>{t("agencies.name")}</Label>
                   <Input value={form.name as string} onChange={(e) => set("name", e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.contact_method")}</Label>
+                  <Label>{t("agencies.contact_method")}</Label>
                   <Input value={form.contact_method as string} onChange={(e) => set("contact_method", e.target.value)} placeholder={t("common.optional")} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.telephone")}</Label>
+                  <Label>{t("agencies.telephone")}</Label>
                   <PhoneInput value={form.telephone as string ?? ""} onChange={(v) => set("telephone", v)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.id_number")}</Label>
+                  <Label>{t("agencies.id_number")}</Label>
                   <Input value={form.id_number as string} onChange={(e) => set("id_number", e.target.value)} placeholder={t("common.optional")} />
                 </div>
               </div>
             ) : (
               <>
-                <Field label={t("insurance_agencies.name")} value={agency.name} />
-                <Field label={t("insurance_agencies.contact_method")} value={agency.contact_method} />
-                <Field label={t("insurance_agencies.telephone")} value={formatPhone(agency.telephone)} />
-                <Field label={t("insurance_agencies.id_number")} value={agency.id_number} />
+                <Field label={t("agencies.name")} value={agency.name} />
+                <Field label={t("agencies.contact_method")} value={agency.contact_method} />
+                <Field label={t("agencies.telephone")} value={formatPhone(agency.telephone)} />
+                <Field label={t("agencies.id_number")} value={agency.id_number} />
               </>
             )}
           </CardContent>
@@ -193,33 +193,33 @@ export function InsuranceAgencyDetailPage() {
 
         {/* Rates */}
         <Card>
-          <CardHeader><CardTitle>{t("insurance_agencies.rates")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("agencies.rates")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.rate_qualified")}</Label>
+                  <Label>{t("agencies.rate_qualified")}</Label>
                   <Input type="number" step="0.01" min="0" value={form.rate_qualified as string} onChange={(e) => set("rate_qualified", e.target.value)} placeholder={t("common.optional")} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.rate_certified")}</Label>
+                  <Label>{t("agencies.rate_certified")}</Label>
                   <Input type="number" step="0.01" min="0" value={form.rate_certified as string} onChange={(e) => set("rate_certified", e.target.value)} placeholder={t("common.optional")} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.rate_qme")}</Label>
+                  <Label>{t("agencies.rate_qme")}</Label>
                   <Input type="number" step="0.01" min="0" value={form.rate_qme as string} onChange={(e) => set("rate_qme", e.target.value)} placeholder={t("common.optional")} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.miles")}</Label>
+                  <Label>{t("agencies.miles")}</Label>
                   <Input type="number" step="0.1" min="0" value={form.miles as string} onChange={(e) => set("miles", e.target.value)} placeholder={t("common.optional")} />
                 </div>
               </div>
             ) : (
               <>
-                <Field label={t("insurance_agencies.rate_qualified")} value={agency.rate_qualified != null ? `$${Number(agency.rate_qualified).toFixed(2)}/hr` : null} />
-                <Field label={t("insurance_agencies.rate_certified")} value={agency.rate_certified != null ? `$${Number(agency.rate_certified).toFixed(2)}/hr` : null} />
-                <Field label={t("insurance_agencies.rate_qme")} value={agency.rate_qme != null ? `$${Number(agency.rate_qme).toFixed(2)}/hr` : null} />
-                <Field label={t("insurance_agencies.miles")} value={agency.miles != null ? `${agency.miles} mi` : null} />
+                <Field label={t("agencies.rate_qualified")} value={agency.rate_qualified != null ? `$${Number(agency.rate_qualified).toFixed(2)}/hr` : null} />
+                <Field label={t("agencies.rate_certified")} value={agency.rate_certified != null ? `$${Number(agency.rate_certified).toFixed(2)}/hr` : null} />
+                <Field label={t("agencies.rate_qme")} value={agency.rate_qme != null ? `$${Number(agency.rate_qme).toFixed(2)}/hr` : null} />
+                <Field label={t("agencies.miles")} value={agency.miles != null ? `${agency.miles} mi` : null} />
               </>
             )}
           </CardContent>
@@ -227,28 +227,28 @@ export function InsuranceAgencyDetailPage() {
 
         {/* Communication preferences */}
         <Card>
-          <CardHeader><CardTitle>{t("insurance_agencies.communication")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("agencies.communication")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.reporting_info")}</Label>
+                  <Label>{t("agencies.reporting_info")}</Label>
                   <ContactSelect value={form.reporting_info as string} onChange={(v) => set("reporting_info", v)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.followup_info")}</Label>
+                  <Label>{t("agencies.followup_info")}</Label>
                   <ContactSelect value={form.followup_info as string} onChange={(v) => set("followup_info", v)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.invoice_info")}</Label>
+                  <Label>{t("agencies.invoice_info")}</Label>
                   <ContactSelect value={form.invoice_info as string} onChange={(v) => set("invoice_info", v)} />
                 </div>
               </div>
             ) : (
               <>
-                <Field label={t("insurance_agencies.reporting_info")} value={agency.reporting_info} />
-                <Field label={t("insurance_agencies.followup_info")} value={agency.followup_info} />
-                <Field label={t("insurance_agencies.invoice_info")} value={agency.invoice_info} />
+                <Field label={t("agencies.reporting_info")} value={agency.reporting_info} />
+                <Field label={t("agencies.followup_info")} value={agency.followup_info} />
+                <Field label={t("agencies.invoice_info")} value={agency.invoice_info} />
               </>
             )}
           </CardContent>
@@ -256,15 +256,15 @@ export function InsuranceAgencyDetailPage() {
 
         {/* Email intake */}
         <Card>
-          <CardHeader><CardTitle>{t("insurance_agencies.email_intake")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("agencies.email_intake")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-3">
                 {[
-                  { key: "reply_from_email", label: t("insurance_agencies.reply_from_email") },
-                  { key: "reply_from_name", label: t("insurance_agencies.reply_from_name") },
-                  { key: "sender_domains", label: t("insurance_agencies.sender_domains_hint") },
-                  { key: "confirmation_method_override", label: t("insurance_agencies.confirmation_method") },
+                  { key: "reply_from_email", label: t("agencies.reply_from_email") },
+                  { key: "reply_from_name", label: t("agencies.reply_from_name") },
+                  { key: "sender_domains", label: t("agencies.sender_domains_hint") },
+                  { key: "confirmation_method_override", label: t("agencies.confirmation_method") },
                 ].map(({ key, label }) => (
                   <div key={key} className="space-y-1">
                     <Label>{label}</Label>
@@ -272,7 +272,7 @@ export function InsuranceAgencyDetailPage() {
                   </div>
                 ))}
                 <div className="space-y-1">
-                  <Label>{t("insurance_agencies.reply_template")}</Label>
+                  <Label>{t("agencies.reply_template")}</Label>
                   <textarea
                     className="w-full rounded-md border p-2 text-sm"
                     rows={5}
@@ -283,13 +283,13 @@ export function InsuranceAgencyDetailPage() {
               </div>
             ) : (
               <>
-                <Field label={t("insurance_agencies.reply_from_email")} value={intake?.reply_from_email} />
-                <Field label={t("insurance_agencies.reply_from_name")} value={intake?.reply_from_name} />
-                <Field label={t("insurance_agencies.sender_domains")} value={(intake?.sender_domains ?? []).join(", ") || null} />
-                <Field label={t("insurance_agencies.confirmation_method")} value={intake?.confirmation_method_override ?? t("common.auto")} />
+                <Field label={t("agencies.reply_from_email")} value={intake?.reply_from_email} />
+                <Field label={t("agencies.reply_from_name")} value={intake?.reply_from_name} />
+                <Field label={t("agencies.sender_domains")} value={(intake?.sender_domains ?? []).join(", ") || null} />
+                <Field label={t("agencies.confirmation_method")} value={intake?.confirmation_method_override ?? t("common.auto")} />
                 {intake?.reply_template && (
                   <div>
-                    <p className="text-muted-foreground">{t("insurance_agencies.reply_template")}</p>
+                    <p className="text-muted-foreground">{t("agencies.reply_template")}</p>
                     <pre className="mt-1 rounded bg-muted p-2 text-xs whitespace-pre-wrap">{intake.reply_template}</pre>
                   </div>
                 )}
@@ -302,7 +302,7 @@ export function InsuranceAgencyDetailPage() {
 
       {/* Notes — full width */}
       <Card>
-        <CardHeader><CardTitle>{t("insurance_agencies.notes")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("agencies.notes")}</CardTitle></CardHeader>
         <CardContent>
           {editing ? (
             <textarea

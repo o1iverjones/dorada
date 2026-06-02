@@ -21,8 +21,8 @@ import { InterpreterDetailPage } from "./pages/interpreters/InterpreterDetailPag
 import { NewInterpreterPage } from "./pages/interpreters/NewInterpreterPage.js";
 import { ClinicsPage } from "./pages/clinics/ClinicsPage.js";
 import { ClinicDetailPage } from "./pages/clinics/ClinicDetailPage.js";
-import { InsuranceAgenciesPage } from "./pages/insurance-agencies/InsuranceAgenciesPage.js";
-import { InsuranceAgencyDetailPage } from "./pages/insurance-agencies/InsuranceAgencyDetailPage.js";
+import { AgenciesPage } from "./pages/agencies/AgenciesPage.js";
+import { AgencyDetailPage } from "./pages/agencies/AgencyDetailPage.js";
 import { PatientsPage } from "./pages/patients/PatientsPage.js";
 import { PatientDetailPage } from "./pages/patients/PatientDetailPage.js";
 import { ReportsPage } from "./pages/reports/ReportsPage.js";
@@ -34,11 +34,11 @@ import { RolesPage } from "./pages/admin-users/RolesPage.js";
 import { SettingsPage } from "./pages/settings/SettingsPage.js";
 import { LocalizationPage } from "./pages/settings/LocalizationPage.js";
 import { AccountPage } from "./pages/account/AccountPage.js";
-import { ImportPage } from "./pages/import/ImportPage.js";
 import { IconGalleryPage } from "./pages/icons/IconGalleryPage.js";
 import { InvoicesPage } from "./pages/invoices/InvoicesPage.js";
 import { InsuranceCompaniesPage } from "./pages/insurance-companies/InsuranceCompaniesPage.js";
 import { InsuranceCompanyDetailPage } from "./pages/insurance-companies/InsuranceCompanyDetailPage.js";
+import { AlertsPage } from "./pages/alerts/AlertsPage.js";
 
 export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
   {
@@ -63,6 +63,7 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "dashboard", element: <DashboardPage /> },
+      { path: "alerts", element: <AlertsPage /> },
       { path: "calendar", element: <CalendarPage /> },
       {
         path: "appointments",
@@ -104,12 +105,12 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
         element: <PermissionGuard permission="manage_clinics"><ClinicDetailPage /></PermissionGuard>,
       },
       {
-        path: "insurance-agencies",
-        element: <PermissionGuard permission="manage_clinics"><InsuranceAgenciesPage /></PermissionGuard>,
+        path: "agencies",
+        element: <PermissionGuard permission="manage_clinics"><AgenciesPage /></PermissionGuard>,
       },
       {
-        path: "insurance-agencies/:id",
-        element: <PermissionGuard permission="manage_clinics"><InsuranceAgencyDetailPage /></PermissionGuard>,
+        path: "agencies/:id",
+        element: <PermissionGuard permission="manage_clinics"><AgencyDetailPage /></PermissionGuard>,
       },
       {
         path: "insurance-companies",
@@ -155,10 +156,6 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       {
         path: "settings/localization",
         element: <PermissionGuard permission="manage_system_settings"><LocalizationPage /></PermissionGuard>,
-      },
-      {
-        path: "import",
-        element: <PermissionGuard permission="manage_interpreters"><ImportPage /></PermissionGuard>,
       },
       {
         path: "invoices",

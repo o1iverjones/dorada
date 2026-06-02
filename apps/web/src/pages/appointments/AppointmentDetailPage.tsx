@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter } from "../../hooks/useAppointments.js";
+import { getSocket } from "../../lib/socket.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
-import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { usePatients, useUpdatePatient } from "../../hooks/usePatients.js";
 import { useOrgTimezone, useSystemSettings, useInterpreterRates, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz, toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
@@ -31,10 +32,11 @@ type FormState = {
   language: string;
   interpreter_type_required: "certified" | "qualified";
   clinic_id: string;
-  insurance_agency_id: string;
+  agency_id: string;
   patient_id: string;
   referring_physician: string;
   po_number: string;
+  billing_interpreter: string;
   pre_auth_amount: number;
   pre_auth_mileage: number;
   dob: string; // "YYYY-MM-DD" or ""
@@ -61,6 +63,16 @@ export function AppointmentDetailPage() {
   const [confirmUnassign, setConfirmUnassign] = useState(false);
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const handler = (data: { appointmentId: string }) => {
+      if (data.appointmentId === id) refetch();
+    };
+    socket.on("appointment:offer_updated", handler);
+    return () => { socket.off("appointment:offer_updated", handler); };
+  }, [id, refetch]);
+
   const cancel = useCancelAppointment(id!);
   const offer = useOfferAppointment(id!);
   const update = useUpdateAppointment(id!);
@@ -76,7 +88,7 @@ export function AppointmentDetailPage() {
 
   // Lookup data for edit mode
   const { data: clinicsData } = useClinics({ limit: "500" });
-  const { data: agenciesData } = useInsuranceAgencies({ limit: "500" });
+  const { data: agenciesData } = useAgencies({ limit: "500" });
   const { data: patientsData } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
@@ -138,10 +150,11 @@ export function AppointmentDetailPage() {
       language: a!.language as string ?? "",
       interpreter_type_required: a!.interpreter_type_required as "certified" | "qualified",
       clinic_id: (a!.clinic as Record<string, unknown>)?.id as string ?? "",
-      insurance_agency_id: (a!.insurance_agency as Record<string, unknown>)?.id as string ?? "",
+      agency_id: (a!.agency as Record<string, unknown>)?.id as string ?? "",
       patient_id: (a!.patient as Record<string, unknown>)?.id as string ?? "",
       referring_physician: a!.referring_physician as string ?? "",
       po_number: a!.po_number as string ?? "",
+      billing_interpreter: a!.billing_interpreter as string ?? "",
       pre_auth_amount: Number(a!.pre_auth_amount ?? 0),
       pre_auth_mileage: Number(a!.pre_auth_mileage ?? 0),
       dob: ((a!.patient as Record<string, unknown>)?.date_of_birth as string | null)?.slice(0, 10) ?? "",
@@ -163,10 +176,11 @@ export function AppointmentDetailPage() {
           language: form.language,
           interpreter_type_required: form.interpreter_type_required,
           ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
-          ...(form.insurance_agency_id ? { insurance_agency_id: form.insurance_agency_id } : {}),
+          ...(form.agency_id ? { agency_id: form.agency_id } : {}),
           ...(form.patient_id ? { patient_id: form.patient_id } : {}),
           referring_physician: form.referring_physician || undefined,
           po_number: form.po_number || undefined,
+          billing_interpreter: form.billing_interpreter || null,
           pre_auth_amount: form.pre_auth_amount,
           pre_auth_mileage: Math.round(form.pre_auth_mileage),
         }),
@@ -225,7 +239,7 @@ export function AppointmentDetailPage() {
                       language: a.language,
                       interpreter_type_required: a.interpreter_type_required,
                       clinic_id: (a.clinic as Record<string, unknown>)?.id,
-                      insurance_agency_id: (a.insurance_agency as Record<string, unknown>)?.id,
+                      agency_id: (a.agency as Record<string, unknown>)?.id,
                       patient_id: (a.patient as Record<string, unknown>)?.id,
                       referring_physician: a.referring_physician,
                       pre_auth_amount: a.pre_auth_amount,
@@ -306,6 +320,23 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.po_number")} value={(a.po_number as string) ?? "—"} />
+              )}
+            </div>
+
+            {/* Billing Interpreter */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing ? (
+                <InlineRow label={t("appointments.billing_interpreter")}>
+                  <AutocompleteInput
+                    options={allInterpreterList.map((i) => ({ value: i.name as string, label: i.name as string }))}
+                    value={form.billing_interpreter}
+                    onChange={(v) => set("billing_interpreter", v)}
+                    placeholder="—"
+                    freeText
+                  />
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.billing_interpreter")} value={(a.billing_interpreter as string) ?? "—"} />
               )}
             </div>
 
@@ -407,14 +438,14 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Insurance Agency */}
+            {/* Agency */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
-                <InlineRow label={t("appointments.insurance_agency")}>
-                  <AutocompleteInput options={agencyOptions} value={form.insurance_agency_id} onChange={(v) => set("insurance_agency_id", v)} placeholder={t("common.search")} />
+                <InlineRow label={t("appointments.agency")}>
+                  <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => set("agency_id", v)} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.insurance_agency")} value={(a.insurance_agency as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("appointments.agency")} value={(a.agency as Record<string, unknown>)?.name as string ?? "—"} />
               )}
             </div>
 
@@ -461,7 +492,10 @@ export function AppointmentDetailPage() {
           </CardContent>
         </Card>
 
-        <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
+        <div className="space-y-6">
+          <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
+          <BillingCard appointmentId={id!} appointment={a} />
+        </div>
 
         {a.shift_notes && (
           <Card>
@@ -494,56 +528,81 @@ export function AppointmentDetailPage() {
         );
       })()}
 
-      {((a.offers as Array<Record<string, unknown>>) ?? []).filter((o) => o.status === "pending").length > 0 && (
+      {((a.offers as Array<Record<string, unknown>>) ?? []).some((o) => o.status === "pending" || o.status === "declined") && (
         <Card>
           <CardHeader><CardTitle>{t("appointments.pending_offers")}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {((a.offers as Array<Record<string, unknown>>) ?? [])
-              .filter((o) => o.status === "pending")
-              .map((o) => (
-                <div key={o.id as string} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                  <span className="font-medium">{(o.interpreter as Record<string, unknown>)?.name as string}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground">{t("appointments.offer_pending")}</span>
-                    {allowManualConfirm && (
-                      <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
-                          disabled={manualConfirm.isPending}
-                          onChange={() => {
-                            manualConfirm.mutate((o.interpreter as Record<string, unknown>)?.id as string, {
-                              onSuccess: () => toast({ title: t("appointments.manually_confirmed") }),
-                              onError: () => toast({ title: t("common.error"), variant: "destructive" }),
-                            });
-                          }}
-                        />
-                        {t("appointments.manually_confirm")}
-                      </label>
-                    )}
+              .filter((o) => o.status === "pending" || o.status === "declined")
+              .map((o) => {
+                const isDeclined = o.status === "declined";
+                return (
+                  <div
+                    key={o.id as string}
+                    className={`flex items-center justify-between rounded-md border p-3 text-sm ${
+                      isDeclined
+                        ? "bg-red-50 border-red-200 opacity-75"
+                        : "bg-yellow-50 border-yellow-300"
+                    }`}
+                  >
+                    <span className={`font-medium ${isDeclined ? "text-muted-foreground line-through" : "text-yellow-900"}`}>
+                      {(o.interpreter as Record<string, unknown>)?.name as string}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {isDeclined ? (
+                        <span className="rounded-full bg-red-100 border border-red-300 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                          {t("appointments.offer_declined")}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-yellow-700 text-xs font-medium">{t("appointments.offer_pending")}</span>
+                          {allowManualConfirm && (
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                                disabled={manualConfirm.isPending}
+                                onChange={() => {
+                                  manualConfirm.mutate((o.interpreter as Record<string, unknown>)?.id as string, {
+                                    onSuccess: () => toast({ title: t("appointments.manually_confirmed") }),
+                                    onError: () => toast({ title: t("common.error"), variant: "destructive" }),
+                                  });
+                                }}
+                              />
+                              {t("appointments.manually_confirm")}
+                            </label>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </CardContent>
         </Card>
       )}
 
-      {a.status === "pending_offer" && (
+      {(a.status === "unassigned" || a.status === "pending_offer" || a.status === "declined") && (
         <Card>
-          <CardHeader>
-            <CardTitle>{t("appointments.select_interpreters")}</CardTitle>
-            {cityFilterApplied && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("appointments.city_filter_active").replace("{{city}}", clinicCityDisplay ?? "")}
-              </p>
-            )}
-            {cityFilterNoMatch && (
-              <p className="text-xs text-amber-600 mt-1">
-                {t("appointments.city_filter_no_match").replace("{{city}}", clinicCityDisplay ?? "")}
-              </p>
-            )}
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <div>
+              <CardTitle>{t("appointments.select_interpreters")}</CardTitle>
+              {cityFilterApplied && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("appointments.city_filter_active").replace("{{city}}", clinicCityDisplay ?? "")}
+                </p>
+              )}
+              {cityFilterNoMatch && (
+                <p className="text-xs text-amber-600 mt-1">
+                  {t("appointments.city_filter_no_match").replace("{{city}}", clinicCityDisplay ?? "")}
+                </p>
+              )}
+            </div>
+            <Button onClick={handleOffer} disabled={offer.isPending || !selectedInterpreters.length} className="shrink-0">
+              {t("appointments.offer_to_interpreters")}
+            </Button>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <InterpreterSearch
               interpreters={interpretersForOffer}
               offers={(a.offers as Array<Record<string, unknown>>) ?? []}
@@ -552,14 +611,11 @@ export function AppointmentDetailPage() {
               setSelectedInterpreters={setSelectedInterpreters}
               t={t}
             />
-            <Button onClick={handleOffer} disabled={offer.isPending || !selectedInterpreters.length}>
-              {t("appointments.offer_to_interpreters")}
-            </Button>
           </CardContent>
         </Card>
       )}
 
-      <Card>
+      {(a.status === "confirmed" || a.status === "in_progress" || a.status === "completed") && <Card>
         <CardHeader>
           <CardTitle>{t("appointments.time_tracking")}</CardTitle>
         </CardHeader>
@@ -717,7 +773,7 @@ export function AppointmentDetailPage() {
             </>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {((mediaData as Array<Record<string, unknown>>) ?? []).length > 0 && (
         <Card>
@@ -846,6 +902,97 @@ export function AppointmentDetailPage() {
   );
 }
 
+function BillingCard({ appointmentId, appointment }: { appointmentId: string; appointment: Record<string, unknown> }) {
+  const { t } = useTranslation();
+  const patch = usePatchBilling(appointmentId);
+
+  const b = appointment as unknown as BillingFields & Record<string, unknown>;
+
+  function toggle(field: keyof BillingFields, value: boolean | string) {
+    patch.mutate({ [field]: value } as Partial<BillingFields>);
+  }
+
+  const checkboxes: { field: keyof BillingFields; label: string }[] = [
+    { field: "billing_invoiced",             label: t("appointments.billing_invoiced") },
+    { field: "billing_billed",               label: t("appointments.billing_billed") },
+    { field: "billing_payment_under_claim",  label: t("appointments.billing_payment_under_claim") },
+    { field: "billing_lost",                 label: t("appointments.billing_lost") },
+    { field: "billing_retro",                label: t("appointments.billing_retro") },
+  ];
+
+  const paymentStatus = (b.billing_payment_status as string) ?? "not_paid";
+  const approvalStatus = (b.billing_approval_status as string) ?? "pending_approval";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle>{t("appointments.billing")}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-4">
+        {/* Checkboxes */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+          {checkboxes.map(({ field, label }) => (
+            <label key={field} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 accent-primary"
+                checked={!!b[field]}
+                onChange={(e) => toggle(field, e.target.checked)}
+                disabled={patch.isPending}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="border-t" />
+
+        {/* Payment status toggle */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{t("appointments.billing_payment")}</span>
+          <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+            <button
+              onClick={() => toggle("billing_payment_status", "not_paid")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${paymentStatus === "not_paid" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_not_paid")}
+            </button>
+            <button
+              onClick={() => toggle("billing_payment_status", "paid")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${paymentStatus === "paid" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_paid")}
+            </button>
+          </div>
+        </div>
+
+        {/* Approval status toggle */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{t("appointments.billing_approval")}</span>
+          <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+            <button
+              onClick={() => toggle("billing_approval_status", "pending_approval")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${approvalStatus === "pending_approval" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_pending_approval")}
+            </button>
+            <button
+              onClick={() => toggle("billing_approval_status", "approved")}
+              disabled={patch.isPending}
+              className={`px-3 py-1.5 transition-colors ${approvalStatus === "approved" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
+            >
+              {t("appointments.billing_approved")}
+            </button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; physician: string | null }) {
   const { t } = useTranslation();
   const address = clinic?.address as string | null;
@@ -856,7 +1003,7 @@ function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; 
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
         <CardTitle>{t("appointments.location")}</CardTitle>
         {mapsUrl && (
           <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
@@ -864,17 +1011,17 @@ function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; 
           </a>
         )}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 px-4 pb-4">
         {embedUrl ? (
           <div className="overflow-hidden rounded-md border">
-            <iframe src={embedUrl} width="100%" height="180" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
+            <iframe src={embedUrl} width="100%" height="130" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
           </div>
         ) : (
-          <div className="flex h-24 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
+          <div className="flex h-16 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
             {t("appointments.no_address")}
           </div>
         )}
-        <div className="space-y-1.5 text-sm">
+        <div className="space-y-1 text-sm">
           {physician && <p className="font-semibold">{physician}</p>}
           <p className="font-semibold">{clinicName}</p>
           {address && (
@@ -952,7 +1099,10 @@ function InterpreterSearch({
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">{t("common.no_results")}</p>
         ) : (
-          filtered.map((interp) => {
+          filtered
+            // Declined interpreters are shown in the Pending Offers card — exclude from this list
+            .filter((interp) => !offers.some((o) => o.interpreter_id === interp.id && o.status === "declined"))
+            .map((interp) => {
             const alreadyOffered = offers.some(
               (o) => o.interpreter_id === interp.id && o.status === "pending",
             );
@@ -963,7 +1113,9 @@ function InterpreterSearch({
               <label
                 key={interp.id as string}
                 className={`flex items-center gap-3 rounded-md border p-3 ${
-                  disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                  disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
                 }`}
               >
                 <input

@@ -18,6 +18,7 @@ import {
 import { addMinutes, diffMinutes } from "@dorada/utils";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { distanceMiles } from "../../lib/geo.js";
+import { sendExpoPushNotifications } from "../../lib/push.js";
 
 async function logActivity(
   appointmentId: string,
@@ -85,7 +86,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
     ...(statuses ? { status: { in: statuses } } : {}),
     ...(query.interpreter_id ? { interpreter_id: query.interpreter_id } : {}),
     ...(query.clinic_id ? { clinic_id: query.clinic_id } : {}),
-    ...(query.insurance_agency_id ? { insurance_agency_id: query.insurance_agency_id } : {}),
+    ...(query.agency_id ? { agency_id: query.agency_id } : {}),
     ...(query.language ? { language: query.language } : {}),
     ...(query.type_id ? { type_id: query.type_id } : {}),
     ...((query.date_from || query.date_to) ? { date_time: dateFilter } : {}),
@@ -100,7 +101,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
       type: true,
       interpreter: { select: { id: true, name: true, profile_picture_url: true, pay_rate: true } },
       clinic: { select: { id: true, name: true } },
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true } },
       offers: { where: { status: "pending" }, select: { interpreter: { select: { id: true, name: true } } } },
       invoice: { select: { id: true, status: true, billable_minutes: true } },
@@ -122,7 +123,7 @@ export async function getAppointment(id: string, organizationId: string, prisma:
       type: true,
       interpreter: { select: { id: true, name: true } },
       clinic: { select: { id: true, name: true, address: true, parking: true } },
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true, date_of_birth: true } },
       offers: { include: { interpreter: { select: { id: true, name: true } } } },
       invoice: { select: { id: true, status: true, amount: true, submitted_at: true } },
@@ -199,21 +200,22 @@ export async function createAppointment(
       language: body.language,
       interpreter_type_required: body.interpreter_type_required,
       clinic_id: body.clinic_id,
-      insurance_agency_id: body.insurance_agency_id,
+      agency_id: body.agency_id,
       patient_id: body.patient_id,
       referring_physician: body.referring_physician ?? null,
       department: body.department ?? null,
       pre_auth_amount: body.pre_auth_amount,
       pre_auth_mileage: body.pre_auth_mileage,
       po_number: body.po_number ?? null,
-      status: "pending_offer",
+      billing_interpreter: body.billing_interpreter ?? null,
+      status: "unassigned",
       source: "manual",
     },
     include: {
       type: true,
       interpreter: { select: { id: true, name: true } },
       clinic: { select: { id: true, name: true } },
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true } },
     },
   });
@@ -242,11 +244,12 @@ export async function updateAppointment(
       ...(body.language ? { language: body.language } : {}),
       ...(body.interpreter_type_required ? { interpreter_type_required: body.interpreter_type_required } : {}),
       ...(body.clinic_id ? { clinic_id: body.clinic_id } : {}),
-      ...(body.insurance_agency_id ? { insurance_agency_id: body.insurance_agency_id } : {}),
+      ...(body.agency_id ? { agency_id: body.agency_id } : {}),
       ...(body.patient_id ? { patient_id: body.patient_id } : {}),
       ...(body.referring_physician !== undefined ? { referring_physician: body.referring_physician } : {}),
       ...(body.department !== undefined ? { department: body.department } : {}),
       ...(body.po_number !== undefined ? { po_number: body.po_number || null } : {}),
+      ...(body.billing_interpreter !== undefined ? { billing_interpreter: body.billing_interpreter || null } : {}),
       ...(body.pre_auth_amount !== undefined ? { pre_auth_amount: body.pre_auth_amount } : {}),
       ...(body.pre_auth_mileage !== undefined ? { pre_auth_mileage: body.pre_auth_mileage } : {}),
       ...(body.status ? { status: body.status } : {}),
@@ -255,7 +258,7 @@ export async function updateAppointment(
       type: true,
       interpreter: { select: { id: true, name: true } },
       clinic: { select: { id: true, name: true } },
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true } },
     },
   });
@@ -265,13 +268,14 @@ export async function updateAppointment(
     language: "Language",
     interpreter_type_required: "Interpreter Type",
     clinic_id: "Clinic",
-    insurance_agency_id: "Insurance Agency",
+    agency_id: "Insurance Agency",
     patient_id: "Patient",
     referring_physician: "Provider",
     department: "Department",
     pre_auth_amount: "Pre-Auth Amount",
     pre_auth_mileage: "Pre-Auth Mileage",
     po_number: "PO Number",
+    billing_interpreter: "Billing Interpreter",
   };
 
   if (body.status && body.status !== appt!.status) {
@@ -289,13 +293,14 @@ export async function updateAppointment(
     if (body.language !== undefined && body.language !== appt!.language) changed.push(FIELD_LABELS.language);
     if (body.interpreter_type_required !== undefined && body.interpreter_type_required !== appt!.interpreter_type_required) changed.push(FIELD_LABELS.interpreter_type_required);
     if (body.clinic_id !== undefined && body.clinic_id !== appt!.clinic_id) changed.push(FIELD_LABELS.clinic_id);
-    if (body.insurance_agency_id !== undefined && body.insurance_agency_id !== appt!.insurance_agency_id) changed.push(FIELD_LABELS.insurance_agency_id);
+    if (body.agency_id !== undefined && body.agency_id !== appt!.agency_id) changed.push(FIELD_LABELS.agency_id);
     if (body.patient_id !== undefined && body.patient_id !== appt!.patient_id) changed.push(FIELD_LABELS.patient_id);
     if (body.referring_physician !== undefined && (body.referring_physician ?? null) !== appt!.referring_physician) changed.push(FIELD_LABELS.referring_physician);
     if (body.department !== undefined && (body.department ?? null) !== appt!.department) changed.push(FIELD_LABELS.department);
     if (body.pre_auth_amount !== undefined && Number(body.pre_auth_amount) !== Number(appt!.pre_auth_amount)) changed.push(FIELD_LABELS.pre_auth_amount);
     if (body.pre_auth_mileage !== undefined && body.pre_auth_mileage !== appt!.pre_auth_mileage) changed.push(FIELD_LABELS.pre_auth_mileage);
     if (body.po_number !== undefined && (body.po_number ?? null) !== appt!.po_number) changed.push(FIELD_LABELS.po_number);
+    if (body.billing_interpreter !== undefined && (body.billing_interpreter ?? null) !== appt!.billing_interpreter) changed.push(FIELD_LABELS.billing_interpreter);
     await logActivity(id, organizationId, "updated", actor.name, actor.id, changed.length ? changed.join(", ") : null, prisma, updated.patient?.name, updated.po_number);
   }
   return updated;
@@ -365,14 +370,14 @@ export async function unassignInterpreter(id: string, organizationId: string, ac
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
 
   if (!appt!.interpreter_id) throw new ConflictError("NO_INTERPRETER", "Appointment has no interpreter assigned");
-  if (!["confirmed", "pending_offer"].includes(appt!.status)) {
+  if (!["confirmed", "pending_offer", "unassigned"].includes(appt!.status)) {
     throw new ValidationError("INVALID_STATUS_TRANSITION", "Cannot unassign interpreter from an appointment that is in progress or completed");
   }
 
   await prisma.$transaction([
     prisma.appointment.update({
       where: { id },
-      data: { interpreter_id: null, status: "pending_offer" },
+      data: { interpreter_id: null, status: "unassigned" },
     }),
     prisma.appointmentOffer.updateMany({
       where: { appointment_id: id },
@@ -444,7 +449,34 @@ export async function offerAppointment(
 
   const created = await Promise.all(offers);
   const names = created.map((o) => o.interpreter.name).join(", ");
+
+  // If the appointment was unassigned or declined, move it to pending_offer now that an offer exists
+  if (created.length > 0 && (appt!.status === "declined" || appt!.status === "unassigned")) {
+    await prisma.appointment.update({ where: { id }, data: { status: "pending_offer" } });
+  }
+
   await logActivity(id, organizationId, "offer_sent", actor.name, actor.id, `Offered to: ${names}`, prisma, null, appt!.po_number);
+
+  // Send push notifications to each offered interpreter
+  const interpreterIds = created.map((o) => o.interpreter_id);
+  const tokens = await prisma.interpreter.findMany({
+    where: { id: { in: interpreterIds }, fcm_token: { not: null } },
+    select: { fcm_token: true },
+  });
+  const apptDate = new Date(appt!.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const messages = tokens
+    .map((t) => t.fcm_token!)
+    .filter((token) => token.startsWith("ExponentPushToken"))
+    .map((token) => ({
+      to: token,
+      title: "New Appointment Offer",
+      body: `You have a new appointment offer for ${apptDate}. Tap to view details.`,
+      data: { appointmentId: id, type: "offer" },
+      sound: "default" as const,
+      priority: "high" as const,
+    }));
+  await sendExpoPushNotifications(messages);
+
   return { offers: created };
 }
 
@@ -495,7 +527,7 @@ export async function manualConfirmInterpreter(
   if (!appointment || appointment.organization_id !== organizationId) {
     throw new NotFoundError("APPOINTMENT_NOT_FOUND", "Appointment not found");
   }
-  if (appointment.status !== "pending_offer") {
+  if (!["pending_offer", "unassigned"].includes(appointment.status)) {
     throw new ConflictError("INVALID_STATUS", "Appointment is not in pending_offer status");
   }
   if (appointment.interpreter_id) {
@@ -537,6 +569,17 @@ export async function declineOffer(
     where: { id: offerId },
     data: { status: "declined", responded_at: new Date() },
   });
+
+  // If no other pending offers exist, flip the appointment status to "declined"
+  const remainingPending = await prisma.appointmentOffer.count({
+    where: { appointment_id: appointmentId, status: "pending" },
+  });
+  if (remainingPending === 0) {
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: "declined" },
+    });
+  }
 
   return { offer: { id: offerId, status: "declined" } };
 }
@@ -685,7 +728,7 @@ export async function getInterpreterAppointment(appointmentId: string, interpret
           interpreter_notes: { where: { is_active: true }, select: { id: true, content: true, type: true }, orderBy: { created_at: "asc" } },
         },
       },
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true } },
       invoice: { select: { id: true, status: true, amount: true } },
       media: { select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true }, orderBy: { uploaded_at: "asc" } },
@@ -726,7 +769,7 @@ export async function getInterpreterAppointments(
           interpreter_notes: { where: { is_active: true }, select: { id: true, type: true }, orderBy: { created_at: "asc" } },
         },
       },
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true } },
     },
   });
@@ -746,7 +789,7 @@ export async function getInterpreterOffers(interpreterId: string, prisma: Prisma
       appointment: {
         include: {
           clinic: { select: { id: true, name: true } },
-          insurance_agency: { select: { id: true, name: true } },
+          agency: { select: { id: true, name: true } },
           patient: { select: { id: true, name: true } },
         },
       },
@@ -764,7 +807,7 @@ export async function getInterpreterOffers(interpreterId: string, prisma: Prisma
       language: o.appointment.language,
       interpreter_type_required: o.appointment.interpreter_type_required,
       clinic_name: o.appointment.clinic?.name ?? null,
-      insurance_agency_name: o.appointment.insurance_agency?.name ?? null,
+      agency_name: o.appointment.agency?.name ?? null,
       patient_name: o.appointment.patient?.name ?? null,
     })),
   };
@@ -841,7 +884,7 @@ export async function listFollowUpDrafts(
     include: {
       follow_up_response: {
         include: {
-          appointment: { include: { patient: true, clinic: true, insurance_agency: true } },
+          appointment: { include: { patient: true, clinic: true, agency: true } },
           interpreter: { select: { id: true, name: true } },
           media: true,
         },
@@ -863,8 +906,8 @@ export async function listFollowUpDrafts(
       clinic: d.follow_up_response.appointment.clinic
         ? { id: d.follow_up_response.appointment.clinic.id, name: d.follow_up_response.appointment.clinic.name }
         : null,
-      insurance_agency: d.follow_up_response.appointment.insurance_agency
-        ? { id: d.follow_up_response.appointment.insurance_agency.id, name: d.follow_up_response.appointment.insurance_agency.name }
+      agency: d.follow_up_response.appointment.agency
+        ? { id: d.follow_up_response.appointment.agency.id, name: d.follow_up_response.appointment.agency.name }
         : null,
       interpreter: { id: d.follow_up_response.interpreter.id, name: d.follow_up_response.interpreter.name },
       follow_up_response: {
@@ -909,14 +952,14 @@ export async function reviewFollowUpDraft(
   const appointment = await prisma.appointment.create({
     data: {
       organization_id: organizationId,
-      status: "pending_offer",
+      status: "unassigned",
       date_time: new Date(body.date_time),
       duration_minutes: src.duration_minutes,
       type_id: src.type_id,
       language: src.language,
       interpreter_type_required: src.interpreter_type_required,
       clinic_id: body.clinic_id ?? src.clinic_id,
-      insurance_agency_id: body.insurance_agency_id ?? src.insurance_agency_id,
+      agency_id: body.agency_id ?? src.agency_id,
       patient_id: src.patient_id,
       referring_physician: src.referring_physician,
       pre_auth_amount: body.pre_auth_amount ?? src.pre_auth_amount,
@@ -932,7 +975,7 @@ export async function reviewFollowUpDraft(
 
   return {
     draft_status: "scheduled",
-    appointment: { id: appointment.id, status: "pending_offer", date_time: appointment.date_time.toISOString() },
+    appointment: { id: appointment.id, status: "unassigned", date_time: appointment.date_time.toISOString() },
   };
 }
 

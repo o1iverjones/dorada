@@ -7,15 +7,26 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": true }
+      "ios": { "simulator": true },
+      "env": { "APP_ENV": "dev" }
     },
     "preview": {
       "distribution": "internal",
-      "ios": { "resourceClass": "m-medium" }
+      "android": { "buildType": "apk" },
+      "ios": { "resourceClass": "m-medium" },
+      "env": { "APP_ENV": "dev" }
+    },
+    "preview:prod": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "ios": { "resourceClass": "m-medium" },
+      "env": { "APP_ENV": "production" }
     },
     "production": {
       "autoIncrement": true,
-      "ios": { "resourceClass": "m-medium" }
+      "android": { "buildType": "app-bundle" },
+      "ios": { "resourceClass": "m-medium" },
+      "env": { "APP_ENV": "production" }
     }
   },
   "submit": {

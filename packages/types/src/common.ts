@@ -20,14 +20,16 @@ export const ErrorResponseSchema = z.object({
 });
 
 export const AppointmentStatusSchema = z.enum([
+  "unassigned",
   "pending_offer",
   "confirmed",
   "in_progress",
   "completed",
   "cancelled",
+  "declined",
 ]);
 
-export const InterpreterTypeSchema = z.enum(["certified", "qualified"]);
+export const InterpreterTypeSchema = z.enum(["qualified", "certified", "qualified_and_certified"]);
 
 export const PayModelSchema = z.enum(["hourly", "flat", "flat_rate"]);
 
@@ -39,7 +41,7 @@ export const NotificationChannelSchema = z.enum(["push", "sms"]);
 
 export const ReportTypeSchema = z.enum([
   "interpreter_compensation",
-  "insurance_agency_billing",
+  "agency_billing",
   "appointment_history",
   "interpreter_performance",
 ]);

@@ -63,12 +63,12 @@ export async function listInterpreters(query: InterpreterListQuery, organization
 function formatInterpreter(i: {
   id: string; name: string; phone: string; email: string | null; type: string;
   languages: string[]; profile_picture_url: string | null; location_lat: number | null;
-  location_lng: number | null; pay_rate: unknown; payment_method: string | null; is_active: boolean;
+  location_lng: number | null; pay_rate: unknown; pay_rate_certified?: unknown; payment_method: string | null; is_active: boolean;
   created_at: Date; updated_at: Date;
   clinics_not_allowed: { clinic: { id: string; name: string } }[];
   address_line1?: string | null; address_line2?: string | null; city?: string | null; state?: string | null;
   emergency_contact_name?: string | null; emergency_contact_phone?: string | null;
-  notes?: string | null; certificate_number?: string | null; zip_code?: string | null; preferred_cities?: string[];
+  notes?: string | null; certificate_number?: string | null; certificate_date?: Date | null; zip_code?: string | null; preferred_cities?: string[];
 }) {
   return {
     id: i.id,
@@ -80,6 +80,7 @@ function formatInterpreter(i: {
     profile_picture_url: i.profile_picture_url,
     location: i.location_lat != null && i.location_lng != null ? { lat: i.location_lat, lng: i.location_lng } : null,
     pay_rate: i.pay_rate ? Number(i.pay_rate) : null,
+    pay_rate_certified: i.pay_rate_certified ? Number(i.pay_rate_certified) : null,
     payment_method: i.payment_method,
     is_active: i.is_active,
     clinics_not_allowed: i.clinics_not_allowed.map((b) => b.clinic),
@@ -94,6 +95,7 @@ function formatInterpreter(i: {
       : {}),
     ...(i.notes !== undefined ? { notes: i.notes } : {}),
     ...(i.certificate_number !== undefined ? { certificate_number: i.certificate_number } : {}),
+    ...(i.certificate_date !== undefined ? { certificate_date: i.certificate_date ? i.certificate_date.toISOString().slice(0, 10) : null } : {}),
     ...(i.zip_code !== undefined ? { zip_code: i.zip_code } : {}),
     ...(i.preferred_cities !== undefined ? { preferred_cities: i.preferred_cities } : {}),
   };
@@ -108,7 +110,7 @@ export async function getInterpreter(id: string, organizationId: string, prisma:
     },
   });
   ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
-  return formatInterpreter({ ...interpreter!, address_line1: interpreter!.address_line1, address_line2: interpreter!.address_line2, city: interpreter!.city, state: interpreter!.state, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, zip_code: interpreter!.zip_code, preferred_cities: interpreter!.preferred_cities });
+  return formatInterpreter({ ...interpreter!, address_line1: interpreter!.address_line1, address_line2: interpreter!.address_line2, city: interpreter!.city, state: interpreter!.state, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, certificate_date: interpreter!.certificate_date, zip_code: interpreter!.zip_code, preferred_cities: interpreter!.preferred_cities });
 }
 
 function normalizePhone(phone: string): string {
@@ -121,9 +123,11 @@ export async function createInterpreter(body: CreateInterpreterBody, organizatio
   if (existing) throw new ConflictError("PHONE_ALREADY_EXISTS", "Phone number already registered");
 
   const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
-  const defaultRate = body.type === "certified"
-    ? Number(settings?.default_pay_rate_certified ?? 40)
-    : Number(settings?.default_pay_rate_qualified ?? 30);
+  const defaultRateQualified = Number(settings?.default_pay_rate_qualified ?? 30);
+  const defaultRateCertified = Number(settings?.default_pay_rate_certified ?? 40);
+  const defaultRate = body.type === "certified" || body.type === "qualified_and_certified"
+    ? defaultRateCertified
+    : defaultRateQualified;
 
   return prisma.interpreter.create({
     data: {
@@ -136,6 +140,7 @@ export async function createInterpreter(body: CreateInterpreterBody, organizatio
       location_lat: body.location?.lat ?? null,
       location_lng: body.location?.lng ?? null,
       pay_rate: body.pay_rate ?? defaultRate,
+      pay_rate_certified: (body as Record<string, unknown>).pay_rate_certified != null ? Number((body as Record<string, unknown>).pay_rate_certified) : null,
       payment_method: body.payment_method ?? null,
       address_line1: body.address_line1 ?? null,
       address_line2: body.address_line2 ?? null,
@@ -145,6 +150,7 @@ export async function createInterpreter(body: CreateInterpreterBody, organizatio
       emergency_contact_phone: body.emergency_contact?.phone ?? null,
       notes: body.notes ?? null,
       certificate_number: body.certificate_number ?? null,
+      certificate_date: (body as Record<string, unknown>).certificate_date ? new Date((body as Record<string, unknown>).certificate_date as string) : null,
       zip_code: body.zip_code ?? null,
       preferred_cities: body.preferred_cities ?? [],
       ...(body.clinics_not_allowed?.length
@@ -183,6 +189,7 @@ export async function updateInterpreter(
       ...(body.languages ? { languages: body.languages } : {}),
       ...(body.location ? { location_lat: body.location.lat, location_lng: body.location.lng } : {}),
       ...(body.pay_rate !== undefined ? { pay_rate: body.pay_rate } : {}),
+      ...((body as Record<string, unknown>).pay_rate_certified !== undefined ? { pay_rate_certified: (body as Record<string, unknown>).pay_rate_certified != null ? Number((body as Record<string, unknown>).pay_rate_certified) : null } : {}),
       ...(body.payment_method !== undefined ? { payment_method: body.payment_method } : {}),
       ...(body.address_line1 !== undefined ? { address_line1: body.address_line1 } : {}),
       ...(body.address_line2 !== undefined ? { address_line2: body.address_line2 } : {}),
@@ -193,6 +200,7 @@ export async function updateInterpreter(
         : {}),
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
       ...(body.certificate_number !== undefined ? { certificate_number: body.certificate_number } : {}),
+      ...((body as Record<string, unknown>).certificate_date !== undefined ? { certificate_date: (body as Record<string, unknown>).certificate_date ? new Date((body as Record<string, unknown>).certificate_date as string) : null } : {}),
       ...(body.zip_code !== undefined ? { zip_code: body.zip_code } : {}),
       ...(body.preferred_cities !== undefined ? { preferred_cities: body.preferred_cities } : {}),
     },

@@ -17,11 +17,13 @@ import { api } from "../../lib/api.js";
 type View = "month" | "week" | "day";
 
 const STATUS_COLORS: Record<string, string> = {
+  unassigned: "bg-gray-100 border-gray-300 text-gray-500",
   confirmed: "bg-green-100 border-green-300 text-green-800",
   pending_offer: "bg-yellow-100 border-yellow-300 text-yellow-800",
-  in_progress: "bg-blue-100 border-blue-300 text-blue-800",
+  in_progress: "bg-green-100 border-green-300 text-blue-800",
   completed: "bg-green-100 border-green-300 text-green-800",
   cancelled: "bg-red-100 border-red-300 text-red-800",
+  declined: "bg-gray-100 border-red-400 text-red-700",
 };
 
 const BLOCK_COLORS = [
@@ -231,8 +233,8 @@ export function CalendarPage() {
 
   function apptColorClass(a: Record<string, unknown>) {
     const status = a.status as string;
-    // Cancelled/completed always use their status colour regardless of interpreter
-    if (status === "cancelled" || status === "completed") {
+    // Certain terminal/non-active statuses always use their status colour regardless of interpreter
+    if (status === "cancelled" || status === "completed" || status === "declined" || status === "unassigned") {
       return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
     }
     const hasInterpreter = !!(a.interpreter as Record<string, unknown> | null)?.id;
@@ -240,6 +242,10 @@ export function CalendarPage() {
       const hasPendingOffer = ((a.offers as Array<unknown>) ?? []).length > 0;
       if (hasPendingOffer) return "bg-orange-100 border-orange-300 text-orange-900";
       return "bg-gray-100 border-gray-300 text-gray-500";
+    }
+    // Confirmed + billing pending approval → blue
+    if (status === "confirmed" && (a.billing_approval_status as string) === "pending_approval") {
+      return "bg-blue-100 border-blue-400 text-blue-900";
     }
     return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
   }
@@ -268,7 +274,7 @@ export function CalendarPage() {
       formatInTz(endDt, { hour: "2-digit", minute: "2-digit" }, tz);
     const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
     const clinicName = (a.clinic as Record<string, unknown>)?.name as string;
-    const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string;
+    const agencyName = (a.agency as Record<string, unknown>)?.name as string;
     const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
     const physician = a.referring_physician as string | null;
     const colorClass = apptColorClass(a);
@@ -301,7 +307,7 @@ export function CalendarPage() {
       formatInTz(endDt, { hour: "2-digit", minute: "2-digit" }, tz);
     const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
     const clinicName = (a.clinic as Record<string, unknown>)?.name as string | null ?? null;
-    const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string | null ?? null;
+    const agencyName = (a.agency as Record<string, unknown>)?.name as string | null ?? null;
     const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
     const physician = a.referring_physician as string | null;
     const poNumber = a.po_number as string | null;
@@ -331,7 +337,7 @@ export function CalendarPage() {
           {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
           <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} bold />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
-          {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} bold />}
+          {agencyName && <DayRow label={t("appointments.agency")} value={agencyName} bold />}
           {physician && <DayRow label={t("appointments.provider")} value={physician} />}
         </div>
       </button>
@@ -447,11 +453,13 @@ export function CalendarPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("common.all")}</SelectItem>
+            <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
             <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
             <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
             <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
             <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
             <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
+            <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -753,7 +761,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
   const language = a.language as string;
   const interpType = a.interpreter_type_required as string;
   const clinicName = (a.clinic as Record<string, unknown>)?.name as string ?? "—";
-  const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string ?? "—";
+  const agencyName = (a.agency as Record<string, unknown>)?.name as string ?? "—";
   const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned");
   const physician = a.referring_physician as string | null;
 
@@ -778,7 +786,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
         {showLanguage && <Row label={t("appointments.language")} value={language} />}
         <Row label={t("appointments.interpreter_type")} value={interpType} />
         <Row label={t("appointments.clinic")} value={clinicName} />
-        <Row label={t("appointments.insurance_agency")} value={agencyName} />
+        <Row label={t("appointments.agency")} value={agencyName} />
         <Row label={t("appointments.interpreter")} value={interpreterName} />
         {physician && <Row label={t("appointments.provider")} value={physician} />}
       </div>

@@ -103,7 +103,64 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     }).parse(req.body);
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
-    return reply.send(await patchClockTimes(id, body, payload.organization_id, actor, fastify.prisma));
+    const result = await patchClockTimes(id, body, payload.organization_id, actor, fastify.prisma);
+
+    // Schedule long-appointment alert when clock_in is set (and clock_out is not yet set)
+    if (body.clock_in_time && !body.clock_out_time) {
+      const settings = await fastify.prisma.systemSettings.findUnique({
+        where: { organization_id: payload.organization_id },
+        select: { long_appointment_alert_minutes: true },
+      });
+      const alertMinutes = settings?.long_appointment_alert_minutes ?? 105;
+      const clockInMs = new Date(body.clock_in_time).getTime();
+      const delay = clockInMs + alertMinutes * 60_000 - Date.now();
+      if (delay > 0) {
+        const { getQueues } = await import("../../workers/queues.js");
+        await getQueues().adminAlertQueue.add(
+          "long-appointment",
+          { appointmentId: id, organizationId: payload.organization_id, alertMinutes },
+          { delay, jobId: `long-appt:${id}`, removeOnComplete: true },
+        );
+      }
+    }
+
+    // Cancel pending long-appointment alert if clock_out is being set
+    if (body.clock_out_time) {
+      const { getQueues } = await import("../../workers/queues.js");
+      const job = await getQueues().adminAlertQueue.getJob(`long-appt:${id}`);
+      if (job) await job.remove();
+    }
+
+    return reply.send(result);
+  });
+
+  // PATCH /appointments/:id/billing
+  fastify.patch("/:id/billing", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    const body = z.object({
+      billing_billed: z.boolean().optional(),
+      billing_invoiced: z.boolean().optional(),
+      billing_lost: z.boolean().optional(),
+      billing_payment_under_claim: z.boolean().optional(),
+      billing_pending_auth: z.boolean().optional(),
+      billing_retro: z.boolean().optional(),
+      billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
+      billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
+    }).parse(req.body);
+    const appt = await fastify.prisma.appointment.findUnique({ where: { id } });
+    if (!appt || appt.organization_id !== payload.organization_id) return reply.status(404).send();
+    const updated = await fastify.prisma.appointment.update({ where: { id }, data: body });
+    return reply.send({ ok: true, billing: {
+      billing_billed: updated.billing_billed,
+      billing_invoiced: updated.billing_invoiced,
+      billing_lost: updated.billing_lost,
+      billing_payment_under_claim: updated.billing_payment_under_claim,
+      billing_pending_auth: updated.billing_pending_auth,
+      billing_retro: updated.billing_retro,
+      billing_payment_status: updated.billing_payment_status,
+      billing_approval_status: updated.billing_approval_status,
+    }});
   });
 
   // DELETE /appointments/:id
@@ -214,14 +271,42 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
   fastify.post("/:id/offers/:offer_id/confirm", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id, offer_id } = req.params as { id: string; offer_id: string };
     const payload = req.user as JwtPayload;
-    return reply.send(await confirmOffer(id, offer_id, payload.sub, fastify.prisma));
+    const result = await confirmOffer(id, offer_id, payload.sub, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "confirmed" });
+    return reply.send(result);
   });
 
   // POST /appointments/:id/offers/:offer_id/decline
   fastify.post("/:id/offers/:offer_id/decline", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id, offer_id } = req.params as { id: string; offer_id: string };
     const payload = req.user as JwtPayload;
-    return reply.send(await declineOffer(id, offer_id, payload.sub, fastify.prisma));
+    const result = await declineOffer(id, offer_id, payload.sub, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "declined" });
+
+    // Create admin alert for declined offer
+    const [appt, interpreter] = await Promise.all([
+      fastify.prisma.appointment.findUnique({
+        where: { id },
+        select: { date_time: true, po_number: true, patient: { select: { name: true } } },
+      }),
+      fastify.prisma.interpreter.findUnique({ where: { id: payload.sub }, select: { name: true } }),
+    ]);
+    const dateStr = appt ? new Date(appt.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+    const interpName = interpreter?.name ?? payload.name ?? "An interpreter";
+    const patientStr = appt?.patient?.name ? `${appt.patient.name}` : "";
+    const poStr = appt?.po_number ? `PO: ${appt.po_number}` : "";
+    const apptRef = [patientStr, poStr].filter(Boolean).join(" — ");
+    const alert = await fastify.prisma.adminAlert.create({
+      data: {
+        organization_id: payload.organization_id,
+        type: "offer_declined",
+        appointment_id: id,
+        message: `${interpName} declined the offer for the ${dateStr} appointment${apptRef ? ` (${apptRef})` : ""}.`,
+      },
+    });
+    fastify.io.to(`notify:${payload.organization_id}`).emit("alert:new", { alert });
+
+    return reply.send(result);
   });
 
   // POST /appointments/:id/manual-confirm — admin manually assigns an interpreter (feature-flagged)

@@ -25,7 +25,7 @@ model Organization {
   roles                Role[]
   interpreters         Interpreter[]
   clinics              Clinic[]
-  insurance_agencies   InsuranceAgency[]
+  agencies             Agency[]
   patients             Patient[]
   claims               Claim[]
   appointments         Appointment[]
@@ -44,6 +44,7 @@ model Organization {
   report_jobs          ReportJob[]
   invoices             Invoice[]
   insurance_companies  InsuranceCompany[]
+  admin_alerts         AdminAlert[]
 
   @@map("organizations")
 }
@@ -56,11 +57,14 @@ model User {
   name            String
   email           String
   password_hash   String
-  totp_secret     String?
-  mfa_enabled     Boolean   @default(false)
-  language        String    @default("en")
-  fcm_token       String?
-  is_active       Boolean   @default(true)
+  totp_secret         String?
+  mfa_enabled         Boolean   @default(false)
+  language            String    @default("en")
+  fcm_token           String?
+  phone               String?
+  phone_ext           String?
+  profile_picture_url String?
+  is_active           Boolean   @default(true)
   failed_attempts Int       @default(0)
   locked_until    DateTime?
   created_at      DateTime  @default(now())
@@ -149,6 +153,7 @@ model Interpreter {
   location_lat            Float?
   location_lng            Float?
   pay_rate                Decimal?  @db.Decimal(10, 2)
+  pay_rate_certified      Decimal?  @db.Decimal(10, 2)
   payment_method          String?
   address_line1           String?
   address_line2           String?
@@ -157,8 +162,12 @@ model Interpreter {
   emergency_contact_name  String?
   emergency_contact_phone String?
   certificate_number      String?
+  certificate_date        DateTime?
   zip_code                String?
   preferred_cities        String[]  @default([])
+  // "high" | "medium" | null
+  priority                String?
+  extra_rates             Json?
   // "push" | "sms"
   follow_up_channel       String    @default("push")
   fcm_token               String?
@@ -205,12 +214,14 @@ model Clinic {
   organization_id       String
   name                  String
   address               String?
+  address_line2         String?
   city                  String?
   state                 String?
   zip_code              String?
   location_lat          Float?
   location_lng          Float?
   parking               String?
+  parking_instructions  String?
   phone                 String?
   primary_contact_name  String?
   primary_contact_phone String?
@@ -258,11 +269,15 @@ model ClinicInterpreterBlock {
 
 // ─── Insurance Agencies ───────────────────────────────────────────────────────
 
-model InsuranceAgency {
+model Agency {
   id                                 String   @id @default(uuid())
   organization_id                    String
   name                               String
   address                            String?
+  city                               String?
+  state                              String?
+  zip_code                           String?
+  fax                                String?
   phone                              String?
   primary_contact_name               String?
   primary_contact_phone              String?
@@ -293,7 +308,7 @@ model InsuranceAgency {
   email_logs   EmailIntakeLog[]
   claims       Claim[]
 
-  @@map("insurance_agencies")
+  @@map("agencies")
 }
 
 // ─── Patients ─────────────────────────────────────────────────────────────────
@@ -325,7 +340,7 @@ model Claim {
   case_number          String
   injury               String?
   date_of_injury       DateTime? @db.Date
-  insurance_agency_id  String?
+  agency_id  String?
   insurance_company_id String?
   adjuster             String?
   adjuster_phone       String?
@@ -335,7 +350,7 @@ model Claim {
 
   organization      Organization      @relation(fields: [organization_id], references: [id])
   patient           Patient           @relation(fields: [patient_id], references: [id], onDelete: Cascade)
-  insurance_agency  InsuranceAgency?  @relation(fields: [insurance_agency_id], references: [id], onDelete: SetNull)
+  agency  Agency?  @relation(fields: [agency_id], references: [id], onDelete: SetNull)
   insurance_company InsuranceCompany? @relation(fields: [insurance_company_id], references: [id], onDelete: SetNull)
 
   @@map("claims")
@@ -391,13 +406,14 @@ model Appointment {
   interpreter_type_required  String
   interpreter_id             String?
   clinic_id                  String
-  insurance_agency_id        String
+  agency_id        String
   patient_id                 String
   referring_physician        String?
   department                 String?
   pre_auth_amount            Decimal   @db.Decimal(10, 2)
   pre_auth_mileage           Int       @default(0)
   po_number                  String?
+  billing_interpreter        String?
   source                     String    @default("manual")
   clock_in_time              DateTime?
   clock_in_lat               Float?
@@ -410,6 +426,14 @@ model Appointment {
   pay_rate                   Decimal?  @db.Decimal(10, 2)
   follow_up_status           String?
   shift_notes                String?
+  billing_billed             Boolean   @default(false)
+  billing_invoiced           Boolean   @default(false)
+  billing_lost               Boolean   @default(false)
+  billing_payment_under_claim Boolean  @default(false)
+  billing_pending_auth       Boolean   @default(false)
+  billing_retro              Boolean   @default(false)
+  billing_payment_status     String    @default("not_paid")
+  billing_approval_status    String    @default("pending_approval")
   created_at                 DateTime  @default(now())
   updated_at                 DateTime  @updatedAt
 
@@ -417,7 +441,7 @@ model Appointment {
   type               AppointmentType    @relation(fields: [type_id], references: [id])
   interpreter        Interpreter?       @relation("AssignedInterpreter", fields: [interpreter_id], references: [id])
   clinic             Clinic             @relation(fields: [clinic_id], references: [id])
-  insurance_agency   InsuranceAgency    @relation(fields: [insurance_agency_id], references: [id])
+  agency   Agency    @relation(fields: [agency_id], references: [id])
   patient            Patient            @relation(fields: [patient_id], references: [id])
   offers             AppointmentOffer[]
   follow_up_response FollowUpResponse?
@@ -598,7 +622,7 @@ model FollowUpDraft {
 model EmailIntakeLog {
   id                               String    @id @default(uuid())
   organization_id                  String
-  insurance_agency_id              String?
+  agency_id              String?
   received_at                      DateTime
   from_email                       String
   subject                          String
@@ -619,7 +643,7 @@ model EmailIntakeLog {
   updated_at                       DateTime  @updatedAt
 
   organization     Organization          @relation(fields: [organization_id], references: [id])
-  insurance_agency InsuranceAgency?      @relation(fields: [insurance_agency_id], references: [id])
+  agency Agency?      @relation(fields: [agency_id], references: [id])
   extraction       EmailIntakeExtraction?
   draft            EmailIntakeDraft?
 
@@ -743,11 +767,27 @@ model SystemSettings {
   timezone                            String   @default("America/Los_Angeles")
   allow_manual_confirm                Boolean  @default(false)
   show_language                       Boolean  @default(true)
+  long_appointment_alert_minutes      Int      @default(105)
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("system_settings")
+}
+
+model AdminAlert {
+  id              String    @id @default(uuid())
+  organization_id String
+  type            String
+  appointment_id  String?
+  message         String
+  is_read         Boolean   @default(false)
+  created_at      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, is_read])
+  @@map("admin_alerts")
 }
 
 model InterpreterRate {

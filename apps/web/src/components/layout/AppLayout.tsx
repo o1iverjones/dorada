@@ -5,6 +5,7 @@ import { getSocket } from "../../lib/socket.js";
 import { Sidebar } from "./Sidebar.js";
 import { TopBar } from "./TopBar.js";
 import { Toaster } from "../ui/toaster.js";
+import { PageHeaderProvider } from "../../contexts/PageHeaderContext.js";
 
 export function AppLayout() {
   const qc = useQueryClient();
@@ -56,15 +57,17 @@ export function AppLayout() {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto p-6">
-          {outlet}
-        </main>
+    <PageHeaderProvider>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <TopBar />
+          <main className="flex-1 overflow-y-auto p-6">
+            {outlet}
+          </main>
+        </div>
+        <Toaster />
       </div>
-      <Toaster />
-    </div>
+    </PageHeaderProvider>
   );
 }

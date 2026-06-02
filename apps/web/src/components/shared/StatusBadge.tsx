@@ -18,6 +18,20 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
 };
 
 export function StatusBadge({ status }: { status: string }) {
+  if (status === "declined") {
+    return (
+      <Badge variant="outline" className="bg-gray-100 border-red-400 text-red-700">
+        declined
+      </Badge>
+    );
+  }
+  if (status === "unassigned") {
+    return (
+      <Badge variant="outline" className="bg-gray-100 border-gray-400 text-gray-600">
+        unassigned
+      </Badge>
+    );
+  }
   const variant = STATUS_VARIANTS[status] ?? "outline";
   return <Badge variant={variant}>{status.replace(/_/g, " ")}</Badge>;
 }

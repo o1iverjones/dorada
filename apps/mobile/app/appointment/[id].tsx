@@ -272,10 +272,10 @@ export default function AppointmentDetailScreen() {
         address={clinic?.address as string | null}
         parking={clinic?.parking as string | null}
       />
-      {!!(appt.insurance_agency as Record<string, unknown> | null)?.name && (
+      {!!(appt.agency as Record<string, unknown> | null)?.name && (
         <View style={styles.section}>
-          <Text style={styles.label}>{t("appointments.insurance_agency")}</Text>
-          <Text style={styles.value}>{(appt.insurance_agency as Record<string, unknown>).name as string}</Text>
+          <Text style={styles.label}>{t("appointments.agency")}</Text>
+          <Text style={styles.value}>{(appt.agency as Record<string, unknown>).name as string}</Text>
         </View>
       )}
 

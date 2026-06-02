@@ -42,11 +42,18 @@ export async function requestOtp(
     throw new TooManyRequestsError("OTP_RATE_LIMITED", "Too many OTP requests");
   }
 
-  const interpreter = await prisma.interpreter.findFirst({ where: { phone: normalized, is_active: true } });
+  // Match on the last 10 digits to handle stored phones with or without
+  // country code (e.g. "8312277291" vs "18312277291" vs "831-227-7291")
+  const last10 = normalized.slice(-10);
+  const interpreter = await prisma.interpreter.findFirst({
+    where: { phone: { endsWith: last10 }, is_active: true },
+  });
   if (!interpreter) return; // silent — prevents enumeration
 
+  // Canonical key: digits-only of the interpreter's stored phone
+  const canonicalPhone = interpreter.phone.replace(/\D/g, "");
   const otp = String(randomInt(100000, 999999));
-  const otpKey = `otp:${normalized}`;
+  const otpKey = `otp:${canonicalPhone}`;
   await redis.set(otpKey, otp, "EX", OTP_TTL_SECONDS);
 
   // In production, send via Twilio. Here we log in dev.
@@ -70,12 +77,14 @@ export async function verifyOtp(
   const locked = await redis.get(lockKey);
   if (locked) throw new TooManyRequestsError("ACCOUNT_LOCKED", "Account locked. Try again later.");
 
+  const last10 = normalized.slice(-10);
   const interpreter = await prisma.interpreter.findFirst({
-    where: { phone: normalized, is_active: true },
+    where: { phone: { endsWith: last10 }, is_active: true },
   });
   if (!interpreter) throw new UnauthorizedError("INVALID_CREDENTIALS", "Invalid OTP");
 
-  const storedOtp = await redis.get(`otp:${normalized}`);
+  const canonicalPhone = interpreter.phone.replace(/\D/g, "");
+  const storedOtp = await redis.get(`otp:${canonicalPhone}`);
   if (!storedOtp || storedOtp !== otp) {
     const attempts = await redis.incr(attemptsKey);
     if (attempts === 1) await redis.expire(attemptsKey, OTP_LOCK_SECONDS);
@@ -162,7 +171,7 @@ export async function adminLogin(
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      admin: { id: user.id, name: user.name, email: user.email, role: { id: user.role.id, name: user.role.name }, permissions },
+      admin: { id: user.id, name: user.name, email: user.email, role: { id: user.role.id, name: user.role.name }, permissions, phone: user.phone, phone_ext: user.phone_ext, profile_picture_url: user.profile_picture_url },
     };
   }
 
@@ -237,6 +246,9 @@ export async function adminMfaVerify(
       email: user.email,
       role: { id: user.role.id, name: user.role.name },
       permissions,
+      phone: user.phone,
+      phone_ext: user.phone_ext,
+      profile_picture_url: user.profile_picture_url,
     },
   };
 }

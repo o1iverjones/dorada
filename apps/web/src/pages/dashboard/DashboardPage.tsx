@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api.js";
 import { useAuthStore } from "../../store/auth.js";
-import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useAlerts, useMarkAlertRead, useMarkAllAlertsRead } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
+import { getSocket } from "../../lib/socket.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
+import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Badge } from "../../components/ui/badge.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
-import { Calendar, Clock, AlertTriangle, Mail, ClipboardList, Receipt } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, Bell, ClipboardList, Receipt, CheckCheck } from "lucide-react";
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -45,10 +47,30 @@ export function DashboardPage() {
     queryFn: () => api.get<{ data: unknown[] }>("/appointments/follow-up-drafts?status=pending_review&limit=5"),
   });
 
-  const { data: emailDrafts } = useQuery({
-    queryKey: ["email-intake-drafts", "pending"],
-    queryFn: () => api.get<{ data: unknown[] }>("/email-intake/drafts?status=pending_review&limit=5"),
+  const { data: alertsData, refetch: refetchAlerts } = useAlerts();
+  const markAlertRead = useMarkAlertRead();
+  const markAllRead = useMarkAllAlertsRead();
+  const allAlerts = (alertsData?.data ?? []) as Array<Record<string, unknown>>;
+  // Stat card: total unread across all time
+  const unreadCount = alertsData?.unread_count ?? 0;
+  // Dashboard panel: today's alerts only, capped at 3
+  const todayAlerts = allAlerts.filter((a) => {
+    const alertDate = new Date(a.created_at as string).toLocaleDateString("en-CA", { timeZone: tz });
+    return alertDate === todayStr;
   });
+  const alerts = todayAlerts.slice(0, 3);
+  const hasMore = todayAlerts.length > 3;
+  const qc = useQueryClient();
+
+  // Real-time: refetch alerts when a new one arrives via socket
+  useEffect(() => {
+    const socket = getSocket();
+    const handler = () => {
+      qc.invalidateQueries({ queryKey: ["alerts"] });
+    };
+    socket.on("alert:new", handler);
+    return () => { socket.off("alert:new", handler); };
+  }, [qc]);
 
   const canManageInvoices = useAuthStore((s) => s.hasPermission("manage_invoices"));
   const { data: invoiceStats } = useInvoiceStats(canManageInvoices);
@@ -80,14 +102,18 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <PageHeader title={t("nav.dashboard")} />
+
+      {/* Greeting + Clock */}
+      <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t("dashboard.welcome", { name: user?.name })}</h1>
-          <p className="text-muted-foreground">{t("dashboard.subtitle")}</p>
+          <p className="text-xl font-semibold">{t("dashboard.welcome", { name: user?.name })}</p>
         </div>
+        <div className="flex justify-end">
         <div className="text-right">
           <p className="text-3xl font-semibold tabular-nums">{formatInTz(now, { hour: "numeric", minute: "2-digit" }, tz)}</p>
-          <p className="text-sm text-muted-foreground">(PST) {formatInTz(now, { weekday: "long", month: "long", day: "numeric" }, tz)}</p>
+          <p className="text-sm text-muted-foreground">{formatInTz(now, { weekday: "long", month: "long", day: "numeric" }, tz)}</p>
+        </div>
         </div>
       </div>
 
@@ -111,10 +137,11 @@ export function DashboardPage() {
           href="/appointments/follow-up-drafts"
         />
         <StatCard
-          icon={<Mail className="h-5 w-5 text-blue-500" />}
-          label={t("dashboard.email_drafts")}
-          value={emailDrafts?.data.length ?? 0}
-          href="/email-intake/drafts"
+          icon={<Bell className={`h-5 w-5 ${unreadCount > 0 ? "text-red-500" : "text-muted-foreground"}`} />}
+          label={t("dashboard.alerts")}
+          value={unreadCount}
+          href="/alerts"
+          highlight={unreadCount > 0}
         />
         <StatCard
           icon={<Receipt className="h-5 w-5 text-orange-500" />}
@@ -124,6 +151,90 @@ export function DashboardPage() {
           permission="manage_invoices"
         />
       </div>
+
+      <Card id="alerts">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bell className="h-4 w-4" />
+            {t("dashboard.alerts")}
+            {unreadCount > 0 && (
+              <Badge className="bg-red-500 text-white text-xs px-1.5 py-0">{unreadCount}</Badge>
+            )}
+          </CardTitle>
+          <div className="flex items-center gap-3">
+            {alerts.length > 0 && (
+              <button
+                onClick={() => markAllRead.mutate()}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+                {t("dashboard.mark_all_read")}
+              </button>
+            )}
+            <Link to="/alerts" className="text-xs font-medium text-primary hover:underline">
+              {t("dashboard.view_all")}
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!alerts.length ? (
+            <p className="text-sm text-muted-foreground">{t("dashboard.no_alerts")}</p>
+          ) : (
+            <>
+              <ul className="space-y-2">
+                {alerts.map((alert) => {
+                  const isUnread = !alert.is_read;
+                  const apptId = alert.appointment_id as string | null;
+                  return (
+                    <li
+                      key={alert.id as string}
+                      className={`flex items-start justify-between gap-3 rounded-md border p-3 text-sm transition-colors ${isUnread ? "bg-red-50 border-red-200" : "bg-muted/30"}`}
+                    >
+                      <div className="flex items-start gap-2 min-w-0">
+                        <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${isUnread ? "text-red-500" : "text-muted-foreground"}`} />
+                        <div className="min-w-0">
+                          <p className={`leading-snug ${isUnread ? "font-medium" : "text-muted-foreground"}`}>
+                            {alert.message as string}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatInTz(alert.created_at as string, { dateStyle: "short", timeStyle: "short" }, tz)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {apptId && (
+                          <Link
+                            to={`/appointments/${apptId}`}
+                            className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
+                          >
+                            {t("dashboard.view_appointment")}
+                          </Link>
+                        )}
+                        {isUnread && (
+                          <button
+                            onClick={() => markAlertRead.mutate(alert.id as string)}
+                            className="text-muted-foreground hover:text-foreground"
+                            title={t("dashboard.mark_read")}
+                          >
+                            <CheckCheck className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {hasMore && (
+                <div className="mt-3 text-center">
+                  <Link to="/alerts" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    {t("dashboard.view_all_alerts", { count: todayAlerts.length })}
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-4">
         <Card className="lg:col-span-3">
@@ -167,7 +278,7 @@ export function DashboardPage() {
                   const rawRate = (appt.pay_rate ?? interp?.pay_rate) as string | number | null | undefined;
                   const payRate = rawRate != null ? `$${Number(rawRate).toFixed(2)}/hr` : null;
 
-                  const agencyName = (appt.insurance_agency as Record<string, unknown>)?.name as string | null;
+                  const agencyName = (appt.agency as Record<string, unknown>)?.name as string | null;
 
                   const clockIn = appt.clock_in_time
                     ? formatInTz(appt.clock_in_time as string, { hour: "2-digit", minute: "2-digit" }, tz)
@@ -236,11 +347,13 @@ export function DashboardPage() {
                         <div className="flex w-20 shrink-0 items-center gap-1 flex-wrap">
                           {(() => {
                             const statusColors: Record<string, string> = {
+                              unassigned:    "bg-gray-100 border-gray-300 text-gray-500",
                               confirmed:     "bg-green-100 border-green-300 text-green-800",
                               pending_offer: "bg-yellow-100 border-yellow-300 text-yellow-800",
                               in_progress:   "bg-blue-100 border-blue-300 text-blue-800",
                               completed:     "bg-green-100 border-green-300 text-green-800",
                               cancelled:     "bg-red-100 border-red-300 text-red-800",
+                              declined:      "bg-gray-100 border-red-400 text-red-700",
                             };
                             const colorClass = statusColors[status] ?? "bg-muted border-gray-300 text-muted-foreground";
                             return (
@@ -312,7 +425,7 @@ export function DashboardPage() {
                   const linkTo = entityType === "appointment" ? `/appointments/${entityId}`
                     : entityType === "clinic" ? `/clinics/${entityId}`
                     : entityType === "interpreter" ? `/interpreters/${entityId}`
-                    : entityType === "agency" ? `/insurance-agencies/${entityId}`
+                    : entityType === "agency" ? `/agencies/${entityId}`
                     : entityType === "admin_user" ? `/admin-users`
                     : null;
                   const meta = [
@@ -362,31 +475,6 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("dashboard.email_intake_queue")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!emailDrafts?.data.length ? (
-            <p className="text-sm text-muted-foreground">{t("dashboard.no_pending_emails")}</p>
-          ) : (
-            <ul className="space-y-2">
-              {(emailDrafts.data as Array<Record<string, unknown>>).map((draft) => (
-                <li key={draft.id as string} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                  <div>
-                    <p className="font-medium">{draft.extracted_patient_name as string ?? t("common.unknown")}</p>
-                    <p className="text-muted-foreground">PO: {draft.po_number as string ?? "—"}</p>
-                  </div>
-                  {draft.has_unresolved_fields && (
-                    <Badge variant="warning">{t("email_intake.unresolved")}</Badge>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
       {logTooltip && (
         <ActivityLogTooltip entry={logTooltip.entry} x={logTooltip.x} y={logTooltip.y} />
       )}
@@ -407,7 +495,7 @@ function ActivityLogTooltip({ entry: e, x, y }: { entry: Record<string, unknown>
   const entityLabel = entityType === "appointment" ? t("nav.appointments")
     : entityType === "clinic" ? t("nav.clinics")
     : entityType === "interpreter" ? t("nav.interpreters")
-    : entityType === "agency" ? t("nav.insuranceAgencies")
+    : entityType === "agency" ? t("nav.agencies")
     : entityType === "admin_user" ? t("nav.admin_users")
     : entityType;
 
@@ -446,20 +534,23 @@ function LogRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function StatCard({ icon, label, value, href, permission }: { icon: React.ReactNode; label: string; value: number; href: string; permission?: string }) {
+function StatCard({ icon, label, value, href, permission, highlight }: { icon: React.ReactNode; label: string; value: number; href: string; permission?: string; highlight?: boolean }) {
   const hasPermission = useAuthStore((s) => s.hasPermission);
   if (permission && !hasPermission(permission)) return null;
-  return (
-    <Link to={href}>
-      <Card className="transition-shadow hover:shadow-md">
-        <CardContent className="flex items-center gap-4 p-6">
-          <div className="rounded-full bg-muted p-2">{icon}</div>
-          <div>
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="text-sm text-muted-foreground">{label}</p>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+  const inner = (
+    <Card className={`transition-shadow hover:shadow-md ${highlight ? "border-red-300 bg-red-50" : ""}`}>
+      <CardContent className="flex items-center gap-4 p-6">
+        <div className={`rounded-full p-2 ${highlight ? "bg-red-100" : "bg-muted"}`}>{icon}</div>
+        <div>
+          <p className={`text-2xl font-bold ${highlight ? "text-red-600" : ""}`}>{value}</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
+  // Alerts card scrolls to the panel rather than navigating
+  if (href.startsWith("#")) {
+    return <a href={href} onClick={(e) => { e.preventDefault(); document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth" }); }}>{inner}</a>;
+  }
+  return <Link to={href}>{inner}</Link>;
 }

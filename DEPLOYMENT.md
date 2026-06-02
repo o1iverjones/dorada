@@ -27,7 +27,7 @@ Dorada is a multi-tenant medical interpretation management platform. The product
 |---|---|---|
 | **API server** | Fastify (Node.js 20, TypeScript) | Compiled to `dist/`, served with `node dist/main.js`. Dockerfile exists at `apps/api/Dockerfile`. |
 | **Web admin** | React + Vite, served via Nginx | Static build proxied through Nginx. Dockerfile exists at `apps/web/Dockerfile`. |
-| **Mobile app** | Expo (React Native) | Published separately via Expo EAS. Connects to the API over HTTPS. |
+| **Mobile app** | Expo SDK 54 (React Native 0.81) | Built locally via `eas build --local`. API URL set per environment via `app.config.js`. |
 | **Database** | PostgreSQL 16 | Managed by Prisma. Schema migrations must run on every deploy. |
 | **Cache / queue** | Redis 7 | Used for session management and Socket.io adapter. |
 | **File storage** | Cloudflare R2 | S3-compatible object storage. Local `uploads/` folder is a dev-only fallback; R2 is the production target. |
@@ -100,7 +100,7 @@ GitHub repo (auto-deploy on push to main)
    > ⚠️ The report worker does **not** need a public port. It connects outbound to Redis and the database only. If this service is not running, report generation will silently hang.
 8. Set all environment variables (see §5) in each service's settings panel. The worker needs the same vars as the API.
 9. Add custom domains (e.g. `api.dorada.com`, `app.dorada.com`) in Railway's domain settings.
-10. Point the mobile app's `EXPO_PUBLIC_API_URL` in `eas.json` to the production HTTPS API URL.
+10. The mobile app API URL is managed in `apps/mobile/app.config.js` — set `APP_ENV=production` in the `production` build profile (already configured in `eas.json`).
 
 #### Why Railway
 - Deploys in under an hour from a fresh account
@@ -127,8 +127,8 @@ The following services need accounts created and API keys configured before goin
 
 | Service | Purpose | Status | Link |
 |---|---|---|---|
-| **Firebase (FCM)** | Interpreter mobile push notifications | Already integrated — needs service account JSON | [console.firebase.google.com](https://console.firebase.google.com) |
-| **Expo EAS** | Mobile app build and OTA update delivery | Needed for mobile publish | [expo.dev](https://expo.dev) |
+| **Expo Push Notifications** | Interpreter mobile push notifications — Expo's proxy routes to FCM/APNs automatically. No Firebase project required. | Already integrated via `expo-notifications` SDK — free, no setup needed | [docs.expo.dev/push-notifications](https://docs.expo.dev/push-notifications/overview/) |
+| **Expo EAS** | Mobile app local builds (APK/IPA/AAB) | EAS CLI installed, `eas.json` configured | [expo.dev](https://expo.dev) |
 
 ### File Storage
 
@@ -184,7 +184,6 @@ Work through this list in order. Each section builds on the previous.
 - [ ] Rotate all secrets that currently use the dev placeholder values (`change-me-*`)
 - [ ] Create a Twilio account, verify a sender number, fill `TWILIO_*` vars
 - [ ] Create a Resend account at [resend.com](https://resend.com), add `dorada.app` as a sending domain, then add the SPF/DKIM/DMARC `TXT` records Resend provides into **Porkbun DNS** (porkbun.com → your domain → DNS records). Once verified, generate an API key and fill `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `APP_URL`
-- [ ] Create a Firebase project, download service account JSON, fill `FIREBASE_SERVICE_ACCOUNT_JSON`
 - [ ] Create a Cloudflare R2 bucket, generate an API token with read/write access, fill `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`
 - [ ] Add Anthropic API key for email intake
 
@@ -253,16 +252,60 @@ The report worker (`apps/api/src/workers/reports-worker.ts`) consumes the BullMQ
 
 ### Phase 6 — Mobile App
 
-- [ ] Update `apiUrl` in `apps/mobile/app.json` to the production API URL (HTTPS)
-- [ ] Install Expo EAS CLI: `npm install -g eas-cli`
-- [ ] Log in: `eas login`
-- [ ] Configure `eas.json` with build profiles for `preview` (QA) and `production`
-- [ ] Build for both platforms:
-  ```bash
-  eas build --platform all --profile preview
-  ```
-- [ ] Distribute the QA build via **TestFlight** (iOS) and **Google Play internal track** (Android)
-- [ ] Enroll in the Apple Developer Program (`$99/yr`) and create a Google Play Console account (`$25 one-time`) if not already done
+#### Prerequisites (already configured on dev machine)
+- EAS CLI v18+ installed globally (`npm install -g eas-cli` if setting up a new machine)
+- Java 21 (Temurin) with `JAVA_HOME` set in `~/.zshrc`
+- Android SDK at `~/Library/Android/sdk` with `ANDROID_HOME` set in `~/.zshrc`
+- `app.config.js` dynamically sets `apiUrl` from `APP_ENV` — no manual URL editing needed
+- `eas.json` has four profiles: `development`, `preview` (dev API), `preview:prod` (prod API), `production`
+
+#### Building locally
+
+Always open a new terminal tab first (so `.zshrc` is sourced), then:
+
+```bash
+cd apps/mobile
+
+# Android APK for testing against dev API
+eas build --platform android --profile preview --local
+
+# Android APK for testing against prod API
+eas build --platform android --profile preview:prod --local
+
+# iOS build (requires Xcode on Mac)
+eas build --platform ios --profile preview --local
+```
+
+#### Installing on a test device
+
+**Android via USB:**
+```bash
+adb devices          # confirm device is listed
+adb install build-*.apk
+```
+**Android via file transfer:** AirDrop / email / Google Drive the `.apk`. Device will prompt to allow unknown sources on first install.
+
+**iOS:** Use TestFlight (internal) — build produces an IPA, submit via `eas submit --platform ios`, testers install via TestFlight app.
+
+#### Production store submissions
+
+**Android (Play Store)**
+- [ ] Create Google Play Console account ($25 one-time) at play.google.com/console
+- [ ] Create app listing with package name `com.dorada.app`
+- [ ] Build: `eas build --platform android --profile production --local` (produces signed AAB)
+- [ ] Submit via Play Console or `eas submit --platform android` to Internal Testing track
+- [ ] Promote: Internal Testing → Closed Testing → Production
+
+**iOS (App Store)**
+- [ ] Enroll in Apple Developer Program ($99/yr) — start early, verification takes 1–5 days
+- [ ] Register App ID `com.dorada.app` in the developer portal
+- [ ] Create app listing in App Store Connect; fill in real Apple ID and ASC App ID in `eas.json` submit section
+- [ ] Build: `eas build --platform ios --profile production --local`
+- [ ] Submit via `eas submit --platform ios` → TestFlight review (fast) → App Store review (1–3 days)
+
+#### Push notifications
+Push notifications use **Expo's push proxy** (`expo-notifications` SDK). The app sends its Expo push token to the API on login. The API calls `https://exp.host/--/api/v2/push/send`. Expo handles routing to FCM (Android) and APNs (iOS) — no Firebase project or `google-services.json` is needed.
+
 - [ ] Test push notifications end-to-end: offer creation → interpreter receives push → confirms → admin sees update
 
 ### Phase 7 — DNS & TLS
@@ -322,8 +365,8 @@ RESEND_FROM_EMAIL=noreply@dorada.app
 RESEND_FROM_NAME=Dorada
 APP_URL=https://app.dorada.app
 
-# Firebase FCM
-FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+# Push notifications are handled by Expo's push proxy (expo-notifications SDK).
+# No Firebase / FCM service account required.
 
 # Cloudflare R2
 R2_ACCOUNT_ID=your-cloudflare-account-id
@@ -344,52 +387,17 @@ LOG_LEVEL=warn
 
 ---
 
-## 6. Mobile App Publishing
+## 6. Mobile App — Build Profiles Reference
 
-The mobile app (`apps/mobile`) is built with **Expo SDK** and distributed via **Expo EAS Build**.
+| Profile | Command | Output | API | Use for |
+|---|---|---|---|---|
+| `preview` | `eas build --platform android --profile preview --local` | APK | Dev Railway | Day-to-day Android testing |
+| `preview` | `eas build --platform ios --profile preview --local` | IPA | Dev Railway | Day-to-day iOS testing |
+| `preview:prod` | `eas build --platform android --profile preview:prod --local` | APK | Production | Smoke test against real data |
+| `production` | `eas build --platform android --profile production --local` | AAB | Production | Play Store submission |
+| `production` | `eas build --platform ios --profile production --local` | IPA | Production | App Store submission |
 
-### Setup
-
-```bash
-# Install EAS CLI
-npm install -g eas-cli
-
-# Authenticate
-eas login
-
-# Initialize EAS in the mobile app directory
-cd apps/mobile
-eas init
-```
-
-### `eas.json` configuration
-
-```json
-{
-  "build": {
-    "preview": {
-      "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.yourdomain.com/api/v1"
-      }
-    },
-    "production": {
-      "distribution": "store",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.yourdomain.com/api/v1"
-      }
-    }
-  }
-}
-```
-
-### QA Distribution
-
-| Platform | Method | Notes |
-|---|---|---|
-| iOS | TestFlight | Requires Apple Developer account. Up to 10,000 external testers. |
-| Android | Play Store Internal Track | Requires Google Play Console. Up to 100 internal testers. |
-| Both | Expo Go / EAS Update | OTA updates for JS-only changes without a new App Store submission. |
+All builds run **locally** — no EAS cloud build minutes consumed. See Phase 6 in the checklist above for the full setup and store submission process.
 
 ---
 
@@ -433,7 +441,7 @@ Approximate costs at QA / early production scale (~10 concurrent admin users, ~5
 |---|---|---|
 | Twilio | $15 credit | Pay-as-you-go (~$0.0079/SMS) |
 | Resend | 3,000 emails/mo free | $20/mo (50K emails) |
-| Firebase FCM | Free | Free (up to very high volume) |
+| Expo Push Notifications | Free | Free (no volume limits) |
 | Cloudflare R2 | 10 GB free, 1M reads/mo free | ~$0.015/GB/mo (no egress fees) |
 | Anthropic API | — | Pay-as-you-go (~$3/M tokens) |
 | Sentry | 5K errors/mo free | $26/mo |
@@ -458,7 +466,7 @@ Cloud DNS / Load Balancer
     ├── Cloud Run (Web / Nginx)                 Memorystore (Redis)
     ├── Cloud Run (Report Worker)               Secret Manager (env vars)
     ├── Cloud Storage (GCS) ← file uploads
-    └── Firebase (FCM push notifications)
+    └── Expo Push Proxy (push notifications — routes to FCM/APNs)
 ```
 
 Key steps: Enable Cloud Run, Cloud SQL, Memorystore, GCS, Secret Manager, Artifact Registry, Cloud Build. Deploy API and worker as separate Cloud Run services with `MIN_INSTANCES=1` on the worker. Use Cloud Build to run `prisma migrate deploy` before each API deploy.

@@ -23,7 +23,7 @@ export function EmailIntakePage() {
     { key: "received_at", header: t("email_intake.received_at"), render: (r: Record<string, unknown>) => new Date(r.received_at as string).toLocaleString() },
     { key: "from_email", header: t("email_intake.from") },
     { key: "subject", header: t("email_intake.subject") },
-    { key: "insurance_agency", header: t("email_intake.agency"), render: (r: Record<string, unknown>) => (r.insurance_agency as Record<string, unknown>)?.name as string ?? "—" },
+    { key: "agency", header: t("email_intake.agency"), render: (r: Record<string, unknown>) => (r.agency as Record<string, unknown>)?.name as string ?? "—" },
     { key: "status", header: t("common.status"), render: (r: Record<string, unknown>) => <StatusBadge status={r.status as string} /> },
     { key: "confirmation_status", header: t("email_intake.confirmation"), render: (r: Record<string, unknown>) => r.confirmation_status ? <StatusBadge status={r.confirmation_status as string} /> : <span className="text-muted-foreground">—</span> },
     { key: "has_unresolved_fields", header: "", render: (r: Record<string, unknown>) => r.has_unresolved_fields ? <Badge variant="warning">{t("email_intake.unresolved")}</Badge> : null },

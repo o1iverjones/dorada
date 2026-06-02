@@ -5,6 +5,7 @@ import { createAppointmentRemindersWorker } from "./appointment-reminders.worker
 import { createFollowUpFlowWorker } from "./follow-up-flow.worker.js";
 import { createReportGenerationWorker } from "./report-generation.worker.js";
 import { createEmailIntakeWorker } from "./email-intake.worker.js";
+import { createAdminAlertWorker } from "./admin-alert.worker.js";
 
 const prisma = new PrismaClient();
 
@@ -46,6 +47,7 @@ const reminderWorker = createAppointmentRemindersWorker(prisma, fcmApp);
 const followUpWorker = createFollowUpFlowWorker(prisma, fcmApp, twilioClient);
 const reportWorker = createReportGenerationWorker(prisma);
 const emailIntakeWorker = createEmailIntakeWorker(prisma, fcmApp);
+const adminAlertWorker = createAdminAlertWorker(prisma);
 
 const emailIntakeQueue = new Queue("email-intake", { connection: redisConnection });
 
@@ -73,7 +75,7 @@ async function scheduleEmailPolling() {
 
 scheduleEmailPolling().catch(console.error);
 
-const workers = [reminderWorker, followUpWorker, reportWorker, emailIntakeWorker];
+const workers = [reminderWorker, followUpWorker, reportWorker, emailIntakeWorker, adminAlertWorker];
 
 function shutdown() {
   console.log("Shutting down workers…");

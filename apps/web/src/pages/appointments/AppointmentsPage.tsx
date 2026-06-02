@@ -16,7 +16,7 @@ import { Input } from "../../components/ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { Plus, TriangleAlert } from "lucide-react";
 
-const NOT_COMPLETED = "pending_offer,confirmed,in_progress,cancelled";
+const NOT_COMPLETED = "unassigned,pending_offer,confirmed,in_progress,cancelled,declined";
 
 export function AppointmentsPage() {
   const { t } = useTranslation();
@@ -72,7 +72,7 @@ export function AppointmentsPage() {
       if (offers.length === 1) return offers[0].interpreter.name;
       return t("common.multiple");
     }},
-    { key: "insurance_agency", header: t("appointments.insurance_agency"), render: (row: Record<string, unknown>) => (row.insurance_agency as Record<string, unknown>)?.name as string ?? "—" },
+    { key: "agency", header: t("appointments.agency"), render: (row: Record<string, unknown>) => (row.agency as Record<string, unknown>)?.name as string ?? "—" },
     { key: "po_number", header: t("appointments.po_number"), render: (row: Record<string, unknown>) => (row.po_number as string) ?? "—" },
     ...(showLanguage ? [{ key: "language", header: t("appointments.language") }] : []),
     { key: "status", header: t("common.status"), render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} /> },
@@ -127,11 +127,13 @@ export function AppointmentsPage() {
           <SelectContent>
             <SelectItem value="not_completed">{t("appointments.not_completed")}</SelectItem>
             <SelectItem value="all">{t("common.all")}</SelectItem>
+            <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
             <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
             <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
             <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
             <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
             <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
+            <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
           </SelectContent>
         </Select>
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "554540393537",
+    "project_id": "dorada-f91ee",
+    "storage_bucket": "dorada-f91ee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:554540393537:android:65575868d7c475ecd7d2c0",
+        "android_client_info": {
+          "package_name": "com.dorada.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxiFQI51EqyAbudC_Xn39-b-Qemdt9GFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -19,6 +19,7 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -53,7 +54,6 @@
     ],
     "scheme": "dorada",
     "extra": {
-      "apiUrl": "http://192.168.100.21:3100/api/v1",
       "router": {},
       "eas": {
         "projectId": "58b4f722-7db0-42da-a52c-539b63dd5184"

@@ -29,6 +29,7 @@ export const SystemSettingsSchema = z.object({
   appointment_types: z.array(AppointmentTypeSettingSchema),
   allow_manual_confirm: z.boolean(),
   show_language: z.boolean(),
+  long_appointment_alert_minutes: z.number().int().positive(),
 });
 
 export const UpdateSystemSettingsBodySchema = z.object({
@@ -44,6 +45,7 @@ export const UpdateSystemSettingsBodySchema = z.object({
   timezone: z.string().optional(),
   allow_manual_confirm: z.boolean().optional(),
   show_language: z.boolean().optional(),
+  long_appointment_alert_minutes: z.number().int().positive().optional(),
 });
 
 export const CreateAppointmentTypeBodySchema = z.object({
@@ -79,3 +81,15 @@ export type UpdateAppointmentTypeBody = z.infer<typeof UpdateAppointmentTypeBody
 export type UpdateLanguageListBody = z.infer<typeof UpdateLanguageListBodySchema>;
 export type UpdateLocalizationStringsBody = z.infer<typeof UpdateLocalizationStringsBodySchema>;
 export type SuperAdminSettings = z.infer<typeof SuperAdminSettingsSchema>;
+
+export const AdminAlertSchema = z.object({
+  id: z.string(),
+  organization_id: z.string(),
+  type: z.enum(["offer_declined", "long_appointment"]),
+  appointment_id: z.string().nullable(),
+  message: z.string(),
+  is_read: z.boolean(),
+  created_at: z.string(),
+});
+
+export type AdminAlert = z.infer<typeof AdminAlertSchema>;

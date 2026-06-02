@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/button.js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card.js";
 import { cn } from "../../lib/utils.js";
 
-type EntityType = "interpreters" | "clinics" | "patients" | "insurance-agencies" | "appointments";
+type EntityType = "interpreters" | "clinics" | "patients" | "agencies" | "appointments";
 
 interface ImportResult {
   total: number;
@@ -15,7 +15,7 @@ interface ImportResult {
   errors: Array<{ row: number; message: string }>;
 }
 
-const ENTITY_KEYS: EntityType[] = ["interpreters", "clinics", "patients", "insurance-agencies", "appointments"];
+const ENTITY_KEYS: EntityType[] = ["interpreters", "clinics", "patients", "agencies", "appointments"];
 
 export function ImportPage() {
   const { t } = useTranslation();

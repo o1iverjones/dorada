@@ -5,9 +5,12 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: string | { id: string; name: string };
   permissions: string[];
   organization_id: string;
+  phone?: string | null;
+  phone_ext?: string | null;
+  profile_picture_url?: string | null;
 }
 
 interface AuthState {

@@ -9,7 +9,7 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
 }
 
 const claimInclude = {
-  insurance_agency: { select: { id: true, name: true } },
+  agency: { select: { id: true, name: true } },
   insurance_company: { select: { id: true, name: true } },
 } as const;
 
@@ -108,7 +108,7 @@ export async function createClaim(patientId: string, body: CreateClaimBody, orga
       case_number: body.case_number,
       injury: body.injury ?? null,
       date_of_injury: body.date_of_injury ? new Date(body.date_of_injury) : null,
-      insurance_agency_id: body.insurance_agency_id ?? null,
+      agency_id: body.agency_id ?? null,
       insurance_company_id: body.insurance_company_id ?? null,
       adjuster: body.adjuster ?? null,
       adjuster_phone: body.adjuster_phone ?? null,
@@ -136,7 +136,7 @@ export async function updateClaim(
       ...(body.case_number !== undefined ? { case_number: body.case_number } : {}),
       ...(body.injury !== undefined ? { injury: body.injury } : {}),
       ...(body.date_of_injury !== undefined ? { date_of_injury: body.date_of_injury ? new Date(body.date_of_injury) : null } : {}),
-      ...(body.insurance_agency_id !== undefined ? { insurance_agency_id: body.insurance_agency_id } : {}),
+      ...(body.agency_id !== undefined ? { agency_id: body.agency_id } : {}),
       ...(body.insurance_company_id !== undefined ? { insurance_company_id: body.insurance_company_id } : {}),
       ...(body.adjuster !== undefined ? { adjuster: body.adjuster } : {}),
       ...(body.adjuster_phone !== undefined ? { adjuster_phone: body.adjuster_phone } : {}),

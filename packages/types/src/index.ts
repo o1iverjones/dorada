@@ -3,7 +3,7 @@ export * from "./auth.js";
 export * from "./appointment.js";
 export * from "./interpreter.js";
 export * from "./clinic.js";
-export * from "./insurance-agency.js";
+export * from "./agency.js";
 export * from "./patient.js";
 export * from "./user.js";
 export * from "./message.js";
