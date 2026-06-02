@@ -110,9 +110,9 @@ function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => 
 
 // ─── CSV Import (super admin only) ───────────────────────────────────────────
 
-type EntityType = "interpreters" | "clinics" | "patients" | "insurance-agencies" | "appointments";
+type EntityType = "interpreters" | "clinics" | "patients" | "agencies" | "appointments";
 interface ImportResult { total: number; created: number; updated: number; errors: Array<{ row: number; message: string }>; }
-const ENTITY_KEYS: EntityType[] = ["interpreters", "clinics", "patients", "insurance-agencies", "appointments"];
+const ENTITY_KEYS: EntityType[] = ["interpreters", "clinics", "patients", "agencies", "appointments"];
 
 function CsvImportCard() {
   const { t } = useTranslation();

@@ -41,7 +41,7 @@ export const NotificationChannelSchema = z.enum(["push", "sms"]);
 
 export const ReportTypeSchema = z.enum([
   "interpreter_compensation",
-  "insurance_agency_billing",
+  "agency_billing",
   "appointment_history",
   "interpreter_performance",
 ]);

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useEmailIntakeDrafts, useReviewEmailIntakeDraft } from "../../hooks/useEmailIntake.js";
 import { useClinics } from "../../hooks/useClinics.js";
-import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
 import { useAppointmentTypes } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -38,7 +38,7 @@ function EmailDraftCard({ draft }: { draft: Record<string, unknown> }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { data: clinics } = useClinics();
-  const { data: agencies } = useInsuranceAgencies();
+  const { data: agencies } = useAgencies();
   const { data: patients } = usePatients();
   const { data: types } = useAppointmentTypes();
   const review = useReviewEmailIntakeDraft(draft.id as string);
@@ -48,7 +48,7 @@ function EmailDraftCard({ draft }: { draft: Record<string, unknown> }) {
   const [form, setForm] = useState({
     date_time: draft.extracted_date_time as string ?? "",
     clinic_id: "",
-    insurance_agency_id: (draft.insurance_agency as Record<string, unknown> | null | undefined)?.id as string ?? "",
+    agency_id: (draft.agency as Record<string, unknown> | null | undefined)?.id as string ?? "",
     patient_id: "",
     type_id: "",
     languages: draft.extracted_languages as string[] ?? [],
@@ -133,8 +133,8 @@ function EmailDraftCard({ draft }: { draft: Record<string, unknown> }) {
                 {((clinics?.data ?? []) as Array<{ id: string; name: string }>).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </SF>
-            <SF label={t("appointments.insurance_agency")}>
-              <select className="w-full rounded-md border p-2 text-sm" value={form.insurance_agency_id} onChange={(e) => setField("insurance_agency_id", e.target.value)}>
+            <SF label={t("appointments.agency")}>
+              <select className="w-full rounded-md border p-2 text-sm" value={form.agency_id} onChange={(e) => setField("agency_id", e.target.value)}>
                 <option value="">{t("common.select")}</option>
                 {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGenerateReport, useReportJob, useReportJobs, downloadReport, buildReportFilename, buildReportLabel } from "../../hooks/useReports.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
-import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
@@ -15,7 +15,7 @@ import { Download, FileText } from "lucide-react";
 
 const REPORT_TYPES = [
   "interpreter_compensation",
-  "insurance_agency_billing",
+  "agency_billing",
   "appointment_history",
   "interpreter_performance",
 ] as const;
@@ -23,7 +23,7 @@ type ReportType = typeof REPORT_TYPES[number];
 
 const REPORT_INFO: Record<ReportType, { title: string; description: string }> = {
   interpreter_compensation: { title: "R1 — Interpreter Compensation", description: "Compensation breakdown by interpreter, clinic, and appointment type for a date range" },
-  insurance_agency_billing: { title: "R2 — Insurance Agency Billing", description: "Billing reconciliation grouped by insurance agency" },
+  agency_billing: { title: "R2 — Agency Billing", description: "Billing reconciliation grouped by agency" },
   appointment_history: { title: "R3 — Appointment History", description: "Full appointment history with optional status filters" },
   interpreter_performance: { title: "R4 — Interpreter Performance", description: "Attendance, on-time rate, and hours worked per interpreter" },
 };
@@ -42,7 +42,7 @@ export function ReportsPage() {
   const { data: job } = useReportJob(pendingJobId ?? "");
   const { data: jobHistory } = useReportJobs();
   const { data: interpreters } = useInterpreters({ limit: "100" });
-  const { data: agencies } = useInsuranceAgencies();
+  const { data: agencies } = useAgencies();
 
   // id → name lookup used for building download filenames
   const interpreterMap: Record<string, string> = Object.fromEntries(
@@ -57,8 +57,8 @@ export function ReportsPage() {
     if ((selectedType === "interpreter_compensation" || selectedType === "interpreter_performance") && interpreterIds.length) {
       filters.interpreter_ids = interpreterIds;
     }
-    if (selectedType === "insurance_agency_billing" && agencyIds.length) {
-      filters.insurance_agency_ids = agencyIds;
+    if (selectedType === "agency_billing" && agencyIds.length) {
+      filters.agency_ids = agencyIds;
     }
 
     try {
@@ -131,7 +131,7 @@ export function ReportsPage() {
               </div>
             )}
 
-            {selectedType === "insurance_agency_billing" && (
+            {selectedType === "agency_billing" && (
               <div className="space-y-1">
                 <Label>{t("reports.select_agencies")}</Label>
                 <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">

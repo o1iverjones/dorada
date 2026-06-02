@@ -8,7 +8,7 @@ import { useAppointment, useUpdateAppointment } from "../../hooks/useAppointment
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
 import { useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
-import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { usePatients } from "../../hooks/usePatients.js";
 import { useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -31,7 +31,7 @@ const schema = z.object({
   language: z.string().min(1),
   interpreter_type_required: z.enum(["certified", "qualified"]),
   clinic_id: z.string().min(1),
-  insurance_agency_id: z.string().min(1),
+  agency_id: z.string().min(1),
   patient_id: z.string().min(1),
   referring_physician: z.string().optional(),
   po_number: z.string().optional(),
@@ -50,7 +50,7 @@ export function EditAppointmentPage() {
   const update = useUpdateAppointment(id!);
 
   const { data: clinics } = useClinics({ limit: "500" });
-  const { data: agencies } = useInsuranceAgencies({ limit: "500" });
+  const { data: agencies } = useAgencies({ limit: "500" });
   const { data: patients } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
@@ -84,7 +84,7 @@ export function EditAppointmentPage() {
       language: a.language as string,
       interpreter_type_required: a.interpreter_type_required as "certified" | "qualified",
       clinic_id: clinicId,
-      insurance_agency_id: (a.insurance_agency as Record<string, unknown>)?.id as string,
+      agency_id: (a.agency as Record<string, unknown>)?.id as string,
       patient_id: (a.patient as Record<string, unknown>)?.id as string,
       referring_physician: (a.referring_physician as string) ?? "",
       po_number: (a.po_number as string) ?? "",
@@ -190,8 +190,8 @@ export function EditAppointmentPage() {
               )} />
             </FormField>
 
-            <FormField label={t("appointments.insurance_agency")} error={errors.insurance_agency_id?.message}>
-              <Controller name="insurance_agency_id" control={control} render={({ field }) => (
+            <FormField label={t("appointments.agency")} error={errors.agency_id?.message}>
+              <Controller name="agency_id" control={control} render={({ field }) => (
                 <AutocompleteInput options={agencyOptions} value={field.value ?? ""} onChange={field.onChange} placeholder={t("common.search")} />
               )} />
             </FormField>

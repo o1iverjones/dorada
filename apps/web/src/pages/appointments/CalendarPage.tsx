@@ -274,7 +274,7 @@ export function CalendarPage() {
       formatInTz(endDt, { hour: "2-digit", minute: "2-digit" }, tz);
     const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
     const clinicName = (a.clinic as Record<string, unknown>)?.name as string;
-    const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string;
+    const agencyName = (a.agency as Record<string, unknown>)?.name as string;
     const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
     const physician = a.referring_physician as string | null;
     const colorClass = apptColorClass(a);
@@ -307,7 +307,7 @@ export function CalendarPage() {
       formatInTz(endDt, { hour: "2-digit", minute: "2-digit" }, tz);
     const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
     const clinicName = (a.clinic as Record<string, unknown>)?.name as string | null ?? null;
-    const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string | null ?? null;
+    const agencyName = (a.agency as Record<string, unknown>)?.name as string | null ?? null;
     const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
     const physician = a.referring_physician as string | null;
     const poNumber = a.po_number as string | null;
@@ -337,7 +337,7 @@ export function CalendarPage() {
           {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
           <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} bold />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
-          {agencyName && <DayRow label={t("appointments.insurance_agency")} value={agencyName} bold />}
+          {agencyName && <DayRow label={t("appointments.agency")} value={agencyName} bold />}
           {physician && <DayRow label={t("appointments.provider")} value={physician} />}
         </div>
       </button>
@@ -761,7 +761,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
   const language = a.language as string;
   const interpType = a.interpreter_type_required as string;
   const clinicName = (a.clinic as Record<string, unknown>)?.name as string ?? "—";
-  const agencyName = (a.insurance_agency as Record<string, unknown>)?.name as string ?? "—";
+  const agencyName = (a.agency as Record<string, unknown>)?.name as string ?? "—";
   const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned");
   const physician = a.referring_physician as string | null;
 
@@ -786,7 +786,7 @@ function ApptTooltip({ appt: a, x, y }: { appt: Record<string, unknown>; x: numb
         {showLanguage && <Row label={t("appointments.language")} value={language} />}
         <Row label={t("appointments.interpreter_type")} value={interpType} />
         <Row label={t("appointments.clinic")} value={clinicName} />
-        <Row label={t("appointments.insurance_agency")} value={agencyName} />
+        <Row label={t("appointments.agency")} value={agencyName} />
         <Row label={t("appointments.interpreter")} value={interpreterName} />
         {physician && <Row label={t("appointments.provider")} value={physician} />}
       </div>

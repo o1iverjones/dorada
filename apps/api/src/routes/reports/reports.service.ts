@@ -5,7 +5,7 @@ import type { Queue } from "bullmq";
 
 const REQUIRED_FILTERS: Record<string, string[]> = {
   interpreter_compensation: ["date_from", "date_to"],
-  insurance_agency_billing: ["date_from", "date_to"],
+  agency_billing: ["date_from", "date_to"],
   appointment_history: ["date_from", "date_to"],
   interpreter_performance: ["date_from", "date_to"],
 };

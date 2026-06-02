@@ -104,7 +104,7 @@ async function handleProcessEmail(
 
   const log = await prisma.emailIntakeLog.findUnique({
     where: { id: emailLogId },
-    include: { insurance_agency: true },
+    include: { agency: true },
   });
   if (!log) return;
   if (log.status !== "unprocessed") return;
@@ -169,7 +169,7 @@ async function handleProcessEmail(
     },
   });
 
-  const confirmationMethod = log.insurance_agency?.email_intake_confirmation_override ??
+  const confirmationMethod = log.agency?.email_intake_confirmation_override ??
     extraction.confirmation_method ?? "reply_email";
 
   await prisma.emailIntakeLog.update({
@@ -197,7 +197,7 @@ async function handleRetryConfirmation(
   const { logId, organizationId } = job.data;
   const log = await prisma.emailIntakeLog.findUnique({
     where: { id: logId },
-    include: { draft: true, insurance_agency: true },
+    include: { draft: true, agency: true },
   });
   if (!log || log.organization_id !== organizationId || !log.draft) return;
 
@@ -206,7 +206,7 @@ async function handleRetryConfirmation(
 }
 
 async function performConfirmation(
-  log: { id: string; from_email: string; insurance_agency: { email_intake_reply_template?: string | null; email_intake_reply_from_email?: string | null } | null },
+  log: { id: string; from_email: string; agency: { email_intake_reply_template?: string | null; email_intake_reply_from_email?: string | null } | null },
   _draftId: string,
   method: string,
   linkUrl: string | null,
@@ -214,7 +214,7 @@ async function performConfirmation(
 ) {
   if (method === "reply_email") {
     try {
-      const template = log.insurance_agency?.email_intake_reply_template ?? "Your appointment has been confirmed.";
+      const template = log.agency?.email_intake_reply_template ?? "Your appointment has been confirmed.";
       await sendEmail({
         to: log.from_email,
         subject: "Appointment Confirmation",

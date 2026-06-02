@@ -5,7 +5,7 @@ import { getSocket } from "../../lib/socket.js";
 import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
-import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { usePatients, useUpdatePatient } from "../../hooks/usePatients.js";
 import { useOrgTimezone, useSystemSettings, useInterpreterRates, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz, toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
@@ -32,7 +32,7 @@ type FormState = {
   language: string;
   interpreter_type_required: "certified" | "qualified";
   clinic_id: string;
-  insurance_agency_id: string;
+  agency_id: string;
   patient_id: string;
   referring_physician: string;
   po_number: string;
@@ -87,7 +87,7 @@ export function AppointmentDetailPage() {
 
   // Lookup data for edit mode
   const { data: clinicsData } = useClinics({ limit: "500" });
-  const { data: agenciesData } = useInsuranceAgencies({ limit: "500" });
+  const { data: agenciesData } = useAgencies({ limit: "500" });
   const { data: patientsData } = usePatients({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
@@ -149,7 +149,7 @@ export function AppointmentDetailPage() {
       language: a!.language as string ?? "",
       interpreter_type_required: a!.interpreter_type_required as "certified" | "qualified",
       clinic_id: (a!.clinic as Record<string, unknown>)?.id as string ?? "",
-      insurance_agency_id: (a!.insurance_agency as Record<string, unknown>)?.id as string ?? "",
+      agency_id: (a!.agency as Record<string, unknown>)?.id as string ?? "",
       patient_id: (a!.patient as Record<string, unknown>)?.id as string ?? "",
       referring_physician: a!.referring_physician as string ?? "",
       po_number: a!.po_number as string ?? "",
@@ -174,7 +174,7 @@ export function AppointmentDetailPage() {
           language: form.language,
           interpreter_type_required: form.interpreter_type_required,
           ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
-          ...(form.insurance_agency_id ? { insurance_agency_id: form.insurance_agency_id } : {}),
+          ...(form.agency_id ? { agency_id: form.agency_id } : {}),
           ...(form.patient_id ? { patient_id: form.patient_id } : {}),
           referring_physician: form.referring_physician || undefined,
           po_number: form.po_number || undefined,
@@ -236,7 +236,7 @@ export function AppointmentDetailPage() {
                       language: a.language,
                       interpreter_type_required: a.interpreter_type_required,
                       clinic_id: (a.clinic as Record<string, unknown>)?.id,
-                      insurance_agency_id: (a.insurance_agency as Record<string, unknown>)?.id,
+                      agency_id: (a.agency as Record<string, unknown>)?.id,
                       patient_id: (a.patient as Record<string, unknown>)?.id,
                       referring_physician: a.referring_physician,
                       pre_auth_amount: a.pre_auth_amount,
@@ -418,14 +418,14 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Insurance Agency */}
+            {/* Agency */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
-                <InlineRow label={t("appointments.insurance_agency")}>
-                  <AutocompleteInput options={agencyOptions} value={form.insurance_agency_id} onChange={(v) => set("insurance_agency_id", v)} placeholder={t("common.search")} />
+                <InlineRow label={t("appointments.agency")}>
+                  <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => set("agency_id", v)} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.insurance_agency")} value={(a.insurance_agency as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("appointments.agency")} value={(a.agency as Record<string, unknown>)?.name as string ?? "—"} />
               )}
             </div>
 

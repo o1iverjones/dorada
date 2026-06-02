@@ -5,7 +5,7 @@ export const ReportFiltersSchema = z.object({
   date_from: z.string().date().optional(),
   date_to: z.string().date().optional(),
   interpreter_ids: z.array(UuidSchema).optional(),
-  insurance_agency_ids: z.array(UuidSchema).optional(),
+  agency_ids: z.array(UuidSchema).optional(),
   clinic_ids: z.array(UuidSchema).optional(),
   statuses: z.array(z.string()).optional(),
   language: z.string().optional(),

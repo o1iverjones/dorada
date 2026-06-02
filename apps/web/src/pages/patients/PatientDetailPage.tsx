@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePatient, useUpdatePatient, useCreateClaim, useUpdateClaim, useDeleteClaim } from "../../hooks/usePatients.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
-import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { useInsuranceCompanies } from "../../hooks/useInsuranceCompanies.js";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
@@ -27,7 +27,7 @@ interface Claim {
   case_number: string;
   injury: string | null;
   date_of_injury: string | null;
-  insurance_agency: { id: string; name: string } | null;
+  agency: { id: string; name: string } | null;
   insurance_company: { id: string; name: string } | null;
   adjuster: string | null;
   adjuster_phone: string | null;
@@ -38,7 +38,7 @@ const emptyClaimForm = {
   case_number: "",
   injury: "",
   date_of_injury: "",
-  insurance_agency_id: "",
+  agency_id: "",
   insurance_company_id: "",
   adjuster: "",
   adjuster_phone: "",
@@ -69,7 +69,7 @@ export function PatientDetailPage() {
   const { data: appts } = useAppointments({ patient_id: id!, limit: "20" });
   const update = useUpdatePatient(id!);
   const { data: interpretersData } = useInterpreters({ limit: "500" });
-  const { data: agenciesData } = useInsuranceAgencies({ limit: "200" });
+  const { data: agenciesData } = useAgencies({ limit: "200" });
   const { data: companiesData } = useInsuranceCompanies({ limit: "200" });
 
   const createClaim = useCreateClaim(id!);
@@ -137,7 +137,7 @@ export function PatientDetailPage() {
       case_number: claim.case_number,
       injury: claim.injury ?? "",
       date_of_injury: claim.date_of_injury ? claim.date_of_injury.slice(0, 10) : "",
-      insurance_agency_id: claim.insurance_agency?.id ?? "",
+      agency_id: claim.agency?.id ?? "",
       insurance_company_id: claim.insurance_company?.id ?? "",
       adjuster: claim.adjuster ?? "",
       adjuster_phone: formatPhoneInput(claim.adjuster_phone ?? ""),
@@ -152,7 +152,7 @@ export function PatientDetailPage() {
         case_number: claimForm.case_number,
         injury: claimForm.injury || null,
         date_of_injury: claimForm.date_of_injury || null,
-        insurance_agency_id: claimForm.insurance_agency_id || null,
+        agency_id: claimForm.agency_id || null,
         insurance_company_id: claimForm.insurance_company_id || null,
         adjuster: claimForm.adjuster || null,
         adjuster_phone: claimForm.adjuster_phone || null,
@@ -301,8 +301,8 @@ export function PatientDetailPage() {
                     {claim.insurance_company && (
                       <div className="text-muted-foreground">{t("patients.insurance_company")}: <span className="text-foreground">{claim.insurance_company.name}</span></div>
                     )}
-                    {claim.insurance_agency && (
-                      <div className="text-muted-foreground">{t("patients.insurance_agency")}: <span className="text-foreground">{claim.insurance_agency.name}</span></div>
+                    {claim.agency && (
+                      <div className="text-muted-foreground">{t("patients.agency")}: <span className="text-foreground">{claim.agency.name}</span></div>
                     )}
                     {claim.adjuster && (
                       <div className="text-muted-foreground">{t("patients.adjuster")}: <span className="text-foreground">{claim.adjuster}</span></div>
@@ -403,11 +403,11 @@ export function PatientDetailPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label>{t("patients.insurance_agency")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
+                <Label>{t("patients.agency")} <span className="text-muted-foreground text-xs">({t("common.optional")})</span></Label>
                 <AutocompleteInput
                   options={agencyOptions}
-                  value={claimForm.insurance_agency_id}
-                  onChange={(val) => setClaimForm(s => ({ ...s, insurance_agency_id: val }))}
+                  value={claimForm.agency_id}
+                  onChange={(val) => setClaimForm(s => ({ ...s, agency_id: val }))}
                   placeholder={t("common.search")}
                 />
               </div>

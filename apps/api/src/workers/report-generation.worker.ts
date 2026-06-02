@@ -26,7 +26,7 @@ function saveLocally(reportJobId: string, format: "pdf" | "csv", buffer: Buffer)
 interface ReportJobData {
   reportJobId: string;
   organizationId: string;
-  type: "interpreter_compensation" | "insurance_agency_billing" | "appointment_history" | "interpreter_performance";
+  type: "interpreter_compensation" | "agency_billing" | "appointment_history" | "interpreter_performance";
   format: "pdf" | "csv";
   filters: Record<string, unknown>;
   locale: string;
@@ -132,21 +132,21 @@ async function fetchReportData(
     }));
   }
 
-  if (type === "insurance_agency_billing") {
-    const agencyIds = filters["insurance_agency_ids"] as string[] | undefined;
+  if (type === "agency_billing") {
+    const agencyIds = filters["agency_ids"] as string[] | undefined;
     const appointments = await prisma.appointment.findMany({
       where: {
         organization_id: organizationId,
         status: "completed",
         ...dateFilter,
-        ...(agencyIds?.length ? { insurance_agency_id: { in: agencyIds } } : {}),
+        ...(agencyIds?.length ? { agency_id: { in: agencyIds } } : {}),
       },
-      include: { patient: true, clinic: true, interpreter: true, insurance_agency: true },
-      orderBy: [{ insurance_agency: { name: "asc" } }, { date_time: "asc" }],
+      include: { patient: true, clinic: true, interpreter: true, agency: true },
+      orderBy: [{ agency: { name: "asc" } }, { date_time: "asc" }],
     });
     return appointments.map((a) => ({
       date: a.date_time.toISOString().slice(0, 10),
-      agency: a.insurance_agency?.name ?? "—",
+      agency: a.agency?.name ?? "—",
       patient: a.patient.name,
       clinic: a.clinic.name,
       interpreter: a.interpreter?.name ?? "—",
@@ -216,7 +216,7 @@ function generateCsv(rows: Record<string, unknown>[]): Buffer {
 
 const REPORT_TITLES: Record<string, string> = {
   interpreter_compensation: "Interpreter Compensation Report",
-  insurance_agency_billing: "Insurance Agency Billing Report",
+  agency_billing: "Insurance Agency Billing Report",
   appointment_history: "Appointment History Report",
   interpreter_performance: "Interpreter Performance Report",
 };
@@ -236,7 +236,7 @@ const COLUMNS: Record<string, ColDef[]> = {
     { key: "rate_per_hour",    label: "Rate/hr",      width: 50,  align: "right" },
     { key: "amount",           label: "Amount",       width: 56,  align: "right" },
   ],
-  insurance_agency_billing: [
+  agency_billing: [
     { key: "date",             label: "Date",         width: 68,  align: "left"  },
     { key: "agency",           label: "Agency",       width: 100, align: "left"  },
     { key: "patient",          label: "Patient",      width: 100, align: "left"  },

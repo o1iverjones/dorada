@@ -13,7 +13,7 @@ export async function listEmailIntakeLogs(
     where: {
       organization_id: organizationId,
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(query.insurance_agency_id ? { insurance_agency_id: query.insurance_agency_id } : {}),
+      ...(query.agency_id ? { agency_id: query.agency_id } : {}),
       ...(query.date_from || query.date_to
         ? {
             received_at: {
@@ -27,7 +27,7 @@ export async function listEmailIntakeLogs(
     take: query.limit + 1,
     orderBy: { received_at: "desc" },
     include: {
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       draft: { select: { id: true } },
     },
   });
@@ -41,7 +41,7 @@ export async function listEmailIntakeLogs(
       from_email: log.from_email,
       subject: log.subject,
       status: log.status,
-      insurance_agency: log.insurance_agency,
+      agency: log.agency,
       draft_appointment_id: log.draft?.id ?? null,
       confirmation_status: log.confirmation_status,
       confirmation_method: log.confirmation_method,
@@ -57,7 +57,7 @@ export async function getEmailIntakeLog(id: string, organizationId: string, pris
   const log = await prisma.emailIntakeLog.findUnique({
     where: { id },
     include: {
-      insurance_agency: { select: { id: true, name: true } },
+      agency: { select: { id: true, name: true } },
       extraction: true,
       draft: true,
     },
@@ -91,7 +91,7 @@ export async function listEmailIntakeDrafts(
     take: query.limit + 1,
     orderBy: { created_at: "desc" },
     include: {
-      log: { include: { insurance_agency: { select: { id: true, name: true } } } },
+      log: { include: { agency: { select: { id: true, name: true } } } },
       appointment: { include: { patient: true, clinic: true } },
     },
   });
@@ -107,7 +107,7 @@ export async function listEmailIntakeDrafts(
       date_time: d.appointment?.date_time.toISOString() ?? null,
       patient: d.appointment ? { id: d.appointment.patient.id, name: d.appointment.patient.name, ai_generated: false } : null,
       clinic: d.appointment ? { id: d.appointment.clinic.id, name: d.appointment.clinic.name, ai_generated: false } : null,
-      insurance_agency: d.log.insurance_agency,
+      agency: d.log.agency,
       unresolved_fields: d.unresolved_fields,
       email_log_id: d.log_id,
       created_at: d.created_at.toISOString(),
@@ -152,7 +152,7 @@ export async function reviewEmailIntakeDraft(
       language: body.languages?.[0] ?? "en",
       interpreter_type_required: body.interpreter_type_required ?? "qualified",
       clinic_id: body.clinic_id!,
-      insurance_agency_id: body.insurance_agency_id!,
+      agency_id: body.agency_id!,
       patient_id: body.patient_id!,
       referring_physician: body.referring_physician ?? null,
       department: body.department ?? null,

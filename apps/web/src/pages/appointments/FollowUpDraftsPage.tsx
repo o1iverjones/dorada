@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useFollowUpDrafts, useReviewFollowUpDraft } from "../../hooks/useAppointments.js";
 import { useClinics } from "../../hooks/useClinics.js";
-import { useInsuranceAgencies } from "../../hooks/useInsuranceAgencies.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -18,7 +18,7 @@ interface FollowUpDraft {
   created_from_appointment: { id: string; date_time: string };
   patient: { id: string; name: string };
   clinic: { id: string; name: string } | null;
-  insurance_agency: { id: string; name: string } | null;
+  agency: { id: string; name: string } | null;
   interpreter: { id: string; name: string };
   follow_up_response: {
     same_physician: boolean | null;
@@ -65,14 +65,14 @@ function DraftCard({ draft, expanded, onToggle }: { draft: FollowUpDraft; expand
   const { t } = useTranslation();
   const tz = useOrgTimezone();
   const { data: clinics } = useClinics();
-  const { data: agencies } = useInsuranceAgencies();
+  const { data: agencies } = useAgencies();
   const review = useReviewFollowUpDraft(draft.id);
 
   const followUp = draft.follow_up_response;
 
   const [formState, setFormState] = useState({
     clinic_id: followUp.same_clinic ? (draft.clinic?.id ?? "") : "",
-    insurance_agency_id: "",
+    agency_id: "",
     date_time: followUp.follow_up_datetime ?? "",
     pre_auth_amount: 0,
     pre_auth_mileage: 0,
@@ -82,7 +82,7 @@ function DraftCard({ draft, expanded, onToggle }: { draft: FollowUpDraft; expand
     try {
       const payload: Record<string, unknown> = { status: "scheduled", date_time: formState.date_time };
       if (formState.clinic_id) payload.clinic_id = formState.clinic_id;
-      if (formState.insurance_agency_id) payload.insurance_agency_id = formState.insurance_agency_id;
+      if (formState.agency_id) payload.agency_id = formState.agency_id;
       if (formState.pre_auth_amount) payload.pre_auth_amount = formState.pre_auth_amount;
       if (formState.pre_auth_mileage) payload.pre_auth_mileage = formState.pre_auth_mileage;
       await review.mutateAsync(payload);
@@ -153,10 +153,10 @@ function DraftCard({ draft, expanded, onToggle }: { draft: FollowUpDraft; expand
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium">{t("appointments.insurance_agency")}</label>
+              <label className="text-sm font-medium">{t("appointments.agency")}</label>
               <select className="mt-1 w-full rounded-md border p-2 text-sm"
-                value={formState.insurance_agency_id} onChange={(e) => setFormState(s => ({ ...s, insurance_agency_id: e.target.value }))}>
-                <option value="">{draft.insurance_agency ? `${t("appointments.same_as_original")}: ${draft.insurance_agency.name}` : t("appointments.same_as_original")}</option>
+                value={formState.agency_id} onChange={(e) => setFormState(s => ({ ...s, agency_id: e.target.value }))}>
+                <option value="">{draft.agency ? `${t("appointments.same_as_original")}: ${draft.agency.name}` : t("appointments.same_as_original")}</option>
                 {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map(a => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}

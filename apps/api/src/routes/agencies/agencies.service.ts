@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { CreateInsuranceAgencyBody, UpdateInsuranceAgencyBody, InsuranceAgencyListQuery } from "@dorada/types";
+import type { CreateAgencyBody, UpdateAgencyBody, AgencyListQuery } from "@dorada/types";
 import { NotFoundError, ConflictError } from "../../lib/errors.js";
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string) {
@@ -51,8 +51,8 @@ function formatAgency(a: {
   };
 }
 
-export async function listAgencies(query: InsuranceAgencyListQuery, organizationId: string, prisma: PrismaClient) {
-  const items = await prisma.insuranceAgency.findMany({
+export async function listAgencies(query: AgencyListQuery, organizationId: string, prisma: PrismaClient) {
+  const items = await prisma.agency.findMany({
     where: {
       organization_id: organizationId,
       is_active: true,
@@ -72,13 +72,13 @@ export async function listAgencies(query: InsuranceAgencyListQuery, organization
 }
 
 export async function getAgency(id: string, organizationId: string, prisma: PrismaClient) {
-  const agency = await prisma.insuranceAgency.findUnique({ where: { id } });
+  const agency = await prisma.agency.findUnique({ where: { id } });
   ensureTenant(agency, organizationId);
   return formatAgency(agency!);
 }
 
-export async function createAgency(body: CreateInsuranceAgencyBody, organizationId: string, prisma: PrismaClient) {
-  return prisma.insuranceAgency.create({
+export async function createAgency(body: CreateAgencyBody, organizationId: string, prisma: PrismaClient) {
+  return prisma.agency.create({
     data: {
       organization_id: organizationId,
       name: body.name,
@@ -108,11 +108,11 @@ export async function createAgency(body: CreateInsuranceAgencyBody, organization
   });
 }
 
-export async function updateAgency(id: string, body: UpdateInsuranceAgencyBody, organizationId: string, prisma: PrismaClient) {
-  const agency = await prisma.insuranceAgency.findUnique({ where: { id } });
+export async function updateAgency(id: string, body: UpdateAgencyBody, organizationId: string, prisma: PrismaClient) {
+  const agency = await prisma.agency.findUnique({ where: { id } });
   ensureTenant(agency, organizationId);
 
-  return prisma.insuranceAgency.update({
+  return prisma.agency.update({
     where: { id },
     data: {
       ...(body.name ? { name: body.name } : {}),
@@ -142,13 +142,13 @@ export async function updateAgency(id: string, body: UpdateInsuranceAgencyBody, 
 }
 
 export async function deactivateAgency(id: string, organizationId: string, prisma: PrismaClient) {
-  const agency = await prisma.insuranceAgency.findUnique({ where: { id } });
+  const agency = await prisma.agency.findUnique({ where: { id } });
   ensureTenant(agency, organizationId);
 
   const upcoming = await prisma.appointment.count({
-    where: { insurance_agency_id: id, status: { in: ["confirmed", "in_progress"] }, date_time: { gte: new Date() } },
+    where: { agency_id: id, status: { in: ["confirmed", "in_progress"] }, date_time: { gte: new Date() } },
   });
   if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Agency has upcoming confirmed appointments");
 
-  await prisma.insuranceAgency.update({ where: { id }, data: { is_active: false } });
+  await prisma.agency.update({ where: { id }, data: { is_active: false } });
 }

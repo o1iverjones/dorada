@@ -72,7 +72,7 @@
     "calendar": "Calendario",
     "dashboard": "Panel principal",
     "email_intake": "Correos entrantes",
-    "insurance_agencies": "Agencias",
+    "agencies": "Agencias",
     "insurance_companies": "Aseguradoras",
     "availability": "Horario",
     "profile": "Perfil",
@@ -224,7 +224,7 @@
   },
   "report": {
     "type.interpreter_compensation": "Compensación de intérpretes",
-    "type.insurance_agency_billing": "Facturación de agencias",
+    "type.agency_billing": "Facturación de agencias",
     "type.appointment_history": "Historial de citas",
     "type.interpreter_performance": "Desempeño y asistencia de intérpretes",
     "format.pdf": "PDF",
@@ -388,7 +388,7 @@
     "interpreter_type": "Tipo de intérprete",
     "interpreter": "Intérprete",
     "clinic": "Clínica",
-    "insurance_agency": "Agencia",
+    "agency": "Agencia",
     "patient": "Paciente",
     "referring_physician": "Proveedor",
     "provider": "Proveedor",
@@ -618,7 +618,7 @@
     "reactivate_confirm_button": "Reactivar",
     "reactivated": "Aseguradora reactivada."
   },
-  "insurance_agencies": {
+  "agencies": {
     "title": "Agencias",
     "new": "Nueva agencia",
     "name": "Nombre de la agencia",
@@ -716,7 +716,7 @@
     "injury": "Lesión",
     "date_of_injury": "Fecha de la lesión",
     "insurance_company": "Aseguradora",
-    "insurance_agency": "Agencia",
+    "agency": "Agencia",
     "adjuster": "Ajustador",
     "adjuster_phone": "Teléfono del ajustador",
     "adjuster_email": "Correo del ajustador",

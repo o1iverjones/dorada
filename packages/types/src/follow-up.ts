@@ -50,7 +50,7 @@ export const ReviewFollowUpDraftBodySchema = z.object({
   status: z.enum(["scheduled", "dismissed"]),
   date_time: z.string().datetime().optional(),
   clinic_id: UuidSchema.optional(),
-  insurance_agency_id: UuidSchema.optional(),
+  agency_id: UuidSchema.optional(),
   pre_auth_amount: z.number().nonnegative().optional(),
   pre_auth_mileage: z.number().int().nonnegative().optional(),
   notes: z.string().max(5000).optional(),

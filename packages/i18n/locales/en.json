@@ -72,7 +72,7 @@
     "calendar": "Calendar",
     "dashboard": "Dashboard",
     "email_intake": "Email Intake",
-    "insurance_agencies": "Agencies",
+    "agencies": "Agencies",
     "insurance_companies": "Insurance Companies",
     "availability": "Schedule",
     "profile": "Profile",
@@ -224,7 +224,7 @@
   },
   "report": {
     "type.interpreter_compensation": "Interpreter Compensation",
-    "type.insurance_agency_billing": "Agency Billing",
+    "type.agency_billing": "Agency Billing",
     "type.appointment_history": "Appointment History",
     "type.interpreter_performance": "Interpreter Performance & Attendance",
     "format.pdf": "PDF",
@@ -388,7 +388,7 @@
     "interpreter_type": "Interpreter type",
     "interpreter": "Interpreter",
     "clinic": "Clinic",
-    "insurance_agency": "Agency",
+    "agency": "Agency",
     "patient": "Patient",
     "referring_physician": "Provider",
     "provider": "Provider",
@@ -618,7 +618,7 @@
     "reactivate_confirm_button": "Reactivate",
     "reactivated": "Insurance company reactivated."
   },
-  "insurance_agencies": {
+  "agencies": {
     "title": "Agencies",
     "new": "New agency",
     "name": "Agency name",
@@ -716,7 +716,7 @@
     "injury": "Injury",
     "date_of_injury": "Date of injury",
     "insurance_company": "Insurance company",
-    "insurance_agency": "Agency",
+    "agency": "Agency",
     "adjuster": "Adjuster",
     "adjuster_phone": "Adjuster phone",
     "adjuster_email": "Adjuster email",

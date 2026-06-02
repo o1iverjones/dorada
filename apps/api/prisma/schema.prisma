@@ -25,7 +25,7 @@ model Organization {
   roles                Role[]
   interpreters         Interpreter[]
   clinics              Clinic[]
-  insurance_agencies   InsuranceAgency[]
+  agencies             Agency[]
   patients             Patient[]
   claims               Claim[]
   appointments         Appointment[]
@@ -269,7 +269,7 @@ model ClinicInterpreterBlock {
 
 // ─── Insurance Agencies ───────────────────────────────────────────────────────
 
-model InsuranceAgency {
+model Agency {
   id                                 String   @id @default(uuid())
   organization_id                    String
   name                               String
@@ -308,7 +308,7 @@ model InsuranceAgency {
   email_logs   EmailIntakeLog[]
   claims       Claim[]
 
-  @@map("insurance_agencies")
+  @@map("agencies")
 }
 
 // ─── Patients ─────────────────────────────────────────────────────────────────
@@ -340,7 +340,7 @@ model Claim {
   case_number          String
   injury               String?
   date_of_injury       DateTime? @db.Date
-  insurance_agency_id  String?
+  agency_id  String?
   insurance_company_id String?
   adjuster             String?
   adjuster_phone       String?
@@ -350,7 +350,7 @@ model Claim {
 
   organization      Organization      @relation(fields: [organization_id], references: [id])
   patient           Patient           @relation(fields: [patient_id], references: [id], onDelete: Cascade)
-  insurance_agency  InsuranceAgency?  @relation(fields: [insurance_agency_id], references: [id], onDelete: SetNull)
+  agency  Agency?  @relation(fields: [agency_id], references: [id], onDelete: SetNull)
   insurance_company InsuranceCompany? @relation(fields: [insurance_company_id], references: [id], onDelete: SetNull)
 
   @@map("claims")
@@ -406,7 +406,7 @@ model Appointment {
   interpreter_type_required  String
   interpreter_id             String?
   clinic_id                  String
-  insurance_agency_id        String
+  agency_id        String
   patient_id                 String
   referring_physician        String?
   department                 String?
@@ -440,7 +440,7 @@ model Appointment {
   type               AppointmentType    @relation(fields: [type_id], references: [id])
   interpreter        Interpreter?       @relation("AssignedInterpreter", fields: [interpreter_id], references: [id])
   clinic             Clinic             @relation(fields: [clinic_id], references: [id])
-  insurance_agency   InsuranceAgency    @relation(fields: [insurance_agency_id], references: [id])
+  agency   Agency    @relation(fields: [agency_id], references: [id])
   patient            Patient            @relation(fields: [patient_id], references: [id])
   offers             AppointmentOffer[]
   follow_up_response FollowUpResponse?
@@ -621,7 +621,7 @@ model FollowUpDraft {
 model EmailIntakeLog {
   id                               String    @id @default(uuid())
   organization_id                  String
-  insurance_agency_id              String?
+  agency_id              String?
   received_at                      DateTime
   from_email                       String
   subject                          String
@@ -642,7 +642,7 @@ model EmailIntakeLog {
   updated_at                       DateTime  @updatedAt
 
   organization     Organization          @relation(fields: [organization_id], references: [id])
-  insurance_agency InsuranceAgency?      @relation(fields: [insurance_agency_id], references: [id])
+  agency Agency?      @relation(fields: [agency_id], references: [id])
   extraction       EmailIntakeExtraction?
   draft            EmailIntakeDraft?
 

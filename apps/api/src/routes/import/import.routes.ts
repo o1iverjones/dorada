@@ -15,7 +15,7 @@ const ENTITY_PERMISSIONS: Record<EntityType, string> = {
   interpreters: "manage_interpreters",
   clinics: "manage_clinics",
   patients: "manage_appointments",
-  "insurance-agencies": "manage_clinics",
+  "agencies": "manage_clinics",
   appointments: "manage_appointments",
 };
 
@@ -26,7 +26,7 @@ export default async function importRoutes(fastify: FastifyInstance) {
     { preHandler: [authenticate] },
     async (request, reply) => {
       const { entity } = request.params;
-      const validEntities: EntityType[] = ["interpreters", "clinics", "patients", "insurance-agencies"];
+      const validEntities: EntityType[] = ["interpreters", "clinics", "patients", "agencies"];
       if (!validEntities.includes(entity)) {
         return reply.status(400).send({ error: { code: "INVALID_ENTITY", message: "Unknown entity type" } });
       }
@@ -83,7 +83,7 @@ export default async function importRoutes(fastify: FastifyInstance) {
         case "patients":
           result = await importPatients(csvText, organizationId, fastify.prisma);
           break;
-        case "insurance-agencies":
+        case "agencies":
           result = await importInsuranceAgencies(csvText, organizationId, fastify.prisma);
           break;
         case "appointments":

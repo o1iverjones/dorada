@@ -55,7 +55,7 @@ export function Sidebar() {
     { label: t("nav.appointments"), to: "/appointments", icon: ClipboardList, permission: "manage_appointments" },
     { label: t("nav.interpreters"), to: "/interpreters", icon: Users, permission: "manage_interpreters" },
     { label: t("nav.clinics"), to: "/clinics", icon: Building2, permission: "manage_clinics" },
-    { label: t("nav.insurance_agencies"), to: "/insurance-agencies", icon: ShieldCheck, permission: "manage_clinics" },
+    { label: t("nav.agencies"), to: "/agencies", icon: ShieldCheck, permission: "manage_clinics" },
     { label: t("nav.insurance_companies"), to: "/insurance-companies", icon: Landmark, permission: "manage_clinics" },
     { label: t("nav.patients"), to: "/patients", icon: UserSquare2, permission: "manage_appointments" },
     { label: t("nav.reports"), to: "/reports", icon: BarChart3, permission: "view_reports" },

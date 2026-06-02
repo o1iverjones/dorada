@@ -21,8 +21,8 @@ import { InterpreterDetailPage } from "./pages/interpreters/InterpreterDetailPag
 import { NewInterpreterPage } from "./pages/interpreters/NewInterpreterPage.js";
 import { ClinicsPage } from "./pages/clinics/ClinicsPage.js";
 import { ClinicDetailPage } from "./pages/clinics/ClinicDetailPage.js";
-import { InsuranceAgenciesPage } from "./pages/insurance-agencies/InsuranceAgenciesPage.js";
-import { InsuranceAgencyDetailPage } from "./pages/insurance-agencies/InsuranceAgencyDetailPage.js";
+import { AgenciesPage } from "./pages/agencies/AgenciesPage.js";
+import { AgencyDetailPage } from "./pages/agencies/AgencyDetailPage.js";
 import { PatientsPage } from "./pages/patients/PatientsPage.js";
 import { PatientDetailPage } from "./pages/patients/PatientDetailPage.js";
 import { ReportsPage } from "./pages/reports/ReportsPage.js";
@@ -105,12 +105,12 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
         element: <PermissionGuard permission="manage_clinics"><ClinicDetailPage /></PermissionGuard>,
       },
       {
-        path: "insurance-agencies",
-        element: <PermissionGuard permission="manage_clinics"><InsuranceAgenciesPage /></PermissionGuard>,
+        path: "agencies",
+        element: <PermissionGuard permission="manage_clinics"><AgenciesPage /></PermissionGuard>,
       },
       {
-        path: "insurance-agencies/:id",
-        element: <PermissionGuard permission="manage_clinics"><InsuranceAgencyDetailPage /></PermissionGuard>,
+        path: "agencies/:id",
+        element: <PermissionGuard permission="manage_clinics"><AgencyDetailPage /></PermissionGuard>,
       },
       {
         path: "insurance-companies",

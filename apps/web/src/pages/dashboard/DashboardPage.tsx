@@ -278,7 +278,7 @@ export function DashboardPage() {
                   const rawRate = (appt.pay_rate ?? interp?.pay_rate) as string | number | null | undefined;
                   const payRate = rawRate != null ? `$${Number(rawRate).toFixed(2)}/hr` : null;
 
-                  const agencyName = (appt.insurance_agency as Record<string, unknown>)?.name as string | null;
+                  const agencyName = (appt.agency as Record<string, unknown>)?.name as string | null;
 
                   const clockIn = appt.clock_in_time
                     ? formatInTz(appt.clock_in_time as string, { hour: "2-digit", minute: "2-digit" }, tz)
@@ -425,7 +425,7 @@ export function DashboardPage() {
                   const linkTo = entityType === "appointment" ? `/appointments/${entityId}`
                     : entityType === "clinic" ? `/clinics/${entityId}`
                     : entityType === "interpreter" ? `/interpreters/${entityId}`
-                    : entityType === "agency" ? `/insurance-agencies/${entityId}`
+                    : entityType === "agency" ? `/agencies/${entityId}`
                     : entityType === "admin_user" ? `/admin-users`
                     : null;
                   const meta = [
@@ -495,7 +495,7 @@ function ActivityLogTooltip({ entry: e, x, y }: { entry: Record<string, unknown>
   const entityLabel = entityType === "appointment" ? t("nav.appointments")
     : entityType === "clinic" ? t("nav.clinics")
     : entityType === "interpreter" ? t("nav.interpreters")
-    : entityType === "agency" ? t("nav.insuranceAgencies")
+    : entityType === "agency" ? t("nav.agencies")
     : entityType === "admin_user" ? t("nav.admin_users")
     : entityType;
 

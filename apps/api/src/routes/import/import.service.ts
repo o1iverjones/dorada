@@ -1,7 +1,7 @@
 import { parse } from "csv-parse/sync";
 import type { PrismaClient } from "@prisma/client";
 
-export type EntityType = "interpreters" | "clinics" | "patients" | "insurance-agencies" | "appointments";
+export type EntityType = "interpreters" | "clinics" | "patients" | "agencies" | "appointments";
 
 export interface ImportRowError {
   row: number;
@@ -22,7 +22,7 @@ const TEMPLATES: Record<EntityType, { headers: string[]; example: string[] }> = 
     headers: [
       "date_time", "duration_minutes", "appointment_type", "language",
       "interpreter_type_required", "patient_name", "patient_mrn",
-      "clinic_name", "insurance_agency_name", "referring_physician",
+      "clinic_name", "agency_name", "referring_physician",
       "pre_auth_amount", "pre_auth_mileage", "po_number", "interpreter_phone",
     ],
     example: [
@@ -60,7 +60,7 @@ const TEMPLATES: Record<EntityType, { headers: string[]; example: string[] }> = 
     headers: ["name", "case_number", "phone", "email", "preferred_language"],
     example: ["John Smith", "CLM-00123", "555-200-0001", "john@example.com", "es"],
   },
-  "insurance-agencies": {
+  "agencies": {
     headers: [
       "name", "address", "phone",
       "primary_contact_name", "primary_contact_phone", "primary_contact_email", "notes",
@@ -418,14 +418,14 @@ export async function importInsuranceAgencies(
     };
 
     try {
-      const existing = await prisma.insuranceAgency.findFirst({
+      const existing = await prisma.agency.findFirst({
         where: { organization_id: organizationId, name: { equals: name, mode: "insensitive" } },
       });
       if (existing) {
-        await prisma.insuranceAgency.update({ where: { id: existing.id }, data });
+        await prisma.agency.update({ where: { id: existing.id }, data });
         result.updated++;
       } else {
-        await prisma.insuranceAgency.create({ data });
+        await prisma.agency.create({ data });
         result.created++;
       }
     } catch (err) {
@@ -455,7 +455,7 @@ export async function importAppointments(
     const interpreterTypeRequired = row["interpreter_type_required"]?.trim().toLowerCase();
     const patientName = row["patient_name"]?.trim();
     const clinicName = row["clinic_name"]?.trim();
-    const insuranceAgencyName = row["insurance_agency_name"]?.trim();
+    const agencyName = row["agency_name"]?.trim();
     const preAuthAmountStr = row["pre_auth_amount"]?.trim();
 
     if (!dateTimeStr) { result.errors.push({ row: rowNum, message: "date_time is required" }); continue; }
@@ -469,7 +469,7 @@ export async function importAppointments(
     }
     if (!patientName) { result.errors.push({ row: rowNum, message: "patient_name is required" }); continue; }
     if (!clinicName) { result.errors.push({ row: rowNum, message: "clinic_name is required" }); continue; }
-    if (!insuranceAgencyName) { result.errors.push({ row: rowNum, message: "insurance_agency_name is required" }); continue; }
+    if (!agencyName) { result.errors.push({ row: rowNum, message: "agency_name is required" }); continue; }
 
     const dateTime = new Date(dateTimeStr);
     if (isNaN(dateTime.getTime())) {
@@ -501,11 +501,11 @@ export async function importAppointments(
         continue;
       }
 
-      const insuranceAgency = await prisma.insuranceAgency.findFirst({
-        where: { organization_id: organizationId, name: { equals: insuranceAgencyName, mode: "insensitive" }, is_active: true },
+      const agency = await prisma.agency.findFirst({
+        where: { organization_id: organizationId, name: { equals: agencyName, mode: "insensitive" }, is_active: true },
       });
-      if (!insuranceAgency) {
-        result.errors.push({ row: rowNum, message: `insurance_agency '${insuranceAgencyName}' not found — import agencies first` });
+      if (!agency) {
+        result.errors.push({ row: rowNum, message: `agency '${agencyName}' not found — import agencies first` });
         continue;
       }
 
@@ -563,7 +563,7 @@ export async function importAppointments(
           interpreter_type_required: interpreterTypeRequired,
           interpreter_id: interpreterId,
           clinic_id: clinic.id,
-          insurance_agency_id: insuranceAgency.id,
+          agency_id: agency.id,
           patient_id: patient.id,
           referring_physician: row["referring_physician"]?.trim() || null,
           pre_auth_amount: preAuthAmountStr ? parseFloat(preAuthAmountStr) : 0,

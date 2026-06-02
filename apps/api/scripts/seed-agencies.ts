@@ -67,7 +67,7 @@ async function main() {
       continue;
     }
 
-    const existing = await prisma.insuranceAgency.findFirst({
+    const existing = await prisma.agency.findFirst({
       where: {
         organization_id: org.id,
         name: { equals: agency.name, mode: "insensitive" },
@@ -81,7 +81,7 @@ async function main() {
       continue;
     }
 
-    await prisma.insuranceAgency.create({
+    await prisma.agency.create({
       data: {
         organization_id:       org.id,
         name:                  agency.name,

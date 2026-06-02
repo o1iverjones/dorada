@@ -12,7 +12,7 @@ export const EmailIntakeConfigSchema = z.object({
 
 export const AGENCY_CONTACT_OPTIONS = ["Text", "Phone", "Email", "Link", "Portal", "App"] as const;
 
-export const InsuranceAgencySchema = z.object({
+export const AgencySchema = z.object({
   id: UuidSchema,
   name: z.string(),
   address: z.string().nullable(),
@@ -35,7 +35,7 @@ export const InsuranceAgencySchema = z.object({
   updated_at: z.string().datetime(),
 });
 
-export const CreateInsuranceAgencyBodySchema = z.object({
+export const CreateAgencyBodySchema = z.object({
   name: z.string().min(1).max(255),
   address: z.string().max(500).nullish(),
   phone: z.string().max(20).nullish(),
@@ -54,16 +54,16 @@ export const CreateInsuranceAgencyBodySchema = z.object({
   email_intake: EmailIntakeConfigSchema.optional(),
 });
 
-export const UpdateInsuranceAgencyBodySchema = CreateInsuranceAgencyBodySchema.partial();
+export const UpdateAgencyBodySchema = CreateAgencyBodySchema.partial();
 
-export const InsuranceAgencyListQuerySchema = z.object({
+export const AgencyListQuerySchema = z.object({
   search: z.string().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(25),
 });
 
 export type EmailIntakeConfig = z.infer<typeof EmailIntakeConfigSchema>;
-export type InsuranceAgency = z.infer<typeof InsuranceAgencySchema>;
-export type CreateInsuranceAgencyBody = z.infer<typeof CreateInsuranceAgencyBodySchema>;
-export type UpdateInsuranceAgencyBody = z.infer<typeof UpdateInsuranceAgencyBodySchema>;
-export type InsuranceAgencyListQuery = z.infer<typeof InsuranceAgencyListQuerySchema>;
+export type Agency = z.infer<typeof AgencySchema>;
+export type CreateAgencyBody = z.infer<typeof CreateAgencyBodySchema>;
+export type UpdateAgencyBody = z.infer<typeof UpdateAgencyBodySchema>;
+export type AgencyListQuery = z.infer<typeof AgencyListQuerySchema>;
