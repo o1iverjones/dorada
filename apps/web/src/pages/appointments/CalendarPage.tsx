@@ -59,13 +59,19 @@ export function CalendarPage() {
   const navigate = useNavigate();
   const tz = useOrgTimezone();
   const showLanguage = useShowLanguage();
-  // Derive "today" on every render using the org timezone so it's never stale
-  // and matches the correct local date even if the browser is in a different zone.
+  // todayStr is the canonical "today" — the current date in the org timezone as
+  // "YYYY-MM-DD". All isToday checks compare cell dates in the same org timezone
+  // so the highlighted day always matches what formatInTz displays, regardless of
+  // the browser's local timezone.
+  const todayStr = useMemo(
+    () => new Date().toLocaleDateString("en-CA", { timeZone: tz }),
+    [tz],
+  );
+  // Convenience Date for places that need a Date object (kept for startOfWeek etc.)
   const today = useMemo(() => {
-    const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
     const [y, m, d] = todayStr.split("-").map(Number);
     return new Date(y, m - 1, d);
-  }, [tz]);
+  }, [todayStr]);
   const [view, setView] = useState<View>(() => {
     const stored = localStorage.getItem("dorada_calendar_view");
     return (stored === "month" || stored === "week" || stored === "day") ? stored : "week";
@@ -487,7 +493,7 @@ export function CalendarPage() {
         {view === "week" && (
           <div className="-mx-6 grid grid-cols-7 bg-muted/50 border-b">
             {weekDays.map((date) => {
-              const isToday = isSameDay(date, today);
+              const isToday = date.toLocaleDateString("en-CA", { timeZone: tz }) === todayStr;
               const dayTotal = appointmentsForDate(date).length;
               return (
                 <div key={date.toISOString()} className="p-2 text-center border-r last:border-r-0">
@@ -505,8 +511,8 @@ export function CalendarPage() {
           </div>
         )}
         {view === "day" && (
-          <div className={`py-3 border-b ${isSameDay(currentDate, today) ? "bg-blue-50" : "bg-muted/50"}`}>
-            <p className={`text-sm font-semibold ${isSameDay(currentDate, today) ? "text-blue-700" : "text-muted-foreground"}`}>
+          <div className={`py-3 border-b ${currentDate.toLocaleDateString("en-CA", { timeZone: tz }) === todayStr ? "bg-blue-50" : "bg-muted/50"}`}>
+            <p className={`text-sm font-semibold ${currentDate.toLocaleDateString("en-CA", { timeZone: tz }) === todayStr ? "text-blue-700" : "text-muted-foreground"}`}>
               {formatInTz(currentDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, tz)}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -524,7 +530,7 @@ export function CalendarPage() {
             {cells.map((date, idx) => {
               const dayAppts = date ? appointmentsForDate(date) : [];
               const dayBlocks = date ? blocksForDate(date) : [];
-              const isToday = date ? isSameDay(date, today) : false;
+              const isToday = date ? date.toLocaleDateString("en-CA", { timeZone: tz }) === todayStr : false;
               return (
                 <div key={idx} className="min-h-24 border-b border-r p-1 last:border-r-0 [&:nth-child(7n)]:border-r-0">
                   {date && (
@@ -555,7 +561,7 @@ export function CalendarPage() {
             {weekDays.map((date) => {
               const dayAppts = appointmentsForDate(date);
               const dayBlocks = blocksForDate(date);
-              const isToday = isSameDay(date, today);
+              const isToday = date.toLocaleDateString("en-CA", { timeZone: tz }) === todayStr;
               return (
                 <div key={date.toISOString()} className={`border-r last:border-r-0 p-1.5 min-h-32 space-y-1 ${isToday ? "bg-blue-50/50" : ""}`}>
                   {dayAppts.map((a) => <WeekApptCard key={a.id as string} a={a} />)}
