@@ -18,7 +18,7 @@ import { Plus } from "lucide-react";
 export function ClinicsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data, isLoading } = useClinics();
+  const { data, isLoading } = useClinics({ limit: "300" });
   const create = useCreateClinic();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", address: "", phone: "", contact_name: "", contact_email: "" });
