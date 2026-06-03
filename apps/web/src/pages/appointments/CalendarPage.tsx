@@ -358,7 +358,7 @@ export function CalendarPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="-mt-6">
+    <div>
       <PageHeader
         title={t("nav.calendar")}
         actions={
