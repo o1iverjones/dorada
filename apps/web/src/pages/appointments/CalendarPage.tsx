@@ -358,7 +358,7 @@ export function CalendarPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       <PageHeader
         title={t("nav.calendar")}
         actions={
@@ -368,7 +368,7 @@ export function CalendarPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-background border-b flex flex-wrap items-center gap-3">
         {/* View toggle */}
         <div className="flex rounded-md border">
           {(["month", "week", "day"] as View[]).map((v, i, arr) => (
@@ -476,7 +476,7 @@ export function CalendarPage() {
 
       {/* ── Month view ── */}
       {view === "month" && (
-        <div className="rounded-md border">
+        <div className="rounded-md border mt-4">
           <div className="grid grid-cols-7 border-b bg-muted/50">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
               <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
@@ -512,7 +512,7 @@ export function CalendarPage() {
 
       {/* ── Week view ── */}
       {view === "week" && (
-        <div className="rounded-md border overflow-x-auto">
+        <div className="rounded-md border overflow-x-auto mt-4">
           <div className="grid grid-cols-7 border-b bg-muted/50 min-w-[700px]">
             {weekDays.map((date) => {
               const isToday = isSameDay(date, today);
@@ -552,7 +552,7 @@ export function CalendarPage() {
 
       {/* ── Day view ── */}
       {view === "day" && (
-        <div className="rounded-md border">
+        <div className="rounded-md border mt-4">
           <div className={`px-4 py-3 border-b ${isSameDay(currentDate, today) ? "bg-blue-50" : "bg-muted/50"}`}>
             <p className={`text-sm font-semibold ${isSameDay(currentDate, today) ? "text-blue-700" : "text-muted-foreground"}`}>
               {formatInTz(currentDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, tz)}
