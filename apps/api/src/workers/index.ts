@@ -31,20 +31,8 @@ try {
   fcmApp = { messaging: () => ({ send: async () => {} }) };
 }
 
-// Twilio — dynamically imported so the worker boots even if credentials aren't set
-let twilioClient: AnyApp;
-try {
-  if (!config.TWILIO_ACCOUNT_SID || !config.TWILIO_AUTH_TOKEN) throw new Error("No credentials");
-  const { default: twilio } = await import("twilio");
-  twilioClient = twilio(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN);
-} catch {
-  console.warn("⚠️  Twilio not configured — SMS disabled");
-  twilioClient = { messages: { create: async () => {} } };
-}
-
-
 const reminderWorker = createAppointmentRemindersWorker(prisma, fcmApp);
-const followUpWorker = createFollowUpFlowWorker(prisma, fcmApp, twilioClient);
+const followUpWorker = createFollowUpFlowWorker(prisma, fcmApp);
 const reportWorker = createReportGenerationWorker(prisma);
 const emailIntakeWorker = createEmailIntakeWorker(prisma, fcmApp);
 const adminAlertWorker = createAdminAlertWorker(prisma);
