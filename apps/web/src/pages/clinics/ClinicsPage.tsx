@@ -48,7 +48,7 @@ export function ClinicsPage() {
     try {
       const payload: Record<string, unknown> = {
         name: form.name,
-        billing: { model: "hourly", hourly_rate: null, flat_rate: null, invoice_cycle: "monthly" },
+        billing: { model: "hourly", hourly_rate: 0, flat_rate: null, invoice_cycle: "monthly" },
       };
       if (form.address) payload.address = form.address;
       if (form.phone) payload.phone = form.phone;
