@@ -368,120 +368,158 @@ export function CalendarPage() {
         }
       />
 
-      <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-background border-b flex flex-wrap items-center gap-3">
-        {/* View toggle */}
-        <div className="flex rounded-md border">
-          {(["month", "week", "day"] as View[]).map((v, i, arr) => (
-            <button
-              key={v}
-              onClick={() => changeView(v)}
-              className={[
-                "px-3 py-1.5 text-sm font-medium transition-colors",
-                i === 0 ? "rounded-l-md" : i === arr.length - 1 ? "rounded-r-md" : "",
-                i > 0 ? "border-l" : "",
-                view === v ? "bg-primary text-primary-foreground" : "hover:bg-muted",
-              ].join(" ")}
-            >
-              {t(`calendar.${v}`)}
-            </button>
-          ))}
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={prev}><ChevronLeft className="h-4 w-4" /></Button>
-          <div className="relative">
-            <button
-              onClick={() => {
-                setPickerYear(currentDate.getFullYear());
-                setPickerLevel("month");
-                setPickerDrillMonth(currentDate.getMonth());
-                setDatePickerOpen((v) => !v);
-              }}
-              className="min-w-44 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-semibold hover:bg-muted transition-colors"
-              title="Jump to date"
-            >
-              {rangeLabel}
-              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            </button>
-            {datePickerOpen && (
-              <JumpToDatePicker
-                pickerYear={pickerYear}
-                selectedYear={currentDate.getFullYear()}
-                selectedMonth={currentDate.getMonth()}
-                selectedDay={currentDate.getDate()}
-                level={pickerLevel}
-                drillMonth={pickerDrillMonth}
-                onLevelChange={setPickerLevel}
-                onDrillMonthChange={setPickerDrillMonth}
-                onYearChange={setPickerYear}
-                onSelect={(y, m, d) => {
-                  changeDate(new Date(y, m, d));
-                  setDatePickerOpen(false);
-                }}
-                onClose={() => setDatePickerOpen(false)}
-              />
-            )}
+      <div className="sticky top-0 z-20 -mx-6 px-6 bg-background">
+        {/* ── Filter controls row ── */}
+        <div className="flex flex-wrap items-center gap-3 py-3 border-b">
+          {/* View toggle */}
+          <div className="flex rounded-md border">
+            {(["month", "week", "day"] as View[]).map((v, i, arr) => (
+              <button
+                key={v}
+                onClick={() => changeView(v)}
+                className={[
+                  "px-3 py-1.5 text-sm font-medium transition-colors",
+                  i === 0 ? "rounded-l-md" : i === arr.length - 1 ? "rounded-r-md" : "",
+                  i > 0 ? "border-l" : "",
+                  view === v ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+                ].join(" ")}
+              >
+                {t(`calendar.${v}`)}
+              </button>
+            ))}
           </div>
-          <Button variant="outline" size="icon" onClick={next}><ChevronRight className="h-4 w-4" /></Button>
+
+          {/* Navigation */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={prev}><ChevronLeft className="h-4 w-4" /></Button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setPickerYear(currentDate.getFullYear());
+                  setPickerLevel("month");
+                  setPickerDrillMonth(currentDate.getMonth());
+                  setDatePickerOpen((v) => !v);
+                }}
+                className="min-w-44 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border text-sm font-semibold hover:bg-muted transition-colors"
+                title="Jump to date"
+              >
+                {rangeLabel}
+                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              </button>
+              {datePickerOpen && (
+                <JumpToDatePicker
+                  pickerYear={pickerYear}
+                  selectedYear={currentDate.getFullYear()}
+                  selectedMonth={currentDate.getMonth()}
+                  selectedDay={currentDate.getDate()}
+                  level={pickerLevel}
+                  drillMonth={pickerDrillMonth}
+                  onLevelChange={setPickerLevel}
+                  onDrillMonthChange={setPickerDrillMonth}
+                  onYearChange={setPickerYear}
+                  onSelect={(y, m, d) => {
+                    changeDate(new Date(y, m, d));
+                    setDatePickerOpen(false);
+                  }}
+                  onClose={() => setDatePickerOpen(false)}
+                />
+              )}
+            </div>
+            <Button variant="outline" size="icon" onClick={next}><ChevronRight className="h-4 w-4" /></Button>
+          </div>
+
+          {/* Interpreter autocomplete */}
+          <div className="w-52">
+            <AutocompleteInput
+              options={interpreterOptions}
+              value={interpreterFilter}
+              onChange={setInterpreterFilter}
+              placeholder={t("appointments.filter_interpreter")}
+            />
+          </div>
+
+          {/* Clinic autocomplete */}
+          <div className="w-52">
+            <AutocompleteInput
+              options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
+              value={clinicFilter === "all" ? "" : clinicFilter}
+              onChange={(v) => setClinicFilter(v || "all")}
+              placeholder={t("appointments.clinic")}
+            />
+          </div>
+
+          {/* Status filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder={t("common.status")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("common.all")}</SelectItem>
+              <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
+              <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
+              <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
+              <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
+              <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
+              <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
+              <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Schedule blocks toggle */}
+          <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
+            <CalendarOff className="h-4 w-4" />
+            {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
+          </Button>
+
+          {(interpreterFilter || clinicFilter !== "all") && (
+            <Button variant="outline" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
+          )}
         </div>
 
-        {/* Interpreter autocomplete */}
-        <div className="w-52">
-          <AutocompleteInput
-            options={interpreterOptions}
-            value={interpreterFilter}
-            onChange={setInterpreterFilter}
-            placeholder={t("appointments.filter_interpreter")}
-          />
-        </div>
-
-        {/* Clinic autocomplete */}
-        <div className="w-52">
-          <AutocompleteInput
-            options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
-            value={clinicFilter === "all" ? "" : clinicFilter}
-            onChange={(v) => setClinicFilter(v || "all")}
-            placeholder={t("appointments.clinic")}
-          />
-        </div>
-
-        {/* Status filter */}
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder={t("common.status")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("common.all")}</SelectItem>
-            <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
-            <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
-            <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
-            <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
-            <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
-            <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
-            <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Schedule blocks toggle */}
-        <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
-          <CalendarOff className="h-4 w-4" />
-          {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
-        </Button>
-
-        {(interpreterFilter || clinicFilter !== "all") && (
-          <Button variant="outline" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
+        {/* ── Sticky column headers (view-specific) ── */}
+        {view === "month" && (
+          <div className="grid grid-cols-7 bg-muted/50 border-b">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+              <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
+            ))}
+          </div>
+        )}
+        {view === "week" && (
+          <div className="grid grid-cols-7 bg-muted/50 border-b">
+            {weekDays.map((date) => {
+              const isToday = isSameDay(date, today);
+              const dayTotal = appointmentsForDate(date).length;
+              return (
+                <div key={date.toISOString()} className="p-2 text-center border-r last:border-r-0">
+                  <p className={`text-xs font-medium ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
+                    {formatInTz(date, { weekday: "short" }, tz).toUpperCase()}{" "}
+                    {formatInTz(date, { month: "short" }, tz)}{" "}
+                    <span className="font-bold">{formatInTz(date, { day: "numeric" }, tz)}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Total: {dayTotal}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {view === "day" && (
+          <div className={`py-3 border-b ${isSameDay(currentDate, today) ? "bg-blue-50" : "bg-muted/50"}`}>
+            <p className={`text-sm font-semibold ${isSameDay(currentDate, today) ? "text-blue-700" : "text-muted-foreground"}`}>
+              {formatInTz(currentDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, tz)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {appointmentsForDate(currentDate).length} appointment{appointmentsForDate(currentDate).length !== 1 ? "s" : ""}
+              {blocksForDate(currentDate).length > 0 && ` · ${blocksForDate(currentDate).length} block${blocksForDate(currentDate).length !== 1 ? "s" : ""}`}
+            </p>
+          </div>
         )}
       </div>
 
       {/* ── Month view ── */}
       {view === "month" && (
-        <div className="rounded-md border mt-4">
-          <div className="grid grid-cols-7 border-b bg-muted/50">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
-            ))}
-          </div>
+        <div className="-mx-6 border-x border-b">
           <div className="grid grid-cols-7">
             {cells.map((date, idx) => {
               const dayAppts = date ? appointmentsForDate(date) : [];
@@ -512,25 +550,7 @@ export function CalendarPage() {
 
       {/* ── Week view ── */}
       {view === "week" && (
-        <div className="rounded-md border overflow-x-auto mt-4">
-          <div className="grid grid-cols-7 border-b bg-muted/50 min-w-[700px]">
-            {weekDays.map((date) => {
-              const isToday = isSameDay(date, today);
-              const dayTotal = appointmentsForDate(date).length;
-              return (
-                <div key={date.toISOString()} className="p-2 text-center border-r last:border-r-0">
-                  <p className={`text-xs font-medium ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
-                    {formatInTz(date, { weekday: "short" }, tz).toUpperCase()}{" "}
-                    {formatInTz(date, { month: "short" }, tz)}{" "}
-                    <span className="font-bold">{formatInTz(date, { day: "numeric" }, tz)}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Total: {dayTotal}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+        <div className="-mx-6 border-x border-b overflow-x-auto">
           <div className="grid grid-cols-7 min-w-[700px]">
             {weekDays.map((date) => {
               const dayAppts = appointmentsForDate(date);
@@ -552,16 +572,7 @@ export function CalendarPage() {
 
       {/* ── Day view ── */}
       {view === "day" && (
-        <div className="rounded-md border mt-4">
-          <div className={`px-4 py-3 border-b ${isSameDay(currentDate, today) ? "bg-blue-50" : "bg-muted/50"}`}>
-            <p className={`text-sm font-semibold ${isSameDay(currentDate, today) ? "text-blue-700" : "text-muted-foreground"}`}>
-              {formatInTz(currentDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, tz)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {appointmentsForDate(currentDate).length} appointment{appointmentsForDate(currentDate).length !== 1 ? "s" : ""}
-              {blocksForDate(currentDate).length > 0 && ` · ${blocksForDate(currentDate).length} block${blocksForDate(currentDate).length !== 1 ? "s" : ""}`}
-            </p>
-          </div>
+        <div className="-mx-6 border-x border-b">
           <div className="p-4 space-y-3">
             {blocksForDate(currentDate).map((b) => (
               <div
