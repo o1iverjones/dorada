@@ -358,7 +358,7 @@ export function CalendarPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-0">
+    <div className="-mt-6">
       <PageHeader
         title={t("nav.calendar")}
         actions={
@@ -368,7 +368,7 @@ export function CalendarPage() {
         }
       />
 
-      <div className="sticky top-0 z-20 -mx-6 -mt-6 px-6 bg-background">
+      <div className="sticky top-0 z-20 -mx-6 px-6 bg-background">
         {/* ── Filter controls row ── */}
         <div className="flex flex-wrap items-center gap-3 py-3 border-b">
           {/* View toggle */}
@@ -478,14 +478,14 @@ export function CalendarPage() {
 
         {/* ── Sticky column headers (view-specific) ── */}
         {view === "month" && (
-          <div className="grid grid-cols-7 bg-muted/50 border-b">
+          <div className="-mx-6 grid grid-cols-7 bg-muted/50 border-b">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
               <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
             ))}
           </div>
         )}
         {view === "week" && (
-          <div className="grid grid-cols-7 bg-muted/50 border-b">
+          <div className="-mx-6 grid grid-cols-7 bg-muted/50 border-b">
             {weekDays.map((date) => {
               const isToday = isSameDay(date, today);
               const dayTotal = appointmentsForDate(date).length;
