@@ -368,7 +368,7 @@ export function CalendarPage() {
         }
       />
 
-      <div className="sticky top-0 z-20 -mx-6 px-6 bg-background">
+      <div className="sticky top-0 z-20 -mx-6 -mt-6 px-6 bg-background">
         {/* ── Filter controls row ── */}
         <div className="flex flex-wrap items-center gap-3 py-3 border-b">
           {/* View toggle */}
