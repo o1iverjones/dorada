@@ -477,9 +477,16 @@ export function CalendarPage() {
             {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
           </Button>
 
-          {(interpreterFilter || clinicFilter !== "all" || statusFilter !== "all") && (
-            <Button variant="outline" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}>{t("common.clear")}</Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}
+            className={(interpreterFilter || clinicFilter !== "all" || statusFilter !== "all")
+              ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
+              : "opacity-40 cursor-default"}
+          >
+            {t("common.clear")}
+          </Button>
         </div>
 
         {/* ── Sticky column headers (view-specific) ── */}
