@@ -53,7 +53,7 @@ export function AppointmentsPage() {
     label: c.name,
   }));
 
-  const hasFilters = !!(dateFilter || interpreterFilter || clinicFilter !== "all");
+  const hasFilters = !!(dateFilter || interpreterFilter || clinicFilter !== "all" || statusFilter !== "not_completed");
 
   const columns = [
     { key: "date_time", header: t("appointments.date_time"), render: (row: Record<string, unknown>) => formatInTz(row.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) },
@@ -138,11 +138,16 @@ export function AppointmentsPage() {
         </Select>
 
         {/* Clear filters */}
-        {hasFilters && (
-          <Button variant="outline" size="sm" onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); }}>
-            {t("common.clear")}
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("not_completed"); }}
+          className={hasFilters
+            ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
+            : "opacity-40 cursor-default"}
+        >
+          {t("common.clear")}
+        </Button>
       </div>
 
       {isLoading ? (
