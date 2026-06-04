@@ -477,8 +477,8 @@ export function CalendarPage() {
             {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
           </Button>
 
-          {(interpreterFilter || clinicFilter !== "all") && (
-            <Button variant="outline" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); }}>{t("common.clear")}</Button>
+          {(interpreterFilter || clinicFilter !== "all" || statusFilter !== "all") && (
+            <Button variant="outline" size="sm" onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}>{t("common.clear")}</Button>
           )}
         </div>
 
