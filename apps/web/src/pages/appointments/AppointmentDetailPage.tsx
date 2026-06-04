@@ -446,7 +446,7 @@ export function AppointmentDetailPage() {
             </div>
 
             {/* Clinic phone */}
-            {!editing && (a.clinic as Record<string, unknown>)?.phone && (
+            {!editing && (
               <div className="px-6 py-2.5 even:bg-muted/40">
                 <Field label={t("appointments.clinic_phone")} value={<PhoneLink phone={(a.clinic as Record<string, unknown>)?.phone as string} />} />
               </div>
