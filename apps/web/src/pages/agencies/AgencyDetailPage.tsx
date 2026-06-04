@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { PhoneInput } from "../../components/ui/PhoneInput.js";
-import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
+import { formatPhoneInput } from "../../lib/phone.js";
+import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 
@@ -184,7 +185,7 @@ export function AgencyDetailPage() {
               <>
                 <Field label={t("agencies.name")} value={agency.name} />
                 <Field label={t("agencies.contact_method")} value={agency.contact_method} />
-                <Field label={t("agencies.telephone")} value={formatPhone(agency.telephone)} />
+                <Field label={t("agencies.telephone")} value={<PhoneLink phone={agency.telephone} />} />
                 <Field label={t("agencies.id_number")} value={agency.id_number} />
               </>
             )}

@@ -313,7 +313,7 @@
   "account": {
     "title": "My Account",
     "profile": "Profile",
-    "preferences": "Notification preferences",
+    "preferences": "Preferences",
     "name": "Full name",
     "email": "Email address",
     "role": "Role",
@@ -388,6 +388,7 @@
     "interpreter_type": "Interpreter type",
     "interpreter": "Interpreter",
     "clinic": "Clinic",
+    "clinic_phone": "Clinic phone",
     "agency": "Agency",
     "patient": "Patient",
     "referring_physician": "Provider",

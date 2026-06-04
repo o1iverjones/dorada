@@ -22,6 +22,7 @@ import { toast } from "../../hooks/use-toast.js";
 import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle, UserX } from "lucide-react";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
 import { DurationInput } from "../../components/shared/DurationInput.js";
+import { PhoneLink } from "../../components/shared/PhoneLink.js";
 
 const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 
@@ -437,6 +438,13 @@ export function AppointmentDetailPage() {
                 <Field label={t("appointments.clinic")} value={(a.clinic as Record<string, unknown>)?.name as string ?? "—"} />
               )}
             </div>
+
+            {/* Clinic phone */}
+            {!editing && (a.clinic as Record<string, unknown>)?.phone && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                <Field label={t("appointments.clinic_phone")} value={<PhoneLink phone={(a.clinic as Record<string, unknown>)?.phone as string} />} />
+              </div>
+            )}
 
             {/* Agency */}
             <div className="px-6 py-2.5 even:bg-muted/40">

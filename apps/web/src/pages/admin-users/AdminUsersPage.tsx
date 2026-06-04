@@ -216,6 +216,7 @@ export function AdminUsersPage() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <p className="text-xs text-muted-foreground">Minimum 10 characters</p>
               </div>
               <div className="space-y-1">
                 <Label>{t("admin_users.role")}</Label>

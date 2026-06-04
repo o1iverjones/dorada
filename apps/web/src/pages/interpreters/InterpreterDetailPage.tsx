@@ -11,7 +11,8 @@ import { Badge } from "../../components/ui/badge.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { PhoneInput } from "../../components/ui/PhoneInput.js";
-import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
+import { formatPhoneInput } from "../../lib/phone.js";
+import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { InterpreterAvatar } from "../../components/shared/InterpreterAvatar.js";
@@ -199,7 +200,7 @@ export function InterpreterDetailPage() {
                     {t(`interpreters.${interp.type as string}`, { defaultValue: interp.type as string })}
                   </Badge>
                 } />
-                <Field label={t("interpreters.phone")} value={formatPhone(interp.phone as string)} />
+                <Field label={t("interpreters.phone")} value={<PhoneLink phone={interp.phone as string} />} />
                 <Field label={t("interpreters.email")} value={interp.email as string} />
                 <Field label={t("interpreters.status")} value={
                   <Badge variant={interp.is_active ? "success" : "secondary"}>
@@ -415,7 +416,7 @@ export function InterpreterDetailPage() {
             ) : (
               <>
                 <Field label={t("interpreters.emergency_name")} value={(interp.emergency_contact as Record<string, unknown>)?.name as string ?? "—"} />
-                <Field label={t("interpreters.emergency_phone")} value={formatPhone((interp.emergency_contact as Record<string, unknown>)?.phone as string)} />
+                <Field label={t("interpreters.emergency_phone")} value={<PhoneLink phone={(interp.emergency_contact as Record<string, unknown>)?.phone as string} />} />
               </>
             )}
           </CardContent>

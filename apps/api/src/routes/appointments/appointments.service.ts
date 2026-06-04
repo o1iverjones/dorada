@@ -122,7 +122,7 @@ export async function getAppointment(id: string, organizationId: string, prisma:
     include: {
       type: true,
       interpreter: { select: { id: true, name: true } },
-      clinic: { select: { id: true, name: true, address: true, parking: true } },
+      clinic: { select: { id: true, name: true, address: true, parking: true, phone: true } },
       agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true, date_of_birth: true } },
       offers: { include: { interpreter: { select: { id: true, name: true } } } },

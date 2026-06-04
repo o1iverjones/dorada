@@ -16,7 +16,8 @@ import { StatusBadge } from "../../components/shared/StatusBadge.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { PhoneInput } from "../../components/ui/PhoneInput.js";
-import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
+import { formatPhoneInput } from "../../lib/phone.js";
+import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
@@ -235,14 +236,18 @@ export function PatientDetailPage() {
             ) : (
               [
                 [t("appointments.dob"), p.date_of_birth ? new Date(p.date_of_birth as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) : null],
-                [t("patients.phone"), formatPhone(p.phone as string)],
+                [t("patients.phone"), p.phone ? "__phone__" : null],
                 [t("patients.email"), p.email],
                 ...(showLanguage ? [[t("patients.preferred_language"), p.preferred_language]] : []),
                 [t("patients.preferred_interpreter"), preferredInterpreter?.name ?? null],
               ].map(([label, value]) => (
                 <div key={label as string} className="flex justify-between gap-4">
                   <span className="text-muted-foreground">{label as string}</span>
-                  <span className="font-medium">{(value as string) ?? "—"}</span>
+                  <span className="font-medium">
+                    {value === "__phone__"
+                      ? <PhoneLink phone={p.phone as string} />
+                      : ((value as string) ?? "—")}
+                  </span>
                 </div>
               ))
             )}
@@ -308,7 +313,7 @@ export function PatientDetailPage() {
                       <div className="text-muted-foreground">{t("patients.adjuster")}: <span className="text-foreground">{claim.adjuster}</span></div>
                     )}
                     {claim.adjuster_phone && (
-                      <div className="text-muted-foreground">{t("patients.adjuster_phone")}: <span className="text-foreground">{formatPhone(claim.adjuster_phone)}</span></div>
+                      <div className="text-muted-foreground">{t("patients.adjuster_phone")}: <span className="text-foreground"><PhoneLink phone={claim.adjuster_phone} /></span></div>
                     )}
                     {claim.adjuster_email && (
                       <div className="text-muted-foreground">{t("patients.adjuster_email")}: <span className="text-foreground">{claim.adjuster_email}</span></div>
