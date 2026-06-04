@@ -30,7 +30,7 @@ export function AppointmentsPage() {
   const [dateFilter, setDateFilter] = useState(searchParams.get("date_from") ?? "");
   const [interpreterFilter, setInterpreterFilter] = useState("");
   const [clinicFilter, setClinicFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "not_completed");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
 
   const params: Record<string, string> = { limit: "100" };
   if (statusFilter === "not_completed") params.status = NOT_COMPLETED;
