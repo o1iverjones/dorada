@@ -432,6 +432,7 @@ export function CalendarPage() {
               )}
             </div>
             <Button variant="outline" size="icon" onClick={next}><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>{t("calendar.today")}</Button>
           </div>
 
           {/* Interpreter autocomplete */}

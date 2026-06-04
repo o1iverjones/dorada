@@ -488,6 +488,7 @@
     "status_unassigned": "Unassigned",
     "status_cancelled": "Cancelled",
     "status_declined": "Declined",
+    "today": "Today",
     "month": "Month",
     "week": "Week",
     "day": "Day",
