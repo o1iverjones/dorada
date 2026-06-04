@@ -441,7 +441,11 @@ export function AppointmentDetailPage() {
                   <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => { set("clinic_id", v); set("referring_physician", ""); }} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.clinic")} value={(a.clinic as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("appointments.clinic")} value={
+                  (a.clinic as Record<string, unknown>)?.id
+                    ? <button type="button" className="text-primary hover:underline font-medium text-left" onClick={() => navigate(`/clinics/${(a.clinic as Record<string, unknown>).id}`)}>{(a.clinic as Record<string, unknown>).name as string}</button>
+                    : "—"
+                } />
               )}
             </div>
 
