@@ -81,7 +81,7 @@ export function AppointmentsPage() {
     {
       key: "clinic_agency",
       header: "Clinic & Agency",
-      className: "w-48",
+      className: "w-56",
       render: (row: Record<string, unknown>) => (
         <div className="flex flex-col gap-0.5">
           <span className="font-medium leading-tight">{(row.clinic as Record<string, unknown>)?.name as string ?? "—"}</span>
@@ -111,13 +111,13 @@ export function AppointmentsPage() {
     {
       key: "status",
       header: t("common.status"),
-      className: "w-28",
+      className: "w-20",
       render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} />,
     },
     {
       key: "time_tracking",
       header: t("appointments.time_tracking"),
-      className: "w-40",
+      className: "w-36",
       render: (row: Record<string, unknown>) => {
         const fmt = (iso: unknown) => iso ? formatInTz(iso as string, { timeStyle: "short" }, tz) : null;
         const clockIn = fmt(row.clock_in_time);
