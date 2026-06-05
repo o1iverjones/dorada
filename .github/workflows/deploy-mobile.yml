@@ -1,14 +1,9 @@
 name: Deploy Mobile
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/mobile/**"
-      - "packages/types/**"
-      - "packages/i18n/**"
-      - "packages/utils/**"
-      - ".github/workflows/deploy-mobile.yml"
+  workflow_dispatch:
+    # Trigger manually from GitHub Actions tab when ready to submit to App Store.
+    # Requires secrets: EXPO_TOKEN, EXPO_APPLE_ID, EXPO_APPLE_TEAM_ID
 
 jobs:
   build-and-submit:

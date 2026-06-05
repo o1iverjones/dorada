@@ -34,6 +34,25 @@ export function useSendMessage(interpreterId: string) {
   });
 }
 
+export interface MessageSearchResult {
+  id: string;
+  body: string;
+  sender_type: "admin" | "interpreter";
+  sender: { id: string; name: string };
+  sent_at: string;
+  read_at: string | null;
+  interpreter: { id: string; name: string };
+}
+
+export function useMessageSearch(q: string) {
+  return useQuery({
+    queryKey: ["message-search", q],
+    queryFn: () => api.get<MessageSearchResult[]>(`/messages/search?q=${encodeURIComponent(q)}`),
+    enabled: q.trim().length >= 2,
+    staleTime: 10_000,
+  });
+}
+
 export function useMarkRead(interpreterId: string) {
   const qc = useQueryClient();
   return useMutation({

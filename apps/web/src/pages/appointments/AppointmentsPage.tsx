@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinics } from "../../hooks/useClinics.js";
-import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useShowLanguage, useLongAppointmentThreshold } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
@@ -14,23 +14,49 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
-import { Plus, TriangleAlert } from "lucide-react";
+import { Plus, TriangleAlert, Clock, UserRound } from "lucide-react";
 
 const NOT_COMPLETED = "unassigned,pending_offer,confirmed,in_progress,cancelled,declined";
+const STORAGE_KEY = "appointments_filters";
+
+function loadFilters(searchParams: URLSearchParams) {
+  // URL params take priority (e.g. deep links), then sessionStorage, then defaults
+  if (searchParams.get("date_from") || searchParams.get("status")) {
+    return {
+      dateFilter:        searchParams.get("date_from") ?? "",
+      interpreterFilter: "",
+      clinicFilter:      "all",
+      statusFilter:      searchParams.get("status") ?? "all",
+    };
+  }
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as { dateFilter: string; interpreterFilter: string; clinicFilter: string; statusFilter: string };
+  } catch { /* ignore */ }
+  return { dateFilter: "", interpreterFilter: "", clinicFilter: "all", statusFilter: "all" };
+}
 
 export function AppointmentsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tz = useOrgTimezone();
   const showLanguage = useShowLanguage();
+  const longThresholdMs = useLongAppointmentThreshold() * 60_000;
   const [searchParams] = useSearchParams();
 
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
-  const [dateFilter, setDateFilter] = useState(searchParams.get("date_from") ?? "");
-  const [interpreterFilter, setInterpreterFilter] = useState("");
-  const [clinicFilter, setClinicFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
+  const initial = loadFilters(searchParams);
+  const [dateFilter, setDateFilter] = useState(initial.dateFilter);
+  const [interpreterFilter, setInterpreterFilter] = useState(initial.interpreterFilter);
+  const [clinicFilter, setClinicFilter] = useState(initial.clinicFilter);
+  const [statusFilter, setStatusFilter] = useState(initial.statusFilter);
+
+  // Persist filters to sessionStorage whenever they change
+  const saveFilters = (updates: Partial<{ dateFilter: string; interpreterFilter: string; clinicFilter: string; statusFilter: string }>) => {
+    const current = { dateFilter, interpreterFilter, clinicFilter, statusFilter, ...updates };
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(current)); } catch { /* ignore */ }
+  };
 
   const params: Record<string, string> = { limit: "100" };
   if (statusFilter === "not_completed") params.status = NOT_COMPLETED;
@@ -56,26 +82,105 @@ export function AppointmentsPage() {
   const hasFilters = !!(dateFilter || interpreterFilter || clinicFilter !== "all" || statusFilter !== "all");
 
   const columns = [
-    { key: "date_time", header: t("appointments.date_time"), render: (row: Record<string, unknown>) => formatInTz(row.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) },
-    { key: "patient", header: t("appointments.patient"), render: (row: Record<string, unknown>) => (row.patient as Record<string, unknown>)?.name as string ?? "—" },
-    { key: "clinic", header: t("appointments.clinic"), render: (row: Record<string, unknown>) => (row.clinic as Record<string, unknown>)?.name as string ?? "—" },
-    { key: "interpreter", header: t("appointments.interpreter"), render: (row: Record<string, unknown>) => {
-      const assigned = (row.interpreter as Record<string, unknown> | null)?.name as string | undefined;
-      if (assigned) return assigned;
-      const offers = (row.offers as Array<{ interpreter: { name: string } }>) ?? [];
-      if (offers.length === 0) return (
-        <span className="flex items-center gap-1.5 text-amber-600">
-          <TriangleAlert className="h-4 w-4 shrink-0" />
-          <span>{t("appointments.no_offer")}</span>
-        </span>
-      );
-      if (offers.length === 1) return offers[0].interpreter.name;
-      return t("common.multiple");
-    }},
-    { key: "agency", header: t("appointments.agency"), render: (row: Record<string, unknown>) => (row.agency as Record<string, unknown>)?.name as string ?? "—" },
-    { key: "po_number", header: t("appointments.po_number"), render: (row: Record<string, unknown>) => (row.po_number as string) ?? "—" },
-    ...(showLanguage ? [{ key: "language", header: t("appointments.language") }] : []),
-    { key: "status", header: t("common.status"), render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} /> },
+    {
+      key: "date_time",
+      header: t("appointments.date_time"),
+      className: "w-32",
+      render: (row: Record<string, unknown>) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium leading-tight">{formatInTz(row.date_time as string, { dateStyle: "medium" }, tz)}</span>
+          <span className="text-xs text-muted-foreground">{formatInTz(row.date_time as string, { timeStyle: "short" }, tz)}</span>
+        </div>
+      ),
+    },
+    {
+      key: "patient_po",
+      header: "Patient & PO",
+      className: "w-44",
+      render: (row: Record<string, unknown>) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-bold leading-tight">{(row.patient as Record<string, unknown>)?.name as string ?? "—"}</span>
+          <span className="text-xs text-muted-foreground">{(row.po_number as string) ?? "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "clinic_agency",
+      header: "Clinic & Agency",
+      className: "w-56",
+      render: (row: Record<string, unknown>) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium leading-tight">{(row.clinic as Record<string, unknown>)?.name as string ?? "—"}</span>
+          <span className="text-xs text-muted-foreground">{(row.agency as Record<string, unknown>)?.name as string ?? "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "interpreter",
+      header: t("appointments.interpreter"),
+      className: "w-36",
+      render: (row: Record<string, unknown>) => {
+        const assigned = (row.interpreter as Record<string, unknown> | null)?.name as string | undefined;
+        if (assigned) return assigned;
+        const offers = (row.offers as Array<{ interpreter: { name: string } }>) ?? [];
+        if (offers.length === 0) return (
+          <span className="flex items-center gap-1.5 text-amber-600">
+            <TriangleAlert className="h-4 w-4 shrink-0" />
+            <span>{t("appointments.no_offer")}</span>
+          </span>
+        );
+        if (offers.length === 1) return offers[0].interpreter.name;
+        return t("common.multiple");
+      },
+    },
+    ...(showLanguage ? [{ key: "language", header: t("appointments.language"), className: "w-24" }] : []),
+    {
+      key: "status",
+      header: t("common.status"),
+      className: "w-20",
+      render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} />,
+    },
+    {
+      key: "time_tracking",
+      header: t("appointments.time_tracking"),
+      className: "w-36",
+      render: (row: Record<string, unknown>) => {
+        const fmt = (iso: unknown) => iso ? formatInTz(iso as string, { timeStyle: "short" }, tz) : null;
+        const clockIn = fmt(row.clock_in_time);
+        const arrived = fmt(row.patient_arrived_at);
+        const clockOut = fmt(row.clock_out_time);
+        if (!clockIn && !arrived && !clockOut) return <span className="text-muted-foreground text-xs">—</span>;
+
+        // Running long: clocked in, not yet clocked out, elapsed > threshold
+        const isRunningLong = !!(
+          row.clock_in_time && !row.clock_out_time &&
+          Date.now() - new Date(row.clock_in_time as string).getTime() > longThresholdMs
+        );
+        const pillClass = isRunningLong
+          ? "rounded bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700"
+          : "rounded bg-muted px-1.5 py-0.5 font-medium";
+        const iconClass = isRunningLong ? "h-3 w-3 shrink-0 text-orange-500" : "h-3 w-3 shrink-0 text-muted-foreground";
+
+        return (
+          <div className="flex flex-col gap-0.5 text-xs">
+            {(clockIn || clockOut) && (
+              <span className="flex items-center gap-1">
+                <Clock className={iconClass} />
+                <span className={pillClass}>{clockIn ?? "—"}</span>
+                <span className="text-muted-foreground">–</span>
+                <span className={pillClass}>{clockOut ?? "—"}</span>
+              </span>
+            )}
+            {arrived && (
+              <span className="flex items-center gap-1">
+                <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{arrived}</span>
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
   ];
 
   return (
@@ -94,7 +199,7 @@ export function AppointmentsPage() {
         <Input
           type="date"
           value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
+          onChange={(e) => { setDateFilter(e.target.value); saveFilters({ dateFilter: e.target.value }); }}
           className="w-40"
           title={t("appointments.date_time")}
         />
@@ -104,7 +209,7 @@ export function AppointmentsPage() {
           <AutocompleteInput
             options={interpreterOptions}
             value={interpreterFilter}
-            onChange={setInterpreterFilter}
+            onChange={(v) => { setInterpreterFilter(v); saveFilters({ interpreterFilter: v }); }}
             placeholder={t("appointments.filter_interpreter")}
           />
         </div>
@@ -114,13 +219,13 @@ export function AppointmentsPage() {
           <AutocompleteInput
             options={clinicOptions}
             value={clinicFilter === "all" ? "" : clinicFilter}
-            onChange={(v) => setClinicFilter(v || "all")}
+            onChange={(v) => { const val = v || "all"; setClinicFilter(val); saveFilters({ clinicFilter: val }); }}
             placeholder={t("appointments.clinic")}
           />
         </div>
 
         {/* Status dropdown */}
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); saveFilters({ statusFilter: v }); }}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder={t("common.status")} />
           </SelectTrigger>
@@ -141,7 +246,7 @@ export function AppointmentsPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}
+          onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); saveFilters({ dateFilter: "", interpreterFilter: "", clinicFilter: "all", statusFilter: "all" }); }}
           className={hasFilters
             ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
             : "opacity-40 cursor-default"}

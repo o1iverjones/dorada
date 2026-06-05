@@ -650,8 +650,9 @@ export function AppointmentDetailPage() {
                       await refetch();
                       toast({ title: t("common.saved") });
                       setEditingClockIn(false);
-                    } catch {
-                      toast({ title: t("common.error"), variant: "destructive" });
+                    } catch (err) {
+                      console.error("Clock-in save error:", err);
+                      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
                     }
                   }}>{t("common.save")}</Button>
                   <Button size="sm" variant="outline" onClick={() => setEditingClockIn(false)}>{t("common.cancel")}</Button>

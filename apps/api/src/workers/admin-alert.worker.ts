@@ -27,6 +27,12 @@ export function createAdminAlertWorker(prisma: PrismaClient) {
 
       if (!appt || appt.clock_out_time || appt.status === "completed") return;
 
+      // Deduplicate — skip if an alert was already created directly from the route handler
+      const existing = await prisma.adminAlert.findFirst({
+        where: { appointment_id: appointmentId, type: "long_appointment" },
+      });
+      if (existing) return;
+
       const hours = Math.floor(alertMinutes / 60);
       const mins = alertMinutes % 60;
       const durationStr = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;

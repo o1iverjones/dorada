@@ -496,8 +496,8 @@ export async function offerAppointment(
   for (const interpreter of interpreters) {
     if (alreadyOffered.has(interpreter.id)) continue;
 
-    const requiredType = appt!.interpreter_type_required;
-    const eligible = interpreter.type === "certified" || requiredType === "qualified";
+    const requiredType = appt!.interpreter_type_required.toLowerCase();
+    const eligible = interpreter.type === "certified" || interpreter.type === "qualified_and_certified" || requiredType === "qualified";
     if (!eligible) {
       throw new ValidationError("INTERPRETER_NOT_ELIGIBLE", `Interpreter ${interpreter.name} is qualified-only and cannot be assigned to a certified appointment`);
     }
@@ -730,7 +730,7 @@ export async function clockOut(appointmentId: string, interpreterId: string, pri
   if (!payRate) payRate = appt.interpreter?.pay_rate ? Number(appt.interpreter.pay_rate) : null;
   if (!payRate) {
     const settings = await prisma.systemSettings.findUnique({ where: { organization_id: appt.organization_id } });
-    const isQualified = appt.interpreter_type_required === "qualified";
+    const isQualified = appt.interpreter_type_required.toLowerCase() === "qualified";
     payRate = settings
       ? Number(isQualified ? settings.default_pay_rate_qualified : settings.default_pay_rate_certified)
       : 30;

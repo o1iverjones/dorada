@@ -106,30 +106,71 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const actor = await resolveActor(payload, fastify);
     const result = await patchClockTimes(id, body, payload.organization_id, actor, fastify.prisma);
 
-    // Schedule long-appointment alert when clock_in is set (and clock_out is not yet set)
-    if (body.clock_in_time && !body.clock_out_time) {
-      const settings = await fastify.prisma.systemSettings.findUnique({
-        where: { organization_id: payload.organization_id },
-        select: { long_appointment_alert_minutes: true },
-      });
-      const alertMinutes = settings?.long_appointment_alert_minutes ?? 105;
-      const clockInMs = new Date(body.clock_in_time).getTime();
-      const delay = clockInMs + alertMinutes * 60_000 - Date.now();
-      if (delay > 0) {
-        const { getQueues } = await import("../../workers/queues.js");
-        await getQueues().adminAlertQueue.add(
-          "long-appointment",
-          { appointmentId: id, organizationId: payload.organization_id, alertMinutes },
-          { delay, jobId: `long-appt:${id}`, removeOnComplete: true },
-        );
-      }
+    // Handle long-appointment alert when clock_in is set (and clock_out is not yet set)
+    // Run fire-and-forget so this never breaks the clock-in response
+    if (body.clock_in_time && !result.clock_out_time) {
+      (async () => {
+        try {
+          const settings = await fastify.prisma.systemSettings.findUnique({
+            where: { organization_id: payload.organization_id },
+            select: { long_appointment_alert_minutes: true },
+          });
+          const alertMinutes = settings?.long_appointment_alert_minutes ?? 105;
+          const clockInMs = new Date(body.clock_in_time!).getTime();
+          const delay = clockInMs + alertMinutes * 60_000 - Date.now();
+
+          if (delay > 0) {
+            // Future alert — schedule via BullMQ
+            const { getQueues } = await import("../../workers/queues.js");
+            await getQueues().adminAlertQueue.add(
+              "long-appointment",
+              { appointmentId: id, organizationId: payload.organization_id, alertMinutes },
+              { delay, jobId: `long-appt:${id}`, removeOnComplete: true },
+            );
+          } else {
+            // Already past threshold — create alert immediately (no worker needed)
+            const existing = await fastify.prisma.adminAlert.findFirst({
+              where: { appointment_id: id, type: "long_appointment" },
+            });
+            if (!existing) {
+              const appt = await fastify.prisma.appointment.findUnique({
+                where: { id },
+                select: { date_time: true, po_number: true },
+              });
+              const hours = Math.floor(alertMinutes / 60);
+              const mins = alertMinutes % 60;
+              const durationStr = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+              const dateStr = appt ? new Date(appt.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+              const poStr = appt?.po_number ? ` (PO: ${appt.po_number})` : "";
+              const alert = await fastify.prisma.adminAlert.create({
+                data: {
+                  organization_id: payload.organization_id,
+                  type: "long_appointment",
+                  appointment_id: id,
+                  message: `The ${dateStr} appointment${poStr} has exceeded ${durationStr} and is still in progress.`,
+                },
+              });
+              const { Emitter } = await import("@socket.io/redis-emitter");
+              const { redisConnection } = await import("../../config.js");
+              const emitter = new Emitter(redisConnection as unknown as ConstructorParameters<typeof Emitter>[0]);
+              emitter.to(`notify:${payload.organization_id}`).emit("alert:new", { alert });
+            }
+          }
+        } catch (err) {
+          fastify.log.error(err, "Failed to handle long-appointment alert");
+        }
+      })();
     }
 
     // Cancel pending long-appointment alert if clock_out is being set
     if (body.clock_out_time) {
-      const { getQueues } = await import("../../workers/queues.js");
-      const job = await getQueues().adminAlertQueue.getJob(`long-appt:${id}`);
-      if (job) await job.remove();
+      try {
+        const { getQueues } = await import("../../workers/queues.js");
+        const job = await getQueues().adminAlertQueue.getJob(`long-appt:${id}`);
+        if (job) await job.remove();
+      } catch (err) {
+        fastify.log.error(err, "Failed to cancel long-appointment alert");
+      }
     }
 
     return reply.send(result);
