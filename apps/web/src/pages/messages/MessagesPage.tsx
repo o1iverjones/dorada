@@ -221,22 +221,28 @@ export function MessagesPage() {
                 <li className="p-4 text-center text-sm text-muted-foreground">Searching…</li>
               ) : !searchResults?.length ? (
                 <li className="p-4 text-center text-sm text-muted-foreground">No results</li>
-              ) : (searchResults as MessageSearchResult[]).map((result) => (
-                <li key={result.id}>
-                  <button
-                    onClick={() => handleSearchResultClick(result)}
-                    className="w-full p-3 text-left text-sm transition-colors hover:bg-accent"
-                  >
-                    <p className="font-medium">{result.interpreter.name}</p>
-                    <p className="truncate text-xs text-muted-foreground mt-0.5">
-                      {result.body}
-                    </p>
-                    <p className="text-xs text-muted-foreground/60 mt-0.5">
-                      {formatInTz(result.sent_at, { dateStyle: "medium", timeStyle: "short" }, tz)}
-                    </p>
-                  </button>
-                </li>
-              ))}
+              ) : (searchResults as MessageSearchResult[]).map((result, idx, arr) => {
+                const prevInterpId = idx > 0 ? arr[idx - 1].interpreter.id : null;
+                const isFirstInGroup = result.interpreter.id !== prevInterpId;
+                return (
+                  <li key={result.id} className={isFirstInGroup && idx > 0 ? "border-t" : ""}>
+                    {isFirstInGroup && (
+                      <p className="px-3 pt-2 pb-0.5 text-xs font-semibold text-foreground">
+                        {result.interpreter.name}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => handleSearchResultClick(result)}
+                      className="w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                    >
+                      <p className="truncate text-xs text-muted-foreground">{result.body}</p>
+                      <p className="text-xs text-muted-foreground/60 mt-0.5">
+                        {formatInTz(result.sent_at, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                      </p>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <ul className="overflow-y-auto">
