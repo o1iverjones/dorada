@@ -11,7 +11,7 @@ import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js"
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Button } from "../../components/ui/button.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
-import { ChevronLeft, ChevronRight, Plus, CalendarOff, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, CalendarOff, CalendarDays } from "lucide-react";
 import { api } from "../../lib/api.js";
 
 type View = "month" | "week" | "day";
@@ -87,6 +87,7 @@ export function CalendarPage() {
   const [clinicFilter, setClinicFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showBlocks, setShowBlocks] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [tooltip, setTooltip] = useState<{ appt: Record<string, unknown>; x: number; y: number } | null>(null);
 
   // Date picker popover
@@ -376,7 +377,8 @@ export function CalendarPage() {
 
       <div className="sticky top-0 z-20 -mx-6 px-6 bg-background">
         {/* ── Filter controls row ── */}
-        <div className="flex flex-wrap items-center gap-3 py-3 border-b">
+        {/* Always-visible: view toggle + navigation + collapse arrow */}
+        <div className="flex items-center gap-3 py-3 border-b flex-wrap">
           {/* View toggle */}
           <div className="flex rounded-md border">
             {(["month", "week", "day"] as View[]).map((v, i, arr) => (
@@ -435,60 +437,74 @@ export function CalendarPage() {
             <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>{t("calendar.today")}</Button>
           </div>
 
-          {/* Interpreter autocomplete */}
-          <div className="w-52">
-            <AutocompleteInput
-              options={interpreterOptions}
-              value={interpreterFilter}
-              onChange={setInterpreterFilter}
-              placeholder={t("appointments.filter_interpreter")}
-            />
-          </div>
-
-          {/* Clinic autocomplete */}
-          <div className="w-52">
-            <AutocompleteInput
-              options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
-              value={clinicFilter === "all" ? "" : clinicFilter}
-              onChange={(v) => setClinicFilter(v || "all")}
-              placeholder={t("appointments.clinic")}
-            />
-          </div>
-
-          {/* Status filter */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder={t("common.status")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("common.all")}</SelectItem>
-              <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
-              <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
-              <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
-              <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
-              <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
-              <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
-              <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Schedule blocks toggle */}
-          <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
-            <CalendarOff className="h-4 w-4" />
-            {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}
-            className={(interpreterFilter || clinicFilter !== "all" || statusFilter !== "all")
-              ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
-              : "opacity-40 cursor-default"}
+          {/* Collapse toggle */}
+          <button
+            onClick={() => setFiltersExpanded((v) => !v)}
+            className="ml-auto flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
+            title={filtersExpanded ? "Hide filters" : "Show filters"}
           >
-            {t("common.clear")}
-          </Button>
+            {filtersExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
         </div>
+
+        {/* Collapsible filters */}
+        {filtersExpanded && (
+          <div className="flex flex-wrap items-center gap-3 py-3 border-b">
+            {/* Interpreter autocomplete */}
+            <div className="w-52">
+              <AutocompleteInput
+                options={interpreterOptions}
+                value={interpreterFilter}
+                onChange={setInterpreterFilter}
+                placeholder={t("appointments.filter_interpreter")}
+              />
+            </div>
+
+            {/* Clinic autocomplete */}
+            <div className="w-52">
+              <AutocompleteInput
+                options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
+                value={clinicFilter === "all" ? "" : clinicFilter}
+                onChange={(v) => setClinicFilter(v || "all")}
+                placeholder={t("appointments.clinic")}
+              />
+            </div>
+
+            {/* Status filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder={t("common.status")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
+                <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
+                <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
+                <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
+                <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
+                <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
+                <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Schedule blocks toggle */}
+            <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
+              <CalendarOff className="h-4 w-4" />
+              {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}
+              className={(interpreterFilter || clinicFilter !== "all" || statusFilter !== "all")
+                ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
+                : "opacity-40 cursor-default"}
+            >
+              {t("common.clear")}
+            </Button>
+          </div>
+        )}
 
         {/* ── Sticky column headers (view-specific) ── */}
         {view === "month" && (
