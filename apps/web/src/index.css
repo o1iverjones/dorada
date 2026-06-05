@@ -84,3 +84,13 @@
 [dir="rtl"] {
   direction: rtl;
 }
+
+/* Message search highlight — flashes amber then fades out in 0.5s */
+@keyframes msg-highlight-fade {
+  0%   { background-color: rgb(251 191 36 / 0.5); }
+  100% { background-color: transparent; }
+}
+.msg-highlight > div {
+  animation: msg-highlight-fade 0.5s ease-out forwards;
+  border-radius: 0.5rem;
+}

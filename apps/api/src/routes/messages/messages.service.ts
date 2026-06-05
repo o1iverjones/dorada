@@ -130,6 +130,37 @@ export async function listMessages(
   };
 }
 
+export async function searchMessages(
+  organizationId: string,
+  q: string,
+  prisma: PrismaClient,
+) {
+  const messages = await prisma.message.findMany({
+    where: {
+      organization_id: organizationId,
+      body: { contains: q, mode: "insensitive" },
+    },
+    orderBy: { sent_at: "desc" },
+    take: 50,
+    include: {
+      interpreter: { select: { id: true, name: true } },
+      sender_user: { select: { id: true, name: true } },
+    },
+  });
+
+  return messages.map((m) => ({
+    id: m.id,
+    body: m.body,
+    sender_type: m.sender_type,
+    sender: m.sender_type === "admin" && m.sender_user
+      ? { id: m.sender_user.id, name: m.sender_user.name }
+      : { id: m.interpreter.id, name: m.interpreter.name },
+    sent_at: m.sent_at.toISOString(),
+    read_at: m.read_at?.toISOString() ?? null,
+    interpreter: { id: m.interpreter.id, name: m.interpreter.name },
+  }));
+}
+
 export async function sendMessage(
   interpreterId: string,
   senderId: string,

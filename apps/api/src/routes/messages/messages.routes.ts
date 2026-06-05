@@ -3,9 +3,15 @@ import { SendMessageBodySchema } from "@dorada/types";
 import { z } from "zod";
 import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
-import { listConversations, listMessages, sendMessage, markRead } from "./messages.service.js";
+import { listConversations, listMessages, sendMessage, markRead, searchMessages } from "./messages.service.js";
 
 export default async function messageRoutes(fastify: FastifyInstance) {
+  fastify.get("/search", { preHandler: authenticate }, async (req, reply) => {
+    const { q } = z.object({ q: z.string().min(1) }).parse(req.query);
+    const payload = req.user as JwtPayload;
+    return reply.send(await searchMessages(payload.organization_id, q, fastify.prisma));
+  });
+
   fastify.get("/conversations", { preHandler: authenticate }, async (req, reply) => {
     const query = z.object({ cursor: z.string().optional(), limit: z.coerce.number().default(25) }).parse(req.query);
     const payload = req.user as JwtPayload;

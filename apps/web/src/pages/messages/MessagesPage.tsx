@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { Socket } from "socket.io-client";
 import { getSocket } from "../../lib/socket.js";
 import { useQueryClient } from "@tanstack/react-query";
-import { useConversations, useMessages, useSendMessage } from "../../hooks/useMessages.js";
+import { useConversations, useMessages, useSendMessage, useMessageSearch } from "../../hooks/useMessages.js";
+import type { MessageSearchResult } from "../../hooks/useMessages.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { api } from "../../lib/api.js";
@@ -37,17 +38,21 @@ export function MessagesPage() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [msgSearch, setMsgSearch] = useState("");
+  const [highlightMsgId, setHighlightMsgId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
   const [peerTyping, setPeerTyping] = useState(false);
   const [typingTimer, setTypingTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<Socket | null>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // Ref so the socket handler always sees the current selected conversation
   const selectedIdRef = useRef<string | null>(null);
 
   const { data: conversations, isLoading } = useConversations();
   const { data: thread } = useMessages(selectedId ?? "");
+  const { data: searchResults, isFetching: searchFetching } = useMessageSearch(msgSearch);
   const send = useSendMessage(selectedId ?? "");
 
   const convs = (conversations?.data ?? []) as Conversation[];
@@ -70,6 +75,22 @@ export function MessagesPage() {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  // Scroll to and highlight the target message once the thread has loaded
+  useEffect(() => {
+    if (!highlightMsgId || !thread) return;
+    const el = msgRefs.current[highlightMsgId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Trigger highlight animation then clear it
+      el.classList.add("msg-highlight");
+      const timer = setTimeout(() => {
+        el.classList.remove("msg-highlight");
+        setHighlightMsgId(null);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightMsgId, thread]);
 
   function markConversationRead(interpreterId: string) {
     // Optimistic update — clear the badge immediately in the cache
@@ -155,6 +176,12 @@ export function MessagesPage() {
     setTypingTimer(timer);
   }, [selectedId, typingTimer]);
 
+  function handleSearchResultClick(result: MessageSearchResult) {
+    setMsgSearch("");
+    setSelectedId(result.interpreter.id);
+    setHighlightMsgId(result.id);
+  }
+
   async function handleSend() {
     if (!draft.trim() || !selectedId) return;
     if (typingTimer) clearTimeout(typingTimer);
@@ -176,12 +203,41 @@ export function MessagesPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("common.search")}
+              placeholder={t("messages.search_interpreters", { defaultValue: "Filter interpreters…" })}
+              className="h-8 text-sm"
+            />
+            <Input
+              value={msgSearch}
+              onChange={(e) => setMsgSearch(e.target.value)}
+              placeholder={t("messages.search_messages", { defaultValue: "Search messages…" })}
               className="h-8 text-sm"
             />
           </div>
           {isLoading ? (
             <LoadingSpinner />
+          ) : msgSearch.trim().length >= 2 ? (
+            <ul className="overflow-y-auto">
+              {searchFetching ? (
+                <li className="p-4 text-center text-sm text-muted-foreground">Searching…</li>
+              ) : !searchResults?.length ? (
+                <li className="p-4 text-center text-sm text-muted-foreground">No results</li>
+              ) : (searchResults as MessageSearchResult[]).map((result) => (
+                <li key={result.id}>
+                  <button
+                    onClick={() => handleSearchResultClick(result)}
+                    className="w-full p-3 text-left text-sm transition-colors hover:bg-accent"
+                  >
+                    <p className="font-medium">{result.interpreter.name}</p>
+                    <p className="truncate text-xs text-muted-foreground mt-0.5">
+                      {result.body}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-0.5">
+                      {formatInTz(result.sent_at, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
           ) : (
             <ul className="overflow-y-auto">
               {recentConvs.length > 0 && (
@@ -256,11 +312,12 @@ export function MessagesPage() {
                 {allMessages.map((msg) => (
                   <div
                     key={msg.id}
+                    ref={(el) => { msgRefs.current[msg.id] = el; }}
                     className={cn("flex", msg.sender_type === "admin" ? "justify-end" : "justify-start")}
                   >
                     <div
                       className={cn(
-                        "max-w-xs rounded-lg px-3 py-2 text-sm",
+                        "max-w-xs rounded-lg px-3 py-2 text-sm transition-colors",
                         msg.sender_type === "admin" ? "bg-primary text-primary-foreground" : "bg-muted",
                       )}
                     >
