@@ -59,8 +59,13 @@ export function AppointmentsPage() {
     {
       key: "date_time",
       header: t("appointments.date_time"),
-      className: "w-36 whitespace-nowrap",
-      render: (row: Record<string, unknown>) => formatInTz(row.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz),
+      className: "w-32",
+      render: (row: Record<string, unknown>) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium leading-tight">{formatInTz(row.date_time as string, { dateStyle: "medium" }, tz)}</span>
+          <span className="text-xs text-muted-foreground">{formatInTz(row.date_time as string, { timeStyle: "short" }, tz)}</span>
+        </div>
+      ),
     },
     {
       key: "patient_po",
@@ -68,7 +73,7 @@ export function AppointmentsPage() {
       className: "w-44",
       render: (row: Record<string, unknown>) => (
         <div className="flex flex-col gap-0.5">
-          <span className="font-medium leading-tight">{(row.patient as Record<string, unknown>)?.name as string ?? "—"}</span>
+          <span className="font-bold leading-tight">{(row.patient as Record<string, unknown>)?.name as string ?? "—"}</span>
           <span className="text-xs text-muted-foreground">{(row.po_number as string) ?? "—"}</span>
         </div>
       ),
@@ -121,24 +126,18 @@ export function AppointmentsPage() {
         if (!clockIn && !arrived && !clockOut) return <span className="text-muted-foreground text-xs">—</span>;
         return (
           <div className="flex flex-col gap-0.5 text-xs">
-            {clockIn && (
+            {(clockIn || clockOut) && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
-                <span className="text-muted-foreground">in</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockIn}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockIn ?? "—"}</span>
+                <span className="text-muted-foreground">–</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockOut ?? "—"}</span>
               </span>
             )}
             {arrived && (
               <span className="flex items-center gap-1">
                 <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
                 <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{arrived}</span>
-              </span>
-            )}
-            {clockOut && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
-                <span className="text-muted-foreground">out</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockOut}</span>
               </span>
             )}
           </div>
