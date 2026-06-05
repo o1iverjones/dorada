@@ -59,6 +59,11 @@ export function useOrgTimezone(): string {
   return (data as Record<string, unknown> | undefined)?.timezone as string ?? "America/Los_Angeles";
 }
 
+export function useLongAppointmentThreshold(): number {
+  const { data } = useSystemSettings();
+  return (data as Record<string, unknown> | undefined)?.long_appointment_alert_minutes as number ?? 105;
+}
+
 export function useShowLanguage(): boolean {
   const { data } = useSystemSettings();
   const val = (data as Record<string, unknown> | undefined)?.show_language;

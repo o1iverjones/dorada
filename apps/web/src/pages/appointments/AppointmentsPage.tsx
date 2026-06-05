@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinics } from "../../hooks/useClinics.js";
-import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
+import { useOrgTimezone, useShowLanguage, useLongAppointmentThreshold } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { DataTable } from "../../components/shared/DataTable.js";
@@ -41,6 +41,7 @@ export function AppointmentsPage() {
   const navigate = useNavigate();
   const tz = useOrgTimezone();
   const showLanguage = useShowLanguage();
+  const longThresholdMs = useLongAppointmentThreshold() * 60_000;
   const [searchParams] = useSearchParams();
 
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
@@ -149,14 +150,25 @@ export function AppointmentsPage() {
         const arrived = fmt(row.patient_arrived_at);
         const clockOut = fmt(row.clock_out_time);
         if (!clockIn && !arrived && !clockOut) return <span className="text-muted-foreground text-xs">—</span>;
+
+        // Running long: clocked in, not yet clocked out, elapsed > threshold
+        const isRunningLong = !!(
+          row.clock_in_time && !row.clock_out_time &&
+          Date.now() - new Date(row.clock_in_time as string).getTime() > longThresholdMs
+        );
+        const pillClass = isRunningLong
+          ? "rounded bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700"
+          : "rounded bg-muted px-1.5 py-0.5 font-medium";
+        const iconClass = isRunningLong ? "h-3 w-3 shrink-0 text-orange-500" : "h-3 w-3 shrink-0 text-muted-foreground";
+
         return (
           <div className="flex flex-col gap-0.5 text-xs">
             {(clockIn || clockOut) && (
               <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
-                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockIn ?? "—"}</span>
+                <Clock className={iconClass} />
+                <span className={pillClass}>{clockIn ?? "—"}</span>
                 <span className="text-muted-foreground">–</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockOut ?? "—"}</span>
+                <span className={pillClass}>{clockOut ?? "—"}</span>
               </span>
             )}
             {arrived && (
