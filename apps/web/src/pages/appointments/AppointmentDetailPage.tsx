@@ -251,7 +251,7 @@ export function AppointmentDetailPage() {
                 })}>
                   <Copy className="h-4 w-4 mr-1.5" />{t("appointments.duplicate")}
                 </Button>
-                {(a.status === "pending_offer" || a.status === "confirmed") && (
+                {a.status !== "completed" && a.status !== "cancelled" && (
                   <Button variant="destructive" onClick={handleCancel} disabled={cancel.isPending}>
                     {t("appointments.cancel")}
                   </Button>
