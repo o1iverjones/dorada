@@ -203,10 +203,14 @@ async function main() {
 
     // ── Create appointment ─────────────────────────────────────────────────
     try {
+      // Determine status based on date and interpreter assignment
+      const isPast = dateTime <= new Date();
+      const apptStatus = isPast ? "completed" : (interpreterId ? "confirmed" : "unassigned");
+
       const newAppt = await prisma.appointment.create({
         data: {
           organization_id:           org.id,
-          status:                    "completed",
+          status:                    apptStatus,
           source:                    "csv_import",
           date_time:                 dateTime,
           duration_minutes:          appt.duration_minutes,
