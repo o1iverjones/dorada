@@ -18,7 +18,7 @@ import { Plus } from "lucide-react";
 export function ClinicsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data, isLoading } = useClinics();
+  const { data, isLoading } = useClinics({ limit: "300" });
   const create = useCreateClinic();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", address: "", phone: "", contact_name: "", contact_email: "" });
@@ -48,7 +48,7 @@ export function ClinicsPage() {
     try {
       const payload: Record<string, unknown> = {
         name: form.name,
-        billing: { model: "hourly", hourly_rate: null, flat_rate: null, invoice_cycle: "monthly" },
+        billing: { model: "hourly", hourly_rate: 0, flat_rate: null, invoice_cycle: "monthly" },
       };
       if (form.address) payload.address = form.address;
       if (form.phone) payload.phone = form.phone;

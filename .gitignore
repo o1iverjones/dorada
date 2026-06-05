@@ -77,3 +77,17 @@ list-of-modules-needed.md
 # Android generated files
 apps/mobile/android/
 apps/mobile/.expo/
+
+# Mobile build artifacts
+apps/mobile/*.apk
+apps/mobile/*.aab
+apps/mobile/*.ipa
+
+# EAS credentials (sensitive)
+apps/mobile/credentials.json
+
+# Database dumps and backups — may contain real data, never commit
+*.dump
+
+# Generated data files from import scripts
+scripts/appointments-clean.json

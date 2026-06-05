@@ -13,6 +13,7 @@ import {
   ValidationError,
 } from "../../lib/errors.js";
 import { config } from "../../config.js";
+import { sendSms } from "../../lib/sms.js";
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
@@ -56,11 +57,7 @@ export async function requestOtp(
   const otpKey = `otp:${canonicalPhone}`;
   await redis.set(otpKey, otp, "EX", OTP_TTL_SECONDS);
 
-  // In production, send via Twilio. Here we log in dev.
-  if (config.NODE_ENV === "development") {
-    console.warn(`[DEV] OTP for ${normalized}: ${otp}`);
-  }
-  // TODO: twilio.messages.create({ to: phone, from: config.TWILIO_FROM_NUMBER, body: `Your Dorada code: ${otp}` })
+  await sendSms(interpreter.phone, `Your Dorada login code is: ${otp}. It expires in 10 minutes.`);
 }
 
 export async function verifyOtp(

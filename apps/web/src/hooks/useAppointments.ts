@@ -47,6 +47,7 @@ export function useCancelAppointment(id: string) {
   return useMutation({
     mutationFn: () => api.delete(`/appointments/${id}`),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
       qc.invalidateQueries({ queryKey: ["activity-log"] });

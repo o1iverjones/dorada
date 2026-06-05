@@ -46,6 +46,7 @@ import {
   getAppointmentMedia,
   manualConfirmInterpreter,
   unassignInterpreter,
+  patchBilling,
 } from "./appointments.service.js";
 
 async function resolveActor(payload: JwtPayload, fastify: FastifyInstance) {
@@ -138,6 +139,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
   fastify.patch("/:id/billing", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
+    const actor = await resolveActor(payload, fastify);
     const body = z.object({
       billing_billed: z.boolean().optional(),
       billing_invoiced: z.boolean().optional(),
@@ -148,9 +150,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
       billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
       billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
     }).parse(req.body);
-    const appt = await fastify.prisma.appointment.findUnique({ where: { id } });
-    if (!appt || appt.organization_id !== payload.organization_id) return reply.status(404).send();
-    const updated = await fastify.prisma.appointment.update({ where: { id }, data: body });
+    const updated = await patchBilling(id, body, payload.organization_id, actor, fastify.prisma);
     return reply.send({ ok: true, billing: {
       billing_billed: updated.billing_billed,
       billing_invoiced: updated.billing_invoiced,

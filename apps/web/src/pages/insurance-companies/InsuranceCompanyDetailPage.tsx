@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { PhoneInput } from "../../components/ui/PhoneInput.js";
-import { formatPhone, formatPhoneInput } from "../../lib/phone.js";
+import { formatPhoneInput } from "../../lib/phone.js";
+import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
@@ -140,11 +141,11 @@ export function InsuranceCompanyDetailPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("insurance_companies.phone")}</p>
-                  <p className="font-medium">{formatPhone(company.phone as string)}</p>
+                  <p className="font-medium"><PhoneLink phone={company.phone as string} /></p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("insurance_companies.fax")}</p>
-                  <p className="font-medium">{formatPhone(company.fax as string)}</p>
+                  <p className="font-medium"><PhoneLink phone={company.fax as string} /></p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t("insurance_companies.email")}</p>

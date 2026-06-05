@@ -122,7 +122,7 @@ export async function getAppointment(id: string, organizationId: string, prisma:
     include: {
       type: true,
       interpreter: { select: { id: true, name: true } },
-      clinic: { select: { id: true, name: true, address: true, parking: true } },
+      clinic: { select: { id: true, name: true, address: true, parking: true, phone: true } },
       agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true, date_of_birth: true } },
       offers: { include: { interpreter: { select: { id: true, name: true } } } },
@@ -386,6 +386,84 @@ export async function unassignInterpreter(id: string, organizationId: string, ac
   ]);
 
   await logActivity(id, organizationId, "interpreter_unassigned", actor.name, actor.id, null, prisma, appt!.patient?.name ?? null, appt!.po_number);
+}
+
+export async function patchBilling(
+  id: string,
+  body: {
+    billing_billed?: boolean;
+    billing_invoiced?: boolean;
+    billing_lost?: boolean;
+    billing_payment_under_claim?: boolean;
+    billing_pending_auth?: boolean;
+    billing_retro?: boolean;
+    billing_payment_status?: string;
+    billing_approval_status?: string;
+  },
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+) {
+  const appt = await prisma.appointment.findUnique({
+    where: { id },
+    include: { patient: { select: { name: true } } },
+  });
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+
+  const updated = await prisma.appointment.update({ where: { id }, data: body });
+
+  // Build a human-readable description of every field that changed
+  const BOOL_LABELS: Record<string, string> = {
+    billing_billed:               "Billed",
+    billing_invoiced:             "Invoiced",
+    billing_lost:                 "Lost",
+    billing_payment_under_claim:  "Payment Under Claim",
+    billing_pending_auth:         "Pending Auth",
+    billing_retro:                "Retro",
+  };
+  const STATUS_LABELS: Record<string, string> = {
+    billing_payment_status:  "Payment",
+    billing_approval_status: "Approval",
+  };
+  const STATUS_VALUES: Record<string, Record<string, string>> = {
+    billing_payment_status:  { not_paid: "Not Paid", paid: "Paid" },
+    billing_approval_status: { pending_approval: "Pending Approval", approved: "Approved" },
+  };
+
+  const changes: string[] = [];
+
+  for (const [field, label] of Object.entries(BOOL_LABELS)) {
+    const newVal = (body as Record<string, unknown>)[field];
+    if (newVal === undefined) continue;
+    const oldVal = (appt as Record<string, unknown>)[field];
+    if (newVal !== oldVal) {
+      changes.push(`${label} ${newVal ? "checked" : "unchecked"}`);
+    }
+  }
+  for (const [field, label] of Object.entries(STATUS_LABELS)) {
+    const newVal = (body as Record<string, unknown>)[field] as string | undefined;
+    if (newVal === undefined) continue;
+    const oldVal = (appt as Record<string, unknown>)[field] as string;
+    if (newVal !== oldVal) {
+      changes.push(`${label}: ${STATUS_VALUES[field][newVal] ?? newVal}`);
+    }
+  }
+
+  if (changes.length > 0) {
+    await logActivity(
+      id,
+      organizationId,
+      "billing_updated",
+      actor.name,
+      actor.id,
+      changes.join(", "),
+      prisma,
+      appt!.patient?.name ?? null,
+      appt!.po_number,
+    );
+  }
+
+  return updated;
 }
 
 export async function offerAppointment(

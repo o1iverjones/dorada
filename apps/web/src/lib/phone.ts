@@ -21,6 +21,17 @@ export function formatPhone(raw: string | null | undefined): string {
 }
 
 /**
+ * Returns a tel: href for a phone number, e.g. "tel:+15551234567".
+ * Returns null if the number can't be normalised.
+ */
+export function telHref(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = digitsOnly(raw);
+  const d = digits.startsWith("1") && digits.length === 11 ? digits : digits.length === 10 ? `1${digits}` : null;
+  return d ? `tel:+${d}` : null;
+}
+
+/**
  * Formats a phone string progressively as the user types.
  * Produces: (XXX, (XXX) XXX, (XXX) XXX-XXXX
  * Strips non-digits and caps at 10 digits.

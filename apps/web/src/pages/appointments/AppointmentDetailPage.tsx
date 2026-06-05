@@ -22,6 +22,7 @@ import { toast } from "../../hooks/use-toast.js";
 import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle, UserX } from "lucide-react";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
 import { DurationInput } from "../../components/shared/DurationInput.js";
+import { PhoneLink } from "../../components/shared/PhoneLink.js";
 
 const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 
@@ -285,22 +286,28 @@ export function AppointmentDetailPage() {
 
             {/* Interpreter */}
             <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing && (a.interpreter as Record<string, unknown>)?.name ? (
+              {editing ? (
                 <InlineRow label={t("appointments.interpreter")}>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm">
-                      {(a.interpreter as Record<string, unknown>)?.name as string}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-destructive border-destructive hover:bg-destructive/10"
-                      onClick={() => setConfirmUnassign(true)}
-                    >
-                      <UserX className="h-3.5 w-3.5 mr-1" />
-                      {t("appointments.unassign")}
-                    </Button>
+                    {(a.interpreter as Record<string, unknown>)?.name ? (
+                      <>
+                        <span className="font-bold text-sm">
+                          {(a.interpreter as Record<string, unknown>)?.name as string}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-destructive border-destructive hover:bg-destructive/10"
+                          onClick={() => setConfirmUnassign(true)}
+                        >
+                          <UserX className="h-3.5 w-3.5 mr-1" />
+                          {t("appointments.unassign")}
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">{t("appointments.unassigned")} — {t("appointments.select_interpreters_below", { defaultValue: "use the card below to assign" })}</span>
+                    )}
                   </div>
                 </InlineRow>
               ) : (
@@ -434,9 +441,20 @@ export function AppointmentDetailPage() {
                   <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => { set("clinic_id", v); set("referring_physician", ""); }} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.clinic")} value={(a.clinic as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("appointments.clinic")} value={
+                  (a.clinic as Record<string, unknown>)?.id
+                    ? <button type="button" className="text-primary hover:underline font-medium text-left" onClick={() => navigate(`/clinics/${(a.clinic as Record<string, unknown>).id}`)}>{(a.clinic as Record<string, unknown>).name as string}</button>
+                    : "—"
+                } />
               )}
             </div>
+
+            {/* Clinic phone */}
+            {!editing && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                <Field label={t("appointments.clinic_phone")} value={<PhoneLink phone={(a.clinic as Record<string, unknown>)?.phone as string} />} />
+              </div>
+            )}
 
             {/* Agency */}
             <div className="px-6 py-2.5 even:bg-muted/40">
@@ -582,7 +600,7 @@ export function AppointmentDetailPage() {
         </Card>
       )}
 
-      {(a.status === "unassigned" || a.status === "pending_offer" || a.status === "declined") && (
+      {(a.status === "unassigned" || a.status === "pending_offer" || a.status === "declined" || !(a.interpreter as Record<string, unknown>)?.id) && a.status !== "cancelled" && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>

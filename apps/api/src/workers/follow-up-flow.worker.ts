@@ -1,11 +1,10 @@
 import { Worker, Queue, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
-// firebase-admin and twilio are optional runtime dependencies; use `any` to avoid compile-time errors
+// firebase-admin is an optional runtime dependency; use `any` to avoid compile-time errors
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FirebaseApp = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TwilioClient = any;
 import { config, redisConnection } from "../config.js";
+import { sendSms } from "../lib/sms.js";
 
 interface FollowUpPromptJobData {
   type: "initial_prompt" | "reminder";
@@ -22,7 +21,6 @@ const followUpQueue = new Queue("follow-up-flow", {
 export function createFollowUpFlowWorker(
   prisma: PrismaClient,
   fcmApp: FirebaseApp,
-  twilioClient: TwilioClient,
 ) {
   return new Worker<FollowUpPromptJobData>(
     "follow-up-flow",
@@ -58,11 +56,7 @@ export function createFollowUpFlowWorker(
       const channel = interpreter.follow_up_channel ?? "push";
 
       if (channel === "sms" && interpreter.phone) {
-        await twilioClient.messages.create({
-          to: interpreter.phone,
-          from: config.TWILIO_FROM_NUMBER,
-          body: "Did your patient have a follow-up appointment? Reply YES or NO.",
-        });
+        await sendSms(interpreter.phone, "Did your patient have a follow-up appointment? Reply YES or NO.");
       } else if (interpreter.fcm_token) {
         await fcmApp.messaging().send({
           token: interpreter.fcm_token,

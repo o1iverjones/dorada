@@ -75,10 +75,12 @@ async function main() {
   const clinicMap      = buildNameMap(dbClinics);
   const agencyMap      = buildNameMap(dbAgencies);
   const typeMap        = buildNameMap(dbTypes);
-  const interpreterMap = new Map<string, string>();
+  const interpreterPhoneMap = new Map<string, string>();
+  const interpreterNameMap  = new Map<string, string>();
   for (const i of dbInterpreters) {
     const digits = i.phone.replace(/\D/g, "");
-    if (digits) interpreterMap.set(digits, i.id);
+    if (digits) interpreterPhoneMap.set(digits, i.id);
+    interpreterNameMap.set(norm(i.name), i.id);
   }
 
   // Track unresolved names for end-of-run report
@@ -113,9 +115,39 @@ async function main() {
     }
 
     // ── Resolve interpreter (optional) ─────────────────────────────────────
-    const interpreterId = appt.interpreter_phone
-      ? (interpreterMap.get(appt.interpreter_phone) ?? null)
-      : null;
+    // Try phone first (Format A), fall back to name match (Format B).
+    // If a name is present but no match found, auto-create an inactive interpreter
+    // so historical appointments remain attributed correctly.
+    let interpreterId: string | null =
+      (appt.interpreter_phone ? interpreterPhoneMap.get(appt.interpreter_phone) : undefined)
+      ?? (appt.interpreter_name ? interpreterNameMap.get(norm(appt.interpreter_name)) : undefined)
+      ?? null;
+
+    if (!interpreterId && appt.interpreter_name) {
+      try {
+        const created = await prisma.interpreter.create({
+          data: {
+            organization_id: org.id,
+            name:            appt.interpreter_name,
+            phone:           "",
+            is_active:       false,
+          },
+        });
+        interpreterId = created.id;
+        interpreterNameMap.set(norm(appt.interpreter_name), created.id);
+        console.log(`  ➕  Created inactive interpreter: ${appt.interpreter_name}`);
+      } catch {
+        // May fail if a race condition creates a duplicate — re-query and continue
+        const existing = await prisma.interpreter.findFirst({
+          where: { organization_id: org.id, name: { equals: appt.interpreter_name, mode: "insensitive" } },
+          select: { id: true },
+        });
+        if (existing) {
+          interpreterId = existing.id;
+          interpreterNameMap.set(norm(appt.interpreter_name), existing.id);
+        }
+      }
+    }
 
     // ── Upsert patient (name-based, case-insensitive) ──────────────────────
     // Patient model has no MRN field; deduplicate by name within the org.
@@ -126,15 +158,23 @@ async function main() {
           organization_id: org.id,
           name: { equals: appt.patient_name, mode: "insensitive" },
         },
-        select: { id: true },
+        select: { id: true, date_of_birth: true },
       });
       if (existingPatient) {
         patientId = existingPatient.id;
+        // Backfill DOB if we have one and the existing record doesn't
+        if (appt.patient_dob && !existingPatient.date_of_birth) {
+          await prisma.patient.update({
+            where: { id: patientId },
+            data: { date_of_birth: new Date(appt.patient_dob) },
+          });
+        }
       } else {
         const newPatient = await prisma.patient.create({
           data: {
             organization_id: org.id,
             name:            appt.patient_name,
+            date_of_birth:   appt.patient_dob ? new Date(appt.patient_dob) : null,
           },
         });
         patientId = newPatient.id;
@@ -163,7 +203,7 @@ async function main() {
 
     // ── Create appointment ─────────────────────────────────────────────────
     try {
-      await prisma.appointment.create({
+      const newAppt = await prisma.appointment.create({
         data: {
           organization_id:           org.id,
           status:                    "completed",
@@ -182,8 +222,27 @@ async function main() {
           pre_auth_mileage:          appt.pre_auth_mileage,
           po_number:                 appt.po_number ?? null,
           billing_interpreter:       appt.billing_interpreter ?? null,
+          billing_payment_status:    appt.billing_payment_status,
+          billing_approval_status:   appt.billing_approval_status,
+          billing_billed:            appt.billing_billed,
+          billing_invoiced:          appt.billing_invoiced,
+          billing_payment_under_claim: appt.billing_payment_under_claim,
+          billing_retro:             appt.billing_retro,
         },
       });
+      // ── Create admin note if present ───────────────────────────────────
+      if (appt.admin_notes) {
+        await prisma.appointmentNote.create({
+          data: {
+            appointment_id:  newAppt.id,
+            organization_id: org.id,
+            content:         appt.admin_notes,
+            admin_name:      "Nowsta Import",
+            admin_id:        null,
+          },
+        });
+      }
+
       console.log(`  ✓  ${appt.date_time.slice(0, 16)}  ${appt.patient_name.padEnd(30)} @ ${appt.clinic_name}`);
       created++;
     } catch (e) {
