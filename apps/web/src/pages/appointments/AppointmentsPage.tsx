@@ -17,6 +17,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Plus, TriangleAlert, Clock, UserRound } from "lucide-react";
 
 const NOT_COMPLETED = "unassigned,pending_offer,confirmed,in_progress,cancelled,declined";
+const STORAGE_KEY = "appointments_filters";
+
+function loadFilters(searchParams: URLSearchParams) {
+  // URL params take priority (e.g. deep links), then sessionStorage, then defaults
+  if (searchParams.get("date_from") || searchParams.get("status")) {
+    return {
+      dateFilter:        searchParams.get("date_from") ?? "",
+      interpreterFilter: "",
+      clinicFilter:      "all",
+      statusFilter:      searchParams.get("status") ?? "all",
+    };
+  }
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as { dateFilter: string; interpreterFilter: string; clinicFilter: string; statusFilter: string };
+  } catch { /* ignore */ }
+  return { dateFilter: "", interpreterFilter: "", clinicFilter: "all", statusFilter: "all" };
+}
 
 export function AppointmentsPage() {
   const { t } = useTranslation();
@@ -27,10 +45,17 @@ export function AppointmentsPage() {
 
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
-  const [dateFilter, setDateFilter] = useState(searchParams.get("date_from") ?? "");
-  const [interpreterFilter, setInterpreterFilter] = useState("");
-  const [clinicFilter, setClinicFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
+  const initial = loadFilters(searchParams);
+  const [dateFilter, setDateFilter] = useState(initial.dateFilter);
+  const [interpreterFilter, setInterpreterFilter] = useState(initial.interpreterFilter);
+  const [clinicFilter, setClinicFilter] = useState(initial.clinicFilter);
+  const [statusFilter, setStatusFilter] = useState(initial.statusFilter);
+
+  // Persist filters to sessionStorage whenever they change
+  const saveFilters = (updates: Partial<{ dateFilter: string; interpreterFilter: string; clinicFilter: string; statusFilter: string }>) => {
+    const current = { dateFilter, interpreterFilter, clinicFilter, statusFilter, ...updates };
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(current)); } catch { /* ignore */ }
+  };
 
   const params: Record<string, string> = { limit: "100" };
   if (statusFilter === "not_completed") params.status = NOT_COMPLETED;
@@ -162,7 +187,7 @@ export function AppointmentsPage() {
         <Input
           type="date"
           value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
+          onChange={(e) => { setDateFilter(e.target.value); saveFilters({ dateFilter: e.target.value }); }}
           className="w-40"
           title={t("appointments.date_time")}
         />
@@ -172,7 +197,7 @@ export function AppointmentsPage() {
           <AutocompleteInput
             options={interpreterOptions}
             value={interpreterFilter}
-            onChange={setInterpreterFilter}
+            onChange={(v) => { setInterpreterFilter(v); saveFilters({ interpreterFilter: v }); }}
             placeholder={t("appointments.filter_interpreter")}
           />
         </div>
@@ -182,13 +207,13 @@ export function AppointmentsPage() {
           <AutocompleteInput
             options={clinicOptions}
             value={clinicFilter === "all" ? "" : clinicFilter}
-            onChange={(v) => setClinicFilter(v || "all")}
+            onChange={(v) => { const val = v || "all"; setClinicFilter(val); saveFilters({ clinicFilter: val }); }}
             placeholder={t("appointments.clinic")}
           />
         </div>
 
         {/* Status dropdown */}
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); saveFilters({ statusFilter: v }); }}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder={t("common.status")} />
           </SelectTrigger>
@@ -209,7 +234,7 @@ export function AppointmentsPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}
+          onClick={() => { setDateFilter(""); setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); saveFilters({ dateFilter: "", interpreterFilter: "", clinicFilter: "all", statusFilter: "all" }); }}
           className={hasFilters
             ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
             : "opacity-40 cursor-default"}
