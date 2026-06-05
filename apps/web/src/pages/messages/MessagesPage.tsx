@@ -36,6 +36,7 @@ export function MessagesPage() {
   const tz = useOrgTimezone();
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
   const [peerTyping, setPeerTyping] = useState(false);
@@ -51,10 +52,11 @@ export function MessagesPage() {
 
   const convs = (conversations?.data ?? []) as Conversation[];
 
+  const searchQ = search.toLowerCase().trim();
   const recentConvs = convs
-    .filter((c) => c.last_message !== null)
+    .filter((c) => c.last_message !== null && (!searchQ || c.interpreter.name.toLowerCase().includes(searchQ)))
     .sort((a, b) => new Date(b.last_message!.sent_at).getTime() - new Date(a.last_message!.sent_at).getTime());
-  const otherConvs = convs.filter((c) => c.last_message === null);
+  const otherConvs = convs.filter((c) => c.last_message === null && (!searchQ || c.interpreter.name.toLowerCase().includes(searchQ)));
   const selected = convs.find((c) => c.interpreter.id === selectedId);
 
   // Merge REST messages with real-time messages (deduplicated by id)
@@ -169,8 +171,14 @@ export function MessagesPage() {
       <div className="flex h-[calc(100vh-200px)] overflow-hidden rounded-md border">
         {/* Conversation list */}
         <div className="flex w-72 shrink-0 flex-col border-r">
-          <div className="border-b p-3">
+          <div className="border-b p-3 space-y-2">
             <p className="text-sm font-medium text-muted-foreground">{t("messages.conversations")}</p>
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("common.search")}
+              className="h-8 text-sm"
+            />
           </div>
           {isLoading ? (
             <LoadingSpinner />
