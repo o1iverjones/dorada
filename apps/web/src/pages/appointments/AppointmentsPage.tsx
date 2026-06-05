@@ -14,7 +14,7 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
-import { Plus, TriangleAlert } from "lucide-react";
+import { Plus, TriangleAlert, Clock, UserRound } from "lucide-react";
 
 const NOT_COMPLETED = "unassigned,pending_offer,confirmed,in_progress,cancelled,declined";
 
@@ -76,6 +76,37 @@ export function AppointmentsPage() {
     { key: "po_number", header: t("appointments.po_number"), render: (row: Record<string, unknown>) => (row.po_number as string) ?? "—" },
     ...(showLanguage ? [{ key: "language", header: t("appointments.language") }] : []),
     { key: "status", header: t("common.status"), render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} /> },
+    { key: "time_tracking", header: t("appointments.time_tracking"), render: (row: Record<string, unknown>) => {
+      const fmt = (iso: unknown) => iso ? formatInTz(iso as string, { timeStyle: "short" }, tz) : null;
+      const clockIn = fmt(row.clock_in_time);
+      const arrived = fmt(row.patient_arrived_at);
+      const clockOut = fmt(row.clock_out_time);
+      if (!clockIn && !arrived && !clockOut) return <span className="text-muted-foreground text-xs">—</span>;
+      return (
+        <div className="flex flex-col gap-0.5 text-xs">
+          {clockIn && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="text-muted-foreground">in</span>
+              <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockIn}</span>
+            </span>
+          )}
+          {arrived && (
+            <span className="flex items-center gap-1">
+              <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{arrived}</span>
+            </span>
+          )}
+          {clockOut && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="text-muted-foreground">out</span>
+              <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockOut}</span>
+            </span>
+          )}
+        </div>
+      );
+    }},
   ];
 
   return (
