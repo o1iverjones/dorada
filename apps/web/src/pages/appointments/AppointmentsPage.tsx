@@ -56,57 +56,95 @@ export function AppointmentsPage() {
   const hasFilters = !!(dateFilter || interpreterFilter || clinicFilter !== "all" || statusFilter !== "all");
 
   const columns = [
-    { key: "date_time", header: t("appointments.date_time"), render: (row: Record<string, unknown>) => formatInTz(row.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz) },
-    { key: "patient", header: t("appointments.patient"), render: (row: Record<string, unknown>) => (row.patient as Record<string, unknown>)?.name as string ?? "—" },
-    { key: "clinic", header: t("appointments.clinic"), render: (row: Record<string, unknown>) => (row.clinic as Record<string, unknown>)?.name as string ?? "—" },
-    { key: "interpreter", header: t("appointments.interpreter"), render: (row: Record<string, unknown>) => {
-      const assigned = (row.interpreter as Record<string, unknown> | null)?.name as string | undefined;
-      if (assigned) return assigned;
-      const offers = (row.offers as Array<{ interpreter: { name: string } }>) ?? [];
-      if (offers.length === 0) return (
-        <span className="flex items-center gap-1.5 text-amber-600">
-          <TriangleAlert className="h-4 w-4 shrink-0" />
-          <span>{t("appointments.no_offer")}</span>
-        </span>
-      );
-      if (offers.length === 1) return offers[0].interpreter.name;
-      return t("common.multiple");
-    }},
-    { key: "agency", header: t("appointments.agency"), render: (row: Record<string, unknown>) => (row.agency as Record<string, unknown>)?.name as string ?? "—" },
-    { key: "po_number", header: t("appointments.po_number"), render: (row: Record<string, unknown>) => (row.po_number as string) ?? "—" },
-    ...(showLanguage ? [{ key: "language", header: t("appointments.language") }] : []),
-    { key: "status", header: t("common.status"), render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} /> },
-    { key: "time_tracking", header: t("appointments.time_tracking"), render: (row: Record<string, unknown>) => {
-      const fmt = (iso: unknown) => iso ? formatInTz(iso as string, { timeStyle: "short" }, tz) : null;
-      const clockIn = fmt(row.clock_in_time);
-      const arrived = fmt(row.patient_arrived_at);
-      const clockOut = fmt(row.clock_out_time);
-      if (!clockIn && !arrived && !clockOut) return <span className="text-muted-foreground text-xs">—</span>;
-      return (
-        <div className="flex flex-col gap-0.5 text-xs">
-          {clockIn && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
-              <span className="text-muted-foreground">in</span>
-              <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockIn}</span>
-            </span>
-          )}
-          {arrived && (
-            <span className="flex items-center gap-1">
-              <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
-              <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{arrived}</span>
-            </span>
-          )}
-          {clockOut && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
-              <span className="text-muted-foreground">out</span>
-              <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockOut}</span>
-            </span>
-          )}
+    {
+      key: "date_time",
+      header: t("appointments.date_time"),
+      className: "w-36 whitespace-nowrap",
+      render: (row: Record<string, unknown>) => formatInTz(row.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz),
+    },
+    {
+      key: "patient_po",
+      header: "Patient & PO",
+      className: "w-44",
+      render: (row: Record<string, unknown>) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium leading-tight">{(row.patient as Record<string, unknown>)?.name as string ?? "—"}</span>
+          <span className="text-xs text-muted-foreground">{(row.po_number as string) ?? "—"}</span>
         </div>
-      );
-    }},
+      ),
+    },
+    {
+      key: "clinic_agency",
+      header: "Clinic & Agency",
+      className: "w-48",
+      render: (row: Record<string, unknown>) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium leading-tight">{(row.clinic as Record<string, unknown>)?.name as string ?? "—"}</span>
+          <span className="text-xs text-muted-foreground">{(row.agency as Record<string, unknown>)?.name as string ?? "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "interpreter",
+      header: t("appointments.interpreter"),
+      className: "w-36",
+      render: (row: Record<string, unknown>) => {
+        const assigned = (row.interpreter as Record<string, unknown> | null)?.name as string | undefined;
+        if (assigned) return assigned;
+        const offers = (row.offers as Array<{ interpreter: { name: string } }>) ?? [];
+        if (offers.length === 0) return (
+          <span className="flex items-center gap-1.5 text-amber-600">
+            <TriangleAlert className="h-4 w-4 shrink-0" />
+            <span>{t("appointments.no_offer")}</span>
+          </span>
+        );
+        if (offers.length === 1) return offers[0].interpreter.name;
+        return t("common.multiple");
+      },
+    },
+    ...(showLanguage ? [{ key: "language", header: t("appointments.language"), className: "w-24" }] : []),
+    {
+      key: "status",
+      header: t("common.status"),
+      className: "w-28",
+      render: (row: Record<string, unknown>) => <StatusBadge status={row.status as string} />,
+    },
+    {
+      key: "time_tracking",
+      header: t("appointments.time_tracking"),
+      className: "w-40",
+      render: (row: Record<string, unknown>) => {
+        const fmt = (iso: unknown) => iso ? formatInTz(iso as string, { timeStyle: "short" }, tz) : null;
+        const clockIn = fmt(row.clock_in_time);
+        const arrived = fmt(row.patient_arrived_at);
+        const clockOut = fmt(row.clock_out_time);
+        if (!clockIn && !arrived && !clockOut) return <span className="text-muted-foreground text-xs">—</span>;
+        return (
+          <div className="flex flex-col gap-0.5 text-xs">
+            {clockIn && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="text-muted-foreground">in</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockIn}</span>
+              </span>
+            )}
+            {arrived && (
+              <span className="flex items-center gap-1">
+                <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{arrived}</span>
+              </span>
+            )}
+            {clockOut && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="text-muted-foreground">out</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{clockOut}</span>
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
   ];
 
   return (
