@@ -90,6 +90,7 @@ export async function updatePatient(id: string, body: UpdatePatientBody, organiz
       ...(body.phone !== undefined ? { phone: body.phone } : {}),
       ...(body.email !== undefined ? { email: body.email } : {}),
       ...(body.preferred_language !== undefined ? { preferred_language: body.preferred_language } : {}),
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
     },
     include: patientInclude,
   });

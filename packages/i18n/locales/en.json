@@ -733,7 +733,10 @@
     "no_appointments": "No appointments on record.",
     "empty": "No patients found.",
     "created": "Patient added.",
-    "edit.title": "Edit patient"
+    "edit.title": "Edit patient",
+    "notes": "Notes",
+    "notes_placeholder": "Add notes about this patient…",
+    "notes_saved": "Notes saved."
   },
   "reports": {
     "title": "Reports",

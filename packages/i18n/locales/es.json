@@ -733,7 +733,10 @@
     "no_appointments": "No hay citas en el registro.",
     "empty": "No se encontraron pacientes.",
     "created": "Paciente agregado.",
-    "edit.title": "Editar paciente"
+    "edit.title": "Editar paciente",
+    "notes": "Notas",
+    "notes_placeholder": "Agrega notas sobre este paciente…",
+    "notes_saved": "Notas guardadas."
   },
   "reports": {
     "title": "Reportes",

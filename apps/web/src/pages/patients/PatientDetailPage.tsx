@@ -21,7 +21,8 @@ import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { Pencil, Plus, X } from "lucide-react";
+import { Pencil, Plus, X, Check } from "lucide-react";
+import { Textarea } from "../../components/ui/textarea.js";
 
 interface Claim {
   id: string;
@@ -80,6 +81,10 @@ export function PatientDetailPage() {
   const [form, setForm] = useState({ name: "", date_of_birth: "", phone: "", email: "", preferred_language: "" });
   const [preferredInterpreterId, setPreferredInterpreterId] = useState<string>("");
 
+  // Notes state
+  const [notes, setNotes] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
+
   // Claim dialog state
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
   const [editingClaimId, setEditingClaimId] = useState<string | null>(null);
@@ -93,6 +98,14 @@ export function PatientDetailPage() {
     .map((a) => ({ value: a.id, label: a.name }));
   const companyOptions = ((companiesData?.data ?? []) as Array<{ id: string; name: string }>)
     .map((c) => ({ value: c.id, label: c.name }));
+
+  // Initialise notes from loaded data
+  useEffect(() => {
+    if (data) {
+      const d = data as Record<string, unknown>;
+      setNotes((d.notes as string) ?? "");
+    }
+  }, [data]);
 
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
@@ -174,6 +187,16 @@ export function PatientDetailPage() {
   async function handleDeleteClaim(claimId: string) {
     try {
       await deleteClaim.mutateAsync(claimId);
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
+  }
+
+  async function handleNotesSave() {
+    try {
+      await update.mutateAsync({ notes: notes || null });
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 2000);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     }
@@ -350,6 +373,29 @@ export function PatientDetailPage() {
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Notes */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle>{t("patients.notes")}</CardTitle>
+          {notesSaved && (
+            <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+              <Check className="h-3.5 w-3.5" /> {t("patients.notes_saved")}
+            </span>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onBlur={handleNotesSave}
+            placeholder={t("patients.notes_placeholder")}
+            className="min-h-[140px] resize-y text-sm"
+            maxLength={5000}
+          />
+          <p className="mt-1.5 text-right text-xs text-muted-foreground">{notes.length} / 5000</p>
         </CardContent>
       </Card>
 
