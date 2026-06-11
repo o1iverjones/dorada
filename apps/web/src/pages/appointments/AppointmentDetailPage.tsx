@@ -330,7 +330,7 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Billing Interpreter */}
+            {/* Interpreter B */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
                 <InlineRow label={t("appointments.billing_interpreter")}>

@@ -396,7 +396,7 @@
     "select_clinic_first": "Select a clinic first",
     "po_number": "PO Number",
     "time_tracking": "Time Tracking",
-    "billing_interpreter": "Billing Interpreter",
+    "billing_interpreter": "Interpreter B",
     "pre_auth_amount": "Pre-auth amount",
     "pre_auth_mileage": "Pre-auth mileage",
     "shift_notes": "Shift notes",
