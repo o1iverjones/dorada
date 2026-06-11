@@ -430,7 +430,7 @@ export function AppointmentDetailPage() {
                   </div>
                 </div>
               ) : (
-                <Field label={t("appointments.interpreter_type")} value={a.interpreter_type_required as string} />
+                <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
               )}
             </div>
 
