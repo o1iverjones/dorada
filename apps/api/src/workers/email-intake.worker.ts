@@ -2,11 +2,9 @@ import { Worker, Queue, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
 import Imap from "imap";
 import { simpleParser } from "mailparser";
-// firebase-admin is an optional runtime dependency; use `any` to avoid compile-time errors
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FirebaseApp = any;
 import { config, redisConnection } from "../config.js";
 import { sendEmail } from "../lib/email.js";
+import { sendExpoPushNotifications } from "../lib/push.js";
 import { extractAppointmentFromEmail } from "../integrations/claude.js";
 import {
   uploadString,
@@ -36,7 +34,6 @@ const emailIntakeQueue = new Queue("email-intake", {
 
 export function createEmailIntakeWorker(
   prisma: PrismaClient,
-  fcmApp: FirebaseApp,
 ) {
   return new Worker<EmailPollJobData | EmailProcessJobData | ConfirmationRetryJobData>(
     "email-intake",
@@ -44,9 +41,9 @@ export function createEmailIntakeWorker(
       if (job.name === "poll-inbox") {
         await handlePollInbox(job as Job<EmailPollJobData>, prisma);
       } else if (job.name === "process-email") {
-        await handleProcessEmail(job as Job<EmailProcessJobData>, prisma, fcmApp);
+        await handleProcessEmail(job as Job<EmailProcessJobData>, prisma);
       } else if (job.name === "retry-confirmation") {
-        await handleRetryConfirmation(job as Job<ConfirmationRetryJobData>, prisma, fcmApp);
+        await handleRetryConfirmation(job as Job<ConfirmationRetryJobData>, prisma);
       }
     },
     {
@@ -98,7 +95,6 @@ async function handlePollInbox(job: Job<EmailPollJobData>, prisma: PrismaClient)
 async function handleProcessEmail(
   job: Job<EmailProcessJobData>,
   prisma: PrismaClient,
-  fcmApp: FirebaseApp,
 ) {
   const { emailLogId, organizationId } = job.data;
 
@@ -146,7 +142,7 @@ async function handleProcessEmail(
         where: { id: emailLogId },
         data: { status: "flagged", duplicate_po: true },
       });
-      await notifyAdmins(organizationId, "duplicate_po", emailLogId, prisma, fcmApp);
+      await notifyAdmins(organizationId, "duplicate_po", emailLogId, prisma);
       return;
     }
   }
@@ -186,13 +182,12 @@ async function handleProcessEmail(
     await performConfirmation(log, draft.id, confirmationMethod, extraction.confirmation_link_url ?? null, prisma);
   }
 
-  await notifyAdmins(organizationId, "new_email_draft", emailLogId, prisma, fcmApp);
+  await notifyAdmins(organizationId, "new_email_draft", emailLogId, prisma);
 }
 
 async function handleRetryConfirmation(
   job: Job<ConfirmationRetryJobData>,
   prisma: PrismaClient,
-  _fcmApp: FirebaseApp,
 ) {
   const { logId, organizationId } = job.data;
   const log = await prisma.emailIntakeLog.findUnique({
@@ -260,7 +255,6 @@ async function notifyAdmins(
   eventType: string,
   relatedId: string,
   prisma: PrismaClient,
-  fcmApp: FirebaseApp,
 ) {
   const users = await prisma.user.findMany({
     where: { organization_id: organizationId, is_active: true },
@@ -270,11 +264,13 @@ async function notifyAdmins(
   for (const user of users) {
     const pref = user.preferences?.email_intake_notification ?? "queue_only";
     if (pref === "immediate_push" && user.fcm_token) {
-      await fcmApp.messaging().send({
-        token: user.fcm_token,
+      await sendExpoPushNotifications([{
+        to: user.fcm_token,
+        title: "New Email Intake Draft",
+        body: "An email requires your review.",
         data: { type: eventType, related_id: relatedId },
-        notification: { title: "New Email Intake Draft", body: "An email requires your review." },
-      }).catch(() => {});
+        sound: "default",
+      }]);
     } else if (pref === "immediate_email" && user.email) {
       await sendEmail({
         to: user.email,

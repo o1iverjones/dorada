@@ -1,10 +1,8 @@
 import { Worker, Queue, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
-// firebase-admin is an optional runtime dependency; use `any` to avoid compile-time errors
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FirebaseApp = any;
-import { config, redisConnection } from "../config.js";
+import { redisConnection } from "../config.js";
 import { sendSms } from "../lib/sms.js";
+import { sendExpoPushNotifications } from "../lib/push.js";
 
 interface FollowUpPromptJobData {
   type: "initial_prompt" | "reminder";
@@ -20,7 +18,6 @@ const followUpQueue = new Queue("follow-up-flow", {
 
 export function createFollowUpFlowWorker(
   prisma: PrismaClient,
-  fcmApp: FirebaseApp,
 ) {
   return new Worker<FollowUpPromptJobData>(
     "follow-up-flow",
@@ -58,19 +55,14 @@ export function createFollowUpFlowWorker(
       if (channel === "sms" && interpreter.phone) {
         await sendSms(interpreter.phone, "Did your patient have a follow-up appointment? Reply YES or NO.");
       } else if (interpreter.fcm_token) {
-        await fcmApp.messaging().send({
-          token: interpreter.fcm_token,
-          data: {
-            type: "follow_up_prompt",
-            appointment_id: appointmentId,
-          },
-          notification: {
-            title: "Follow-up Question",
-            body: "Did your patient have a follow-up appointment scheduled?",
-          },
-          android: { priority: "high" },
-          apns: { payload: { aps: { sound: "default" } } },
-        });
+        await sendExpoPushNotifications([{
+          to: interpreter.fcm_token,
+          title: "Follow-up Question",
+          body: "Did your patient have a follow-up appointment scheduled?",
+          data: { type: "follow_up_prompt", appointment_id: appointmentId },
+          sound: "default",
+          priority: "high",
+        }]);
       }
 
       // Schedule next reminder if within limit

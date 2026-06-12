@@ -9,14 +9,10 @@ import { createAdminAlertWorker } from "./admin-alert.worker.js";
 
 const prisma = new PrismaClient();
 
-// follow-up and email-intake workers still reference a Firebase stub; they
-// will be migrated to Expo push in a follow-up task.
-const noopFcm = { messaging: () => ({ send: async () => {} }) };
-
 const reminderWorker = createAppointmentRemindersWorker(prisma);
-const followUpWorker = createFollowUpFlowWorker(prisma, noopFcm);
+const followUpWorker = createFollowUpFlowWorker(prisma);
 const reportWorker = createReportGenerationWorker(prisma);
-const emailIntakeWorker = createEmailIntakeWorker(prisma, noopFcm);
+const emailIntakeWorker = createEmailIntakeWorker(prisma);
 const adminAlertWorker = createAdminAlertWorker(prisma);
 
 const emailIntakeQueue = new Queue("email-intake", { connection: redisConnection });
