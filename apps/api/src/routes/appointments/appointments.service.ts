@@ -69,6 +69,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 function assertValidTransition(from: string, to: string) {
+  if (from === to) return;
   if (!STATUS_TRANSITIONS[from]?.includes(to)) {
     throw new ValidationError("INVALID_STATUS_TRANSITION", `Cannot transition from ${from} to ${to}`);
   }

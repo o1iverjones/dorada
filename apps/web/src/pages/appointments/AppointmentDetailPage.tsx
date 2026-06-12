@@ -187,7 +187,7 @@ export function AppointmentDetailPage() {
           billing_interpreter: form.billing_interpreter || null,
           pre_auth_amount: form.pre_auth_amount,
           pre_auth_mileage: Math.round(form.pre_auth_mileage),
-          status: form.status as import("@dorada/types").AppointmentStatus,
+          ...(form.status !== (a!.status as string) ? { status: form.status as import("@dorada/types").AppointmentStatus } : {}),
         }),
         patientId
           ? updatePatient.mutateAsync({ date_of_birth: form.dob || null })
