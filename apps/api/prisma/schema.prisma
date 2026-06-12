@@ -347,6 +347,7 @@ model Claim {
   adjuster             String?
   adjuster_phone       String?
   adjuster_email       String?
+  status               String    @default("active")
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 

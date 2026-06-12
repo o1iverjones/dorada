@@ -114,6 +114,7 @@ export async function createClaim(patientId: string, body: CreateClaimBody, orga
       adjuster: body.adjuster ?? null,
       adjuster_phone: body.adjuster_phone ?? null,
       adjuster_email: body.adjuster_email ?? null,
+      status: body.status ?? "active",
     },
     include: claimInclude,
   });
@@ -142,6 +143,7 @@ export async function updateClaim(
       ...(body.adjuster !== undefined ? { adjuster: body.adjuster } : {}),
       ...(body.adjuster_phone !== undefined ? { adjuster_phone: body.adjuster_phone } : {}),
       ...(body.adjuster_email !== undefined ? { adjuster_email: body.adjuster_email } : {}),
+      ...(body.status !== undefined ? { status: body.status } : {}),
     },
     include: claimInclude,
   });
