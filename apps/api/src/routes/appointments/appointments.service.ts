@@ -63,7 +63,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   pending_offer: ["confirmed", ...ADMIN_RESOLVABLE_STATUSES],
   confirmed:     ["in_progress", ...ADMIN_RESOLVABLE_STATUSES],
   in_progress:   ["completed", ...ADMIN_RESOLVABLE_STATUSES],
-  completed:     [],
+  completed:     [...ADMIN_RESOLVABLE_STATUSES],
   // Allow re-classification between admin-resolvable statuses
   ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)])),
 };
