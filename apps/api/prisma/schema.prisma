@@ -40,8 +40,9 @@ model Organization {
   interpreter_rates    InterpreterRate[]
   messages             Message[]
   email_intake_logs    EmailIntakeLog[]
-  super_admin_settings SuperAdminSettings?
-  report_jobs          ReportJob[]
+  super_admin_settings       SuperAdminSettings?
+  report_jobs                ReportJob[]
+  appointment_reminder_configs AppointmentReminderConfig[]
   invoices             Invoice[]
   insurance_companies  InsuranceCompany[]
   admin_alerts         AdminAlert[]
@@ -774,6 +775,20 @@ model SystemSettings {
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("system_settings")
+}
+
+model AppointmentReminderConfig {
+  id              String   @id @default(uuid())
+  organization_id String
+  offset_minutes  Int
+  label           String
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("appointment_reminder_configs")
 }
 
 model AdminAlert {

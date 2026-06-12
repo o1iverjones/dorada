@@ -18,6 +18,7 @@ import { authenticate, authenticateAdmin, authenticateInterpreter } from "../../
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { sendExpoPushNotifications } from "../../lib/push.js";
+import { scheduleRemindersForAppointment, cancelRemindersForAppointment } from "../../workers/appointment-reminders.worker.js";
 import {
   listAppointments,
   getAppointment,
@@ -210,6 +211,8 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
     await cancelAppointment(id, payload.organization_id, actor, fastify.prisma);
+    const { getQueues } = await import("../../workers/queues.js");
+    cancelRemindersForAppointment(id, fastify.prisma, getQueues().appointmentRemindersQueue).catch(console.error);
     return reply.status(204).send();
   });
 
@@ -314,6 +317,12 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const payload = req.user as JwtPayload;
     const result = await confirmOffer(id, offer_id, payload.sub, fastify.prisma);
     fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "confirmed" });
+    // Schedule reminders (fire-and-forget)
+    const { getQueues } = await import("../../workers/queues.js");
+    const appt = await fastify.prisma.appointment.findUnique({ where: { id }, select: { date_time: true } });
+    if (appt) {
+      scheduleRemindersForAppointment(id, payload.organization_id, appt.date_time, fastify.prisma, getQueues().appointmentRemindersQueue).catch(console.error);
+    }
     return reply.send(result);
   });
 
@@ -363,7 +372,14 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
       return reply.status(403).send({ error: { code: "FEATURE_DISABLED", message: "Manual confirm is not enabled" } });
     }
 
-    return reply.send(await manualConfirmInterpreter(id, interpreter_id, payload.organization_id, fastify.prisma));
+    const result = await manualConfirmInterpreter(id, interpreter_id, payload.organization_id, fastify.prisma);
+    // Schedule reminders (fire-and-forget)
+    const { getQueues } = await import("../../workers/queues.js");
+    const appt = await fastify.prisma.appointment.findUnique({ where: { id }, select: { date_time: true } });
+    if (appt) {
+      scheduleRemindersForAppointment(id, payload.organization_id, appt.date_time, fastify.prisma, getQueues().appointmentRemindersQueue).catch(console.error);
+    }
+    return reply.send(result);
   });
 
   // POST /appointments/:id/unassign — admin removes interpreter and returns to pending_offer
@@ -372,6 +388,8 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
     await unassignInterpreter(id, payload.organization_id, actor, fastify.prisma);
+    const { getQueues } = await import("../../workers/queues.js");
+    cancelRemindersForAppointment(id, fastify.prisma, getQueues().appointmentRemindersQueue).catch(console.error);
     return reply.status(200).send({ success: true });
   });
 

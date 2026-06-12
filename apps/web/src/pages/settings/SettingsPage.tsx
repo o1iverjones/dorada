@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates, useUpdateAppointmentType, useDeleteAppointmentType } from "../../hooks/useSettings.js";
+import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates, useUpdateAppointmentType, useDeleteAppointmentType, useReminderConfigs, useCreateReminderConfig, useUpdateReminderConfig, useDeleteReminderConfig, type ReminderConfig } from "../../hooks/useSettings.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -17,6 +17,69 @@ import { cn } from "../../lib/utils.js";
 
 interface Language { id?: string; code: string; name: string; active: boolean; }
 interface AppointmentType { id: string; name: string; pay_model: string; minimum_billable_minutes: number; is_active: boolean; }
+
+function ReminderRow({ reminder, t }: { reminder: ReminderConfig; t: (k: string) => string }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ label: "", offset_minutes: 0 });
+  const update = useUpdateReminderConfig(reminder.id);
+  const remove = useDeleteReminderConfig();
+
+  function startEdit() {
+    setForm({ label: reminder.label, offset_minutes: reminder.offset_minutes });
+    setEditing(true);
+  }
+
+  async function save() {
+    try {
+      await update.mutateAsync({ label: form.label, offset_minutes: form.offset_minutes });
+      setEditing(false);
+      toast({ title: t("common.saved") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded-md border p-3 space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input
+            value={form.label}
+            onChange={(e) => setForm(s => ({ ...s, label: e.target.value }))}
+            placeholder={t("settings.reminder_label")}
+          />
+          <div className="relative">
+            <Input
+              type="number"
+              min={1}
+              value={form.offset_minutes}
+              onChange={(e) => setForm(s => ({ ...s, offset_minutes: parseInt(e.target.value) || 0 }))}
+              className="pr-10"
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">min</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={save} disabled={!form.label.trim() || form.offset_minutes < 1 || update.isPending}>{t("common.save_changes")}</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-md border p-3 text-sm">
+      <div>
+        <p className="font-medium">{reminder.label}</p>
+        <p className="text-xs text-muted-foreground">{reminder.offset_minutes} {t("settings.reminder_offset")}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={startEdit} className="text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+        <button type="button" onClick={() => remove.mutate(reminder.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></button>
+      </div>
+    </div>
+  );
+}
 
 function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => string }) {
   const [editing, setEditing] = useState(false);
@@ -341,6 +404,10 @@ export function SettingsPage() {
 
   const { data: ratesData, refetch: refetchRates } = useInterpreterRates();
   const rates = ratesData?.data ?? [];
+  const { data: reminderConfigs } = useReminderConfigs();
+  const reminders = (reminderConfigs ?? []) as ReminderConfig[];
+  const createReminder = useCreateReminderConfig();
+  const [newReminder, setNewReminder] = useState({ label: "", offset_minutes: "" });
 
   const createRate = useMutation({
     mutationFn: (body: { title: string; amount: number }) => api.post("/settings/interpreter-rates", body),
@@ -571,6 +638,51 @@ export function SettingsPage() {
           <Button onClick={addType} disabled={!newType.name || createType.isPending}>{t("settings.add_type")}</Button>
         </CardContent>
       </Card>
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.interpreter_reminders")}</CardTitle>
+            <CardDescription>{t("settings.reminders_description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              {reminders.map((r) => <ReminderRow key={r.id} reminder={r} t={t} />)}
+              {reminders.length === 0 && <p className="text-sm text-muted-foreground">{t("settings.no_reminders")}</p>}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder={t("settings.reminder_label")}
+                value={newReminder.label}
+                onChange={(e) => setNewReminder(s => ({ ...s, label: e.target.value }))}
+                className="max-w-xs"
+              />
+              <div className="relative max-w-36">
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="60"
+                  value={newReminder.offset_minutes}
+                  onChange={(e) => setNewReminder(s => ({ ...s, offset_minutes: e.target.value }))}
+                  className="pr-10"
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">min</span>
+              </div>
+              <Button
+                onClick={() => {
+                  createReminder.mutate(
+                    { label: newReminder.label.trim(), offset_minutes: parseInt(newReminder.offset_minutes) },
+                    { onSuccess: () => setNewReminder({ label: "", offset_minutes: "" }) },
+                  );
+                }}
+                disabled={!newReminder.label.trim() || !newReminder.offset_minutes || createReminder.isPending}
+              >
+                {t("settings.add_reminder")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {hasPermission("manage_system_settings") && (
         <Card>

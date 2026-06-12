@@ -13,6 +13,7 @@ import {
   getSettings, updateSettings, createAppointmentType, updateAppointmentType,
   deactivateAppointmentType, updateLanguages, getLocalizationStrings, updateLocalizationStrings,
   listInterpreterRates, createInterpreterRate, deleteInterpreterRate,
+  listReminderConfigs, createReminderConfig, updateReminderConfig, deleteReminderConfig,
 } from "./settings.service.js";
 
 export default async function settingsRoutes(fastify: FastifyInstance) {
@@ -70,6 +71,33 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
     await deleteInterpreterRate(id, payload.organization_id, fastify.prisma);
+    return reply.status(204).send();
+  });
+
+  // ─── Interpreter reminder configs ────────────────────────────────────────────
+
+  fastify.get("/reminder-configs", { preHandler }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    return reply.send(await listReminderConfigs(payload.organization_id, fastify.prisma));
+  });
+
+  fastify.post("/reminder-configs", { preHandler }, async (req, reply) => {
+    const { offset_minutes, label } = req.body as { offset_minutes: number; label: string };
+    const payload = req.user as JwtPayload;
+    return reply.status(201).send(await createReminderConfig({ offset_minutes, label }, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.patch("/reminder-configs/:id", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as { offset_minutes?: number; label?: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await updateReminderConfig(id, body, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.delete("/reminder-configs/:id", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    await deleteReminderConfig(id, payload.organization_id, fastify.prisma);
     return reply.status(204).send();
   });
 

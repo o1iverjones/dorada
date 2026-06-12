@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { Queue } from "bullmq";
-import { config, redisConnection } from "../config.js";
+import { redisConnection } from "../config.js";
 import { createAppointmentRemindersWorker } from "./appointment-reminders.worker.js";
 import { createFollowUpFlowWorker } from "./follow-up-flow.worker.js";
 import { createReportGenerationWorker } from "./report-generation.worker.js";
@@ -9,37 +9,18 @@ import { createAdminAlertWorker } from "./admin-alert.worker.js";
 
 const prisma = new PrismaClient();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyApp = any;
+// follow-up and email-intake workers still reference a Firebase stub; they
+// will be migrated to Expo push in a follow-up task.
+const noopFcm = { messaging: () => ({ send: async () => {} }) };
 
-// Firebase — dynamically imported so the worker boots even if firebase-admin isn't installed
-let fcmApp: AnyApp;
-try {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error — firebase-admin is an optional dependency
-  const admin = await import("firebase-admin");
-  const adminDefault = admin.default ?? admin;
-  if (!adminDefault.apps.length) {
-    adminDefault.initializeApp({
-      credential: adminDefault.credential.applicationDefault(),
-      projectId: config.GCP_PROJECT_ID || undefined,
-    });
-  }
-  fcmApp = adminDefault.app();
-} catch {
-  console.warn("⚠️  firebase-admin not available — push notifications disabled");
-  fcmApp = { messaging: () => ({ send: async () => {} }) };
-}
-
-const reminderWorker = createAppointmentRemindersWorker(prisma, fcmApp);
-const followUpWorker = createFollowUpFlowWorker(prisma, fcmApp);
+const reminderWorker = createAppointmentRemindersWorker(prisma);
+const followUpWorker = createFollowUpFlowWorker(prisma, noopFcm);
 const reportWorker = createReportGenerationWorker(prisma);
-const emailIntakeWorker = createEmailIntakeWorker(prisma, fcmApp);
+const emailIntakeWorker = createEmailIntakeWorker(prisma, noopFcm);
 const adminAlertWorker = createAdminAlertWorker(prisma);
 
 const emailIntakeQueue = new Queue("email-intake", { connection: redisConnection });
 
-// Kick off repeatable inbox-poll jobs for all active orgs at startup
 async function scheduleEmailPolling() {
   const superSettings = await prisma.superAdminSettings.findFirst();
   const intervalMinutes = superSettings?.email_polling_interval_minutes ?? 5;

@@ -153,6 +153,48 @@ export async function deleteInterpreterRate(id: string, organizationId: string, 
   await prisma.interpreterRate.update({ where: { id }, data: { is_active: false } });
 }
 
+// ─── Interpreter Reminder Configs ────────────────────────────────────────────
+
+export async function listReminderConfigs(organizationId: string, prisma: PrismaClient) {
+  return prisma.appointmentReminderConfig.findMany({
+    where: { organization_id: organizationId, is_active: true },
+    orderBy: { offset_minutes: "desc" },
+  });
+}
+
+export async function createReminderConfig(
+  body: { offset_minutes: number; label: string },
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  return prisma.appointmentReminderConfig.create({
+    data: { organization_id: organizationId, offset_minutes: body.offset_minutes, label: body.label },
+  });
+}
+
+export async function updateReminderConfig(
+  id: string,
+  body: { offset_minutes?: number; label?: string },
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const config = await prisma.appointmentReminderConfig.findUnique({ where: { id } });
+  if (!config || config.organization_id !== organizationId) throw new NotFoundError("REMINDER_NOT_FOUND", "Reminder not found");
+  return prisma.appointmentReminderConfig.update({
+    where: { id },
+    data: {
+      ...(body.offset_minutes !== undefined ? { offset_minutes: body.offset_minutes } : {}),
+      ...(body.label !== undefined ? { label: body.label } : {}),
+    },
+  });
+}
+
+export async function deleteReminderConfig(id: string, organizationId: string, prisma: PrismaClient) {
+  const config = await prisma.appointmentReminderConfig.findUnique({ where: { id } });
+  if (!config || config.organization_id !== organizationId) throw new NotFoundError("REMINDER_NOT_FOUND", "Reminder not found");
+  await prisma.appointmentReminderConfig.update({ where: { id }, data: { is_active: false } });
+}
+
 export async function getLocalizationStrings(locale: string, organizationId: string, prisma: PrismaClient) {
   const overrides = await prisma.localeString.findMany({
     where: { organization_id: organizationId, locale },
