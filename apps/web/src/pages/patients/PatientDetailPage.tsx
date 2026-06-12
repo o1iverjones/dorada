@@ -362,26 +362,48 @@ export function PatientDetailPage() {
       {/* Appointment history */}
       <Card>
         <CardHeader><CardTitle>{t("patients.appointment_history")}</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {!appts?.data.length ? (
-            <p className="text-sm text-muted-foreground">{t("patients.no_appointments")}</p>
+            <p className="text-sm text-muted-foreground px-6 py-4">{t("patients.no_appointments")}</p>
           ) : (
-            <ul className="space-y-2">
-              {(appts.data as Array<Record<string, unknown>>).map((a) => (
-                <li key={a.id as string}>
-                  <button
-                    onClick={() => navigate(`/appointments/${a.id as string}`)}
-                    className="w-full flex items-center justify-between rounded-md border p-3 text-sm text-left hover:bg-muted/50 transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium">{formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</p>
-                      <p className="text-muted-foreground">{(a.clinic as Record<string, unknown>)?.name as string ?? "—"}</p>
-                    </div>
-                    <StatusBadge status={a.status as string} />
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.date_time")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.agency")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.referring_physician")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.status")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.interpreter")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(appts.data as Array<Record<string, unknown>>).map((a) => (
+                    <tr
+                      key={a.id as string}
+                      onClick={() => navigate(`/appointments/${a.id as string}`)}
+                      className="border-b last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-2.5 whitespace-nowrap font-medium">
+                        {formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {(a.agency as Record<string, unknown>)?.name as string ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {a.referring_physician as string ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge status={a.status as string} />
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {(a.interpreter as Record<string, unknown>)?.name as string ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
