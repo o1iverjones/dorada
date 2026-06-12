@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "../../hooks/use-toast.js";
 import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle, UserX } from "lucide-react";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { DurationInput } from "../../components/shared/DurationInput.js";
 import { PhoneLink } from "../../components/shared/PhoneLink.js";
 
@@ -41,6 +42,7 @@ type FormState = {
   pre_auth_amount: number;
   pre_auth_mileage: number;
   dob: string; // "YYYY-MM-DD" or ""
+  status: string;
 };
 
 export function AppointmentDetailPage() {
@@ -159,6 +161,7 @@ export function AppointmentDetailPage() {
       pre_auth_amount: Number(a!.pre_auth_amount ?? 0),
       pre_auth_mileage: Number(a!.pre_auth_mileage ?? 0),
       dob: ((a!.patient as Record<string, unknown>)?.date_of_birth as string | null)?.slice(0, 10) ?? "",
+      status: a!.status as string,
     });
     setEditing(true);
   }
@@ -184,6 +187,7 @@ export function AppointmentDetailPage() {
           billing_interpreter: form.billing_interpreter || null,
           pre_auth_amount: form.pre_auth_amount,
           pre_auth_mileage: Math.round(form.pre_auth_mileage),
+          status: form.status as import("@dorada/types").AppointmentStatus,
         }),
         patientId
           ? updatePatient.mutateAsync({ date_of_birth: form.dob || null })
@@ -367,9 +371,30 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Status — always read-only */}
+            {/* Status */}
             <div className="px-6 py-2.5 even:bg-muted/40">
-              <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
+              {editing ? (
+                <InlineRow label={t("appointments.status")} wide>
+                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                    <SelectTrigger className="h-7 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        "unassigned", "pending_offer", "confirmed", "in_progress", "completed",
+                        "cancelled", "late_cancellation", "no_show", "rescheduled",
+                        "double_booking", "pt_speaks_eng", "dr_speaks_es",
+                      ].map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {t(`appointment.status.${s}`, { defaultValue: s.replace(/_/g, " ") })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
+              )}
             </div>
 
             {/* Date/Time */}
