@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getSocket } from "../../lib/socket.js";
@@ -65,6 +65,8 @@ export function AppointmentDetailPage() {
   const [clockOutForm, setClockOutForm] = useState("");
   const [confirmUnassign, setConfirmUnassign] = useState(false);
   const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
+  const [highlightPo, setHighlightPo] = useState(false);
+  const poRef = useRef<HTMLDivElement>(null);
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
 
@@ -325,7 +327,7 @@ export function AppointmentDetailPage() {
             </div>
 
             {/* PO Number */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
+            <div ref={poRef} className={`px-6 py-2.5 even:bg-muted/40 transition-colors duration-300 ${highlightPo ? "ring-2 ring-inset ring-destructive bg-destructive/5" : ""}`}>
               {editing ? (
                 <InlineRow label={t("appointments.po_number")}>
                   <Input className="h-7 text-sm" value={form.po_number} onChange={(e) => set("po_number", e.target.value)} placeholder="—" />
@@ -538,7 +540,11 @@ export function AppointmentDetailPage() {
 
         <div className="space-y-6">
           <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
-          <BillingCard appointmentId={id!} appointment={a} />
+          <BillingCard appointmentId={id!} appointment={a} onPoRequired={() => {
+            poRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            setHighlightPo(true);
+            setTimeout(() => setHighlightPo(false), 3000);
+          }} />
         </div>
 
         {a.shift_notes && (
@@ -960,7 +966,7 @@ export function AppointmentDetailPage() {
   );
 }
 
-function BillingCard({ appointmentId, appointment }: { appointmentId: string; appointment: Record<string, unknown> }) {
+function BillingCard({ appointmentId, appointment, onPoRequired }: { appointmentId: string; appointment: Record<string, unknown>; onPoRequired: () => void }) {
   const { t } = useTranslation();
   const patch = usePatchBilling(appointmentId);
 
@@ -1038,7 +1044,14 @@ function BillingCard({ appointmentId, appointment }: { appointmentId: string; ap
               {t("appointments.billing_pending_approval")}
             </button>
             <button
-              onClick={() => toggle("billing_approval_status", "approved")}
+              onClick={() => {
+                if (!b.po_number) {
+                  toast({ title: t("appointments.po_number_required"), variant: "destructive" });
+                  onPoRequired();
+                  return;
+                }
+                toggle("billing_approval_status", "approved");
+              }}
               disabled={patch.isPending}
               className={`px-3 py-1.5 transition-colors ${approvalStatus === "approved" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
             >
