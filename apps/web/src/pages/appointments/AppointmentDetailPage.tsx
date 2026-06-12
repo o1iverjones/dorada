@@ -375,7 +375,7 @@ export function AppointmentDetailPage() {
             {/* Date/Time */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
-                <InlineRow label={t("appointments.date_time")}>
+                <InlineRow label={t("appointments.date_time")} wide>
                   <DateTimePicker value={form.date_time} onChange={(v) => set("date_time", v)} />
                 </InlineRow>
               ) : (
@@ -1191,11 +1191,11 @@ function extractCityFromAddress(address: string | null | undefined): string | nu
   return null;
 }
 
-function InlineRow({ label, children }: { label: string; children: React.ReactNode }) {
+function InlineRow({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
-      <div className="w-52 shrink-0">{children}</div>
+      <div className={wide ? "shrink-0" : "w-52 shrink-0"}>{children}</div>
     </div>
   );
 }
