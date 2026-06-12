@@ -506,67 +506,6 @@ export function SettingsPage() {
       <Button onClick={saveSettings} disabled={update.isPending}>{t("common.save_changes")}</Button>
 
       <Card>
-        <CardHeader><CardTitle>{t("settings.languages")}</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {languages.filter((l) => l.active).map((l) => (
-              removingMode ? (
-                <button
-                  key={l.code}
-                  type="button"
-                  onClick={() => {
-                    const merged = languages.map((x) =>
-                      x.code === l.code ? { code: x.code, name: x.name, active: false } : { code: x.code, name: x.name, active: x.active }
-                    );
-                    patchLanguages.mutate({ languages: merged });
-                  }}
-                  className="rounded-full border px-3 py-1 text-sm cursor-pointer animate-pulse shadow-[0_0_0_3px_hsl(var(--destructive)/0.3)] hover:bg-destructive/10 hover:shadow-[0_0_0_3px_hsl(var(--destructive)/0.6)] transition-all"
-                >
-                  {l.name}
-                </button>
-              ) : (
-                <span key={l.code} className="rounded-full border px-3 py-1 text-sm">{l.name}</span>
-              )
-            ))}
-          </div>
-          <div className="flex gap-2">
-            {!removingMode && (
-              <>
-                <Input placeholder={t("settings.new_language")} value={newLang.name} onChange={(e) => setNewLang(s => ({ ...s, name: e.target.value, code: e.target.value.trim().toLowerCase().slice(0, 10).replace(/\s+/g, "_") }))} className="max-w-xs" />
-                <Button onClick={addLanguage} disabled={!newLang.name.trim() || patchLanguages.isPending}>{t("common.add")}</Button>
-              </>
-            )}
-            {canRemoveLanguages && (
-              <Button onClick={() => setRemovingMode((v) => !v)}>
-                {removingMode ? t("settings.languages_done") : t("settings.remove_languages")}
-              </Button>
-            )}
-          </div>
-          {hasPermission("manage_system_settings") && (
-            <div className="border-t pt-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{t("settings.show_language")}</p>
-                <p className="text-xs text-muted-foreground">{t("settings.show_language_description")}</p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={((settings as Record<string, unknown>)?.show_language ?? true) as boolean}
-                onClick={() => update.mutate({ show_language: !(((settings as Record<string, unknown>)?.show_language) ?? true) })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "bg-primary" : "bg-input"
-                }`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "translate-x-6" : "translate-x-1"
-                }`} />
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader><CardTitle>{t("settings.interpreter_rates")}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -781,6 +720,67 @@ export function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader><CardTitle>{t("settings.languages")}</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {languages.filter((l) => l.active).map((l) => (
+              removingMode ? (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => {
+                    const merged = languages.map((x) =>
+                      x.code === l.code ? { code: x.code, name: x.name, active: false } : { code: x.code, name: x.name, active: x.active }
+                    );
+                    patchLanguages.mutate({ languages: merged });
+                  }}
+                  className="rounded-full border px-3 py-1 text-sm cursor-pointer animate-pulse shadow-[0_0_0_3px_hsl(var(--destructive)/0.3)] hover:bg-destructive/10 hover:shadow-[0_0_0_3px_hsl(var(--destructive)/0.6)] transition-all"
+                >
+                  {l.name}
+                </button>
+              ) : (
+                <span key={l.code} className="rounded-full border px-3 py-1 text-sm">{l.name}</span>
+              )
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {!removingMode && (
+              <>
+                <Input placeholder={t("settings.new_language")} value={newLang.name} onChange={(e) => setNewLang(s => ({ ...s, name: e.target.value, code: e.target.value.trim().toLowerCase().slice(0, 10).replace(/\s+/g, "_") }))} className="max-w-xs" />
+                <Button onClick={addLanguage} disabled={!newLang.name.trim() || patchLanguages.isPending}>{t("common.add")}</Button>
+              </>
+            )}
+            {canRemoveLanguages && (
+              <Button onClick={() => setRemovingMode((v) => !v)}>
+                {removingMode ? t("settings.languages_done") : t("settings.remove_languages")}
+              </Button>
+            )}
+          </div>
+          {hasPermission("manage_system_settings") && (
+            <div className="border-t pt-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.show_language")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.show_language_description")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={((settings as Record<string, unknown>)?.show_language ?? true) as boolean}
+                onClick={() => update.mutate({ show_language: !(((settings as Record<string, unknown>)?.show_language) ?? true) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {hasPermission("manage_system_settings") && <CsvImportCard />}
     </div>
