@@ -89,7 +89,7 @@ export type SuperAdminSettings = z.infer<typeof SuperAdminSettingsSchema>;
 export const AdminAlertSchema = z.object({
   id: z.string(),
   organization_id: z.string(),
-  type: z.enum(["offer_declined", "long_appointment"]),
+  type: z.enum(["offer_declined", "long_appointment", "stale_billing"]),
   appointment_id: z.string().nullable(),
   message: z.string(),
   is_read: z.boolean(),

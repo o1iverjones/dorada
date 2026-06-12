@@ -5,7 +5,7 @@ import { createAppointmentRemindersWorker } from "./appointment-reminders.worker
 import { createFollowUpFlowWorker } from "./follow-up-flow.worker.js";
 import { createReportGenerationWorker } from "./report-generation.worker.js";
 import { createEmailIntakeWorker } from "./email-intake.worker.js";
-import { createAdminAlertWorker } from "./admin-alert.worker.js";
+import { createAdminAlertWorker, scheduleAdminAlertPolling } from "./admin-alert.worker.js";
 import { createClinicConfirmationWorker, scheduleClinicConfirmationPolling } from "./clinic-confirmation.worker.js";
 
 const prisma = new PrismaClient();
@@ -42,6 +42,7 @@ async function scheduleEmailPolling() {
 
 scheduleEmailPolling().catch(console.error);
 scheduleClinicConfirmationPolling().catch(console.error);
+scheduleAdminAlertPolling().catch(console.error);
 
 const workers = [reminderWorker, followUpWorker, reportWorker, emailIntakeWorker, adminAlertWorker, clinicConfirmationWorker];
 
