@@ -252,7 +252,6 @@ export function AppointmentDetailPage() {
                       referring_physician: a.referring_physician,
                       pre_auth_amount: a.pre_auth_amount,
                       pre_auth_mileage: a.pre_auth_mileage,
-                      po_number: a.po_number,
                     },
                   },
                 })}>
