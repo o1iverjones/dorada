@@ -398,6 +398,7 @@
     "clinic": "Clínica",
     "clinic_phone": "Teléfono de la clínica",
     "agency": "Agencia",
+    "agency_order_check": "¿Ya verificaste que la fecha, hora y lugar coinciden con la orden de la agencia?",
     "patient": "Paciente",
     "referring_physician": "Proveedor",
     "provider": "Proveedor",

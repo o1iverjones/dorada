@@ -398,6 +398,7 @@
     "clinic": "Clinic",
     "clinic_phone": "Clinic phone",
     "agency": "Agency",
+    "agency_order_check": "Have you already checked that the date, time and location match the agency's order?",
     "patient": "Patient",
     "referring_physician": "Provider",
     "provider": "Provider",

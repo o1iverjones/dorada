@@ -17,7 +17,7 @@ import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
 import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle, UserX } from "lucide-react";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
@@ -64,6 +64,7 @@ export function AppointmentDetailPage() {
   const [patientArrivedForm, setPatientArrivedForm] = useState("");
   const [clockOutForm, setClockOutForm] = useState("");
   const [confirmUnassign, setConfirmUnassign] = useState(false);
+  const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
 
@@ -485,7 +486,7 @@ export function AppointmentDetailPage() {
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
                 <InlineRow label={t("appointments.agency")}>
-                  <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => set("agency_id", v)} placeholder={t("common.search")} />
+                  <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => { if (v) { setPendingAgencyId(v); } else { set("agency_id", v); } }} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.agency")} value={(a.agency as Record<string, unknown>)?.name as string ?? "—"} />
@@ -939,6 +940,19 @@ export function AppointmentDetailPage() {
             >
               {t("appointments.unassign")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pendingAgencyId !== null} onOpenChange={(open) => { if (!open) setPendingAgencyId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("appointments.agency")}</DialogTitle>
+            <DialogDescription>{t("appointments.agency_order_check")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingAgencyId(null)}>{t("common.no")}</Button>
+            <Button onClick={() => { set("agency_id", pendingAgencyId!); setPendingAgencyId(null); }}>{t("common.yes")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
