@@ -42,6 +42,7 @@ export const PatientSchema = z.object({
   phone: z.string().nullable(),
   email: z.string().email().nullable(),
   preferred_language: z.string().nullable(),
+  notes: z.string().nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -59,6 +60,7 @@ export const UpdatePatientBodySchema = CreatePatientBodySchema.partial().extend(
   // Allow null to clear the date of birth
   date_of_birth: z.string().date().nullable().optional(),
   preferred_interpreter_id: UuidSchema.nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
 });
 
 export const PatientListQuerySchema = z.object({

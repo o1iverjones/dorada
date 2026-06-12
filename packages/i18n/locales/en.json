@@ -121,11 +121,19 @@
     "otp_invalid": "Invalid or expired code. Please try again."
   },
   "appointment": {
+    "status.unassigned": "Unassigned",
     "status.pending_offer": "Pending offer",
     "status.confirmed": "Confirmed",
+    "status.declined": "Declined",
     "status.in_progress": "In progress",
     "status.completed": "Completed",
     "status.cancelled": "Cancelled",
+    "status.late_cancellation": "Late cancellation",
+    "status.no_show": "No show",
+    "status.rescheduled": "Rescheduled",
+    "status.double_booking": "Double booking",
+    "status.pt_speaks_eng": "Pt speaks Eng",
+    "status.dr_speaks_es": "Dr speaks ES",
     "source.manual": "Manual",
     "source.email_intake": "Email intake",
     "source.follow_up": "Follow-up",
@@ -396,7 +404,7 @@
     "select_clinic_first": "Select a clinic first",
     "po_number": "PO Number",
     "time_tracking": "Time Tracking",
-    "billing_interpreter": "Billing Interpreter",
+    "billing_interpreter": "Interpreter B",
     "pre_auth_amount": "Pre-auth amount",
     "pre_auth_mileage": "Pre-auth mileage",
     "shift_notes": "Shift notes",
@@ -733,7 +741,10 @@
     "no_appointments": "No appointments on record.",
     "empty": "No patients found.",
     "created": "Patient added.",
-    "edit.title": "Edit patient"
+    "edit.title": "Edit patient",
+    "notes": "Notes",
+    "notes_placeholder": "Add notes about this patient…",
+    "notes_saved": "Notes saved."
   },
   "reports": {
     "title": "Reports",

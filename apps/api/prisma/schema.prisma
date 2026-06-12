@@ -322,6 +322,7 @@ model Patient {
   phone                    String?
   email                    String?
   preferred_language       String?
+  notes                    String?
   created_at               DateTime  @default(now())
   updated_at               DateTime  @updatedAt
 

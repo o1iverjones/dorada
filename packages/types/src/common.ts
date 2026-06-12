@@ -27,6 +27,12 @@ export const AppointmentStatusSchema = z.enum([
   "completed",
   "cancelled",
   "declined",
+  "late_cancellation",
+  "no_show",
+  "rescheduled",
+  "double_booking",
+  "pt_speaks_eng",
+  "dr_speaks_es",
 ]);
 
 export const InterpreterTypeSchema = z.enum(["qualified", "certified", "qualified_and_certified"]);

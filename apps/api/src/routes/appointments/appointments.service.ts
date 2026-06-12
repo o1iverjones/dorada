@@ -53,12 +53,19 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
   }
 }
 
+const ADMIN_RESOLVABLE_STATUSES = [
+  "cancelled", "late_cancellation", "no_show", "rescheduled",
+  "double_booking", "pt_speaks_eng", "dr_speaks_es",
+];
+
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending_offer: ["confirmed", "cancelled"],
-  confirmed: ["in_progress", "cancelled"],
-  in_progress: ["completed"],
-  completed: [],
-  cancelled: [],
+  unassigned:    [...ADMIN_RESOLVABLE_STATUSES],
+  pending_offer: ["confirmed", ...ADMIN_RESOLVABLE_STATUSES],
+  confirmed:     ["in_progress", ...ADMIN_RESOLVABLE_STATUSES],
+  in_progress:   ["completed", ...ADMIN_RESOLVABLE_STATUSES],
+  completed:     [...ADMIN_RESOLVABLE_STATUSES],
+  // Allow re-classification between admin-resolvable statuses
+  ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)])),
 };
 
 function assertValidTransition(from: string, to: string) {

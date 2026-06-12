@@ -121,11 +121,19 @@
     "otp_invalid": "Código inválido o expirado. Por favor intenta de nuevo."
   },
   "appointment": {
+    "status.unassigned": "Sin asignar",
     "status.pending_offer": "Pendiente de oferta",
     "status.confirmed": "Confirmada",
+    "status.declined": "Rechazada",
     "status.in_progress": "En progreso",
     "status.completed": "Completada",
     "status.cancelled": "Cancelada",
+    "status.late_cancellation": "Cancelación tardía",
+    "status.no_show": "No se presentó",
+    "status.rescheduled": "Reprogramada",
+    "status.double_booking": "Doble reserva",
+    "status.pt_speaks_eng": "Paciente habla inglés",
+    "status.dr_speaks_es": "Dr. habla español",
     "source.manual": "Manual",
     "source.email_intake": "Correo entrante",
     "source.follow_up": "Seguimiento",
@@ -396,7 +404,7 @@
     "select_clinic_first": "Selecciona una clínica primero",
     "po_number": "Número de PO",
     "time_tracking": "Seguimiento de tiempo",
-    "billing_interpreter": "Intérprete de Facturación",
+    "billing_interpreter": "Intérprete B",
     "pre_auth_amount": "Monto preautorizado",
     "pre_auth_mileage": "Millaje preautorizado",
     "shift_notes": "Notas del turno",
@@ -733,7 +741,10 @@
     "no_appointments": "No hay citas en el registro.",
     "empty": "No se encontraron pacientes.",
     "created": "Paciente agregado.",
-    "edit.title": "Editar paciente"
+    "edit.title": "Editar paciente",
+    "notes": "Notas",
+    "notes_placeholder": "Agrega notas sobre este paciente…",
+    "notes_saved": "Notas guardadas."
   },
   "reports": {
     "title": "Reportes",
