@@ -32,6 +32,8 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
     allow_manual_confirm: settings?.allow_manual_confirm ?? false,
     show_language: settings?.show_language ?? true,
     long_appointment_alert_minutes: settings?.long_appointment_alert_minutes ?? 105,
+    clinic_confirmation_enabled: settings?.clinic_confirmation_enabled ?? false,
+    clinic_confirmation_time: settings?.clinic_confirmation_time ?? "08:00",
     languages,
     appointment_types: appointmentTypes,
   };
@@ -54,6 +56,8 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       ...(body.allow_manual_confirm !== undefined ? { allow_manual_confirm: body.allow_manual_confirm } : {}),
       ...(body.show_language !== undefined ? { show_language: body.show_language } : {}),
       ...(body.long_appointment_alert_minutes !== undefined ? { long_appointment_alert_minutes: body.long_appointment_alert_minutes } : {}),
+      ...(body.clinic_confirmation_enabled !== undefined ? { clinic_confirmation_enabled: body.clinic_confirmation_enabled } : {}),
+      ...(body.clinic_confirmation_time !== undefined ? { clinic_confirmation_time: body.clinic_confirmation_time } : {}),
     },
     create: {
       organization_id: organizationId,
@@ -66,6 +70,8 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       allow_manual_confirm: body.allow_manual_confirm ?? false,
       show_language: body.show_language ?? true,
       long_appointment_alert_minutes: body.long_appointment_alert_minutes ?? 105,
+      clinic_confirmation_enabled: body.clinic_confirmation_enabled ?? false,
+      clinic_confirmation_time: body.clinic_confirmation_time ?? "08:00",
     },
   });
 

@@ -625,6 +625,45 @@ export function SettingsPage() {
 
       {hasPermission("manage_system_settings") && (
         <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.clinic_confirmation")}</CardTitle>
+            <CardDescription>{t("settings.clinic_confirmation_description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.clinic_confirmation_enabled")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={((settings as Record<string, unknown>)?.clinic_confirmation_enabled ?? false) as boolean}
+                onClick={() => update.mutate({ clinic_confirmation_enabled: !((settings as Record<string, unknown>)?.clinic_confirmation_enabled as boolean ?? false) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  (settings as Record<string, unknown>)?.clinic_confirmation_enabled ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  (settings as Record<string, unknown>)?.clinic_confirmation_enabled ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.clinic_confirmation_time")}</Label>
+              <Input
+                type="time"
+                className="max-w-xs"
+                value={((settings as Record<string, unknown>)?.clinic_confirmation_time as string) ?? "08:00"}
+                onChange={(e) => update.mutate({ clinic_confirmation_time: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">{t("settings.clinic_confirmation_time_hint")}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
           <CardHeader><CardTitle>{t("settings.super_admin_options")}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
 

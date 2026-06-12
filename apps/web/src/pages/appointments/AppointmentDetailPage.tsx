@@ -325,6 +325,22 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
+            {/* Clinic confirmed */}
+            {!editing && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                <Field
+                  label={t("appointments.clinic_confirmed")}
+                  value={
+                    a.clinic_confirmed ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">✓ Yes</span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )
+                  }
+                />
+              </div>
+            )}
+
             {/* PO Number */}
             <div ref={poRef} className={`px-6 py-2.5 even:bg-muted/40 transition-colors duration-300 ${highlightPo ? "ring-2 ring-inset ring-destructive bg-destructive/5" : ""}`}>
               {editing ? (

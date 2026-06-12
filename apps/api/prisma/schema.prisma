@@ -437,6 +437,7 @@ model Appointment {
   billing_retro              Boolean   @default(false)
   billing_payment_status     String    @default("not_paid")
   billing_approval_status    String    @default("pending_approval")
+  clinic_confirmed           Boolean   @default(false)
   created_at                 DateTime  @default(now())
   updated_at                 DateTime  @updatedAt
 
@@ -771,6 +772,9 @@ model SystemSettings {
   allow_manual_confirm                Boolean  @default(false)
   show_language                       Boolean  @default(true)
   long_appointment_alert_minutes      Int      @default(105)
+  clinic_confirmation_enabled         Boolean  @default(false)
+  clinic_confirmation_time            String   @default("08:00")
+  clinic_confirmation_last_sent_date  String?
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
