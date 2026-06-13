@@ -55,11 +55,22 @@ export function useClinicNotes(id: string) {
 export function useAddClinicNote(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) => api.post(`/clinics/${id}/admin-notes`, { content }),
+    mutationFn: ({ content, image_url }: { content: string; image_url?: string | null }) =>
+      api.post(`/clinics/${id}/admin-notes`, { content, image_url }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clinics", id, "notes"] });
       qc.invalidateQueries({ queryKey: ["clinics", id, "activity"] });
       qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
+  });
+}
+
+export function useUploadClinicNoteImage(id: string) {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return api.post<{ url: string }>(`/clinics/${id}/note-image`, fd);
     },
   });
 }

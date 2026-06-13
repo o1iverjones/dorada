@@ -6,6 +6,8 @@ import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { listClinics, getClinic, createClinic, updateClinic, deactivateClinic, setInterpreterBlocks, getClinicActivity, getClinicNotes, addClinicNote, listInterpreterNotes, createInterpreterNote, updateInterpreterNote, deleteInterpreterNote, listClinicDoctors, addClinicDoctor, removeClinicDoctor } from "./clinics.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
+import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
+import { noteImagePath } from "../../integrations/gcs.js";
 
 export default async function clinicRoutes(fastify: FastifyInstance) {
   const preHandler = [authenticateAdmin, requirePermission("manage_clinics")];
@@ -84,12 +86,27 @@ export default async function clinicRoutes(fastify: FastifyInstance) {
 
   fastify.post("/:id/admin-notes", { preHandler }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { content } = z.object({ content: z.string().min(1).max(800) }).parse(req.body);
+    const { content, image_url } = z.object({ content: z.string().min(1).max(800), image_url: z.string().url().nullish() }).parse(req.body);
     const payload = req.user as JwtPayload;
     const actor = payload.name
       ? { id: payload.sub, name: payload.name }
       : { id: payload.sub, name: (await fastify.prisma.user.findUnique({ where: { id: payload.sub }, select: { name: true } }))?.name ?? "Admin" };
-    return reply.status(201).send(await addClinicNote(id, content, payload.organization_id, actor, fastify.prisma));
+    return reply.status(201).send(await addClinicNote(id, content, payload.organization_id, actor, fastify.prisma, image_url ?? null));
+  });
+
+  // POST /clinics/:id/note-image  (upload image before saving a note)
+  fastify.post("/:id/note-image", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const data = await req.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
+    try {
+      const filename = imageFilename(data.filename, data.mimetype);
+      const url = await uploadImage(data, noteImagePath("clinic", id, filename));
+      return reply.send({ url });
+    } catch (err) {
+      if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
+      throw err;
+    }
   });
 
   fastify.put("/:id/interpreter-blocks", { preHandler }, async (req, reply) => {

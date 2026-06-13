@@ -517,6 +517,7 @@ model AppointmentNote {
   appointment_id  String
   organization_id String
   content         String   @db.VarChar(800)
+  image_url       String?
   admin_id        String?
   admin_name      String
   created_at      DateTime @default(now())
@@ -532,6 +533,7 @@ model ClinicNote {
   clinic_id       String
   organization_id String
   content         String   @db.VarChar(800)
+  image_url       String?
   admin_id        String?
   admin_name      String
   created_at      DateTime @default(now())
@@ -722,6 +724,7 @@ model Message {
   sender_type     String
   sender_user_id  String?
   body            String
+  image_url       String?
   sent_at         DateTime  @default(now())
   read_at         DateTime?
 

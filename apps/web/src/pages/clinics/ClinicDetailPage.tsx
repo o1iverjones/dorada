@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useClinic, useUpdateClinic, useSetClinicInterpreterBlocks, useClinicActivity, useClinicNotes, useAddClinicNote, useClinicInterpreterNotes, useCreateClinicInterpreterNote, useUpdateClinicInterpreterNote, useDeleteClinicInterpreterNote, useAddClinicDoctor, useRemoveClinicDoctor } from "../../hooks/useClinics.js";
+import { useClinic, useUpdateClinic, useSetClinicInterpreterBlocks, useClinicActivity, useClinicNotes, useAddClinicNote, useUploadClinicNoteImage, useClinicInterpreterNotes, useCreateClinicInterpreterNote, useUpdateClinicInterpreterNote, useDeleteClinicInterpreterNote, useAddClinicDoctor, useRemoveClinicDoctor } from "../../hooks/useClinics.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
@@ -34,6 +34,7 @@ export function ClinicDetailPage() {
   const { data: activityLog } = useClinicActivity(id!);
   const { data: adminNotes } = useClinicNotes(id!);
   const addNote = useAddClinicNote(id!);
+  const uploadNoteImage = useUploadClinicNoteImage(id!);
   const { data: interpreterNotes } = useClinicInterpreterNotes(id!);
   const createInterpreterNote = useCreateClinicInterpreterNote(id!);
   const updateInterpreterNote = useUpdateClinicInterpreterNote(id!);
@@ -409,8 +410,9 @@ export function ClinicDetailPage() {
             <NoteInput
               value={noteText}
               onChange={setNoteText}
-              onSave={async () => { await addNote.mutateAsync(noteText.trim()); setNoteText(""); }}
+              onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
               isSaving={addNote.isPending}
+              onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
               placeholder={t("appointments.admin_notes_placeholder")}
               saveLabel={t("common.save")}
             />
@@ -424,6 +426,11 @@ export function ClinicDetailPage() {
                       <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
+                    {n.image_url && (
+                      <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
+                        <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>

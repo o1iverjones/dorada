@@ -4,6 +4,7 @@ import { UuidSchema } from "./common.js";
 export const MessageSchema = z.object({
   id: UuidSchema,
   body: z.string(),
+  image_url: z.string().nullable(),
   sender_type: z.enum(["admin", "interpreter"]),
   sender: z.object({ id: UuidSchema, name: z.string() }),
   sent_at: z.string().datetime(),
@@ -23,6 +24,7 @@ export const ConversationSchema = z.object({
 
 export const SendMessageBodySchema = z.object({
   body: z.string().min(1).max(2000),
+  image_url: z.string().url().nullish(),
 });
 
 export const ConversationListQuerySchema = z.object({

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getSocket } from "../../lib/socket.js";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useAgencies } from "../../hooks/useAgencies.js";
@@ -88,6 +88,7 @@ export function AppointmentDetailPage() {
   const { data: activityLog } = useAppointmentActivity(id!);
   const { data: adminNotes } = useAppointmentNotes(id!);
   const addNote = useAddAppointmentNote(id!);
+  const uploadNoteImage = useUploadAppointmentNoteImage(id!);
   const { data: mediaData } = useAppointmentMedia(id!);
   const manualConfirm = useManualConfirm(id!);
   const unassign = useUnassignInterpreter(id!);
@@ -878,8 +879,9 @@ export function AppointmentDetailPage() {
             <NoteInput
               value={noteText}
               onChange={setNoteText}
-              onSave={async () => { await addNote.mutateAsync(noteText.trim()); setNoteText(""); }}
+              onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
               isSaving={addNote.isPending}
+              onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
               placeholder={t("appointments.admin_notes_placeholder")}
               saveLabel={t("common.save")}
             />
@@ -893,6 +895,11 @@ export function AppointmentDetailPage() {
                       <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
+                    {n.image_url && (
+                      <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
+                        <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>

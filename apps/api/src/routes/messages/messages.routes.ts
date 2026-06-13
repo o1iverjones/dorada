@@ -4,6 +4,8 @@ import { z } from "zod";
 import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { listConversations, listMessages, sendMessage, markRead, searchMessages } from "./messages.service.js";
+import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
+import { messageImagePath } from "../../integrations/gcs.js";
 
 export default async function messageRoutes(fastify: FastifyInstance) {
   fastify.get("/search", { preHandler: authenticate }, async (req, reply) => {
@@ -40,6 +42,7 @@ export default async function messageRoutes(fastify: FastifyInstance) {
     const emitPayload = {
       id: message.id,
       body: message.body,
+      image_url: message.image_url ?? null,
       sender_type: message.sender_type,
       sender: message.sender_type === "admin" && message.sender_user
         ? { id: message.sender_user.id, name: message.sender_user.name }
@@ -54,6 +57,21 @@ export default async function messageRoutes(fastify: FastifyInstance) {
       fastify.io.to(`notify:${payload.organization_id}`).emit("new_message", emitPayload);
     }
     return reply.status(201).send(emitPayload);
+  });
+
+  // POST /messages/conversations/:interpreter_id/media  (upload image, returns URL)
+  fastify.post("/conversations/:interpreter_id/media", { preHandler: authenticate }, async (req, reply) => {
+    const { interpreter_id } = req.params as { interpreter_id: string };
+    const data = await req.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
+    try {
+      const filename = imageFilename(data.filename, data.mimetype);
+      const url = await uploadImage(data, messageImagePath(interpreter_id, filename));
+      return reply.send({ url });
+    } catch (err) {
+      if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
+      throw err;
+    }
   });
 
   fastify.post("/conversations/:interpreter_id/read", { preHandler: authenticate }, async (req, reply) => {

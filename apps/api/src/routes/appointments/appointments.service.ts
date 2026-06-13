@@ -174,11 +174,12 @@ export async function addAdminNote(
   organizationId: string,
   actor: { id: string; name: string },
   prisma: PrismaClient,
+  imageUrl: string | null = null,
 ) {
   const appt = await prisma.appointment.findUnique({ where: { id }, select: { organization_id: true, po_number: true, patient: { select: { name: true } } } });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
   const note = await prisma.appointmentNote.create({
-    data: { appointment_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name },
+    data: { appointment_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: imageUrl },
   });
   await logActivity(id, organizationId, "note_added", actor.name, actor.id, null, prisma, appt!.patient?.name, appt!.po_number);
   return note;

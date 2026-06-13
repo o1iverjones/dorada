@@ -65,3 +65,11 @@ export function confirmationScreenshotPath(logId: string): string {
 export function reportPath(reportJobId: string, format: "pdf" | "csv"): string {
   return `dorada/reports/${reportJobId}/report.${format}`;
 }
+
+export function noteImagePath(entityType: "appointment" | "clinic", entityId: string, filename: string): string {
+  return `dorada/notes/${entityType}/${entityId}/${filename}`;
+}
+
+export function messageImagePath(interpreterId: string, filename: string): string {
+  return `dorada/messages/${interpreterId}/${filename}`;
+}

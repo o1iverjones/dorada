@@ -18,6 +18,8 @@ import { authenticate, authenticateAdmin, authenticateInterpreter } from "../../
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { sendExpoPushNotifications } from "../../lib/push.js";
+import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
+import { noteImagePath } from "../../integrations/gcs.js";
 import { scheduleRemindersForAppointment, cancelRemindersForAppointment } from "../../workers/appointment-reminders.worker.js";
 import {
   listAppointments,
@@ -305,10 +307,25 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
   // POST /appointments/:id/admin-notes
   fastify.post("/:id/admin-notes", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { content } = z.object({ content: z.string().min(1).max(800) }).parse(req.body);
+    const { content, image_url } = z.object({ content: z.string().min(1).max(800), image_url: z.string().url().nullish() }).parse(req.body);
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
-    return reply.status(201).send(await addAdminNote(id, content, payload.organization_id, actor, fastify.prisma));
+    return reply.status(201).send(await addAdminNote(id, content, payload.organization_id, actor, fastify.prisma, image_url ?? null));
+  });
+
+  // POST /appointments/:id/note-image  (upload image before saving a note)
+  fastify.post("/:id/note-image", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const data = await req.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
+    try {
+      const filename = imageFilename(data.filename, data.mimetype);
+      const url = await uploadImage(data, noteImagePath("appointment", id, filename));
+      return reply.send({ url });
+    } catch (err) {
+      if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
+      throw err;
+    }
   });
 
   // POST /appointments/:id/offers/:offer_id/confirm
