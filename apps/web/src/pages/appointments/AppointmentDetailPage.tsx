@@ -176,32 +176,35 @@ export function AppointmentDetailPage() {
 
   async function save() {
     try {
-      await Promise.all([
-        update.mutateAsync({
-          date_time: fromTzDateTimeInput(form.date_time, tz),
-          duration_minutes: form.duration_minutes,
-          ...(form.type_id ? { type_id: form.type_id } : {}),
-          language: form.language,
-          interpreter_type_required: form.interpreter_type_required,
-          ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
-          ...(form.agency_id ? { agency_id: form.agency_id } : {}),
-          ...(form.patient_id ? { patient_id: form.patient_id } : {}),
-          referring_physician: form.referring_physician || undefined,
-          po_number: form.po_number || undefined,
-          billing_interpreter: form.billing_interpreter || null,
-          pre_auth_amount: form.pre_auth_amount,
-          pre_auth_mileage: Math.round(form.pre_auth_mileage),
-          ...(form.status !== (a!.status as string) ? { status: form.status as import("@dorada/types").AppointmentStatus } : {}),
-        }),
-        patientId
-          ? updatePatient.mutateAsync({ date_of_birth: form.dob || null })
-          : Promise.resolve(),
-      ]);
-      toast({ title: t("appointments.updated") });
-      setEditing(false);
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
+      await update.mutateAsync({
+        date_time: fromTzDateTimeInput(form.date_time, tz),
+        duration_minutes: form.duration_minutes,
+        ...(form.type_id ? { type_id: form.type_id } : {}),
+        language: form.language,
+        interpreter_type_required: form.interpreter_type_required,
+        ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
+        ...(form.agency_id ? { agency_id: form.agency_id } : {}),
+        ...(form.patient_id ? { patient_id: form.patient_id } : {}),
+        referring_physician: form.referring_physician || undefined,
+        po_number: form.po_number || undefined,
+        billing_interpreter: form.billing_interpreter || null,
+        pre_auth_amount: form.pre_auth_amount,
+        pre_auth_mileage: Math.round(form.pre_auth_mileage),
+        ...(form.status !== (a!.status as string) ? { status: form.status as import("@dorada/types").AppointmentStatus } : {}),
+      });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : t("common.error"), variant: "destructive" });
+      return;
     }
+    if (patientId) {
+      try {
+        await updatePatient.mutateAsync({ date_of_birth: form.dob || null });
+      } catch {
+        // DOB update failure is non-fatal; appointment was already saved
+      }
+    }
+    toast({ title: t("appointments.updated") });
+    setEditing(false);
   }
 
   async function handleCancel() {
@@ -326,22 +329,6 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Clinic confirmed */}
-            {!editing && (
-              <div className="px-6 py-2.5 even:bg-muted/40">
-                <Field
-                  label={t("appointments.clinic_confirmed")}
-                  value={
-                    a.clinic_confirmed ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">✓ Yes</span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">—</span>
-                    )
-                  }
-                />
-              </div>
-            )}
-
             {/* PO Number */}
             <div ref={poRef} className={`px-6 py-2.5 even:bg-muted/40 transition-colors duration-300 ${highlightPo ? "ring-2 ring-inset ring-destructive bg-destructive/5" : ""}`}>
               {editing ? (
@@ -350,6 +337,43 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.po_number")} value={(a.po_number as string) ?? "—"} />
+              )}
+            </div>
+
+            {/* Date/Time */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing ? (
+                <InlineRow label={t("appointments.date_time")} wide>
+                  <DateTimePicker value={form.date_time} onChange={(v) => set("date_time", v)} />
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.date_time")} value={formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)} />
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing ? (
+                <InlineRow label={t("appointments.status")} wide>
+                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                    <SelectTrigger className="h-7 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        "unassigned", "pending_offer", "confirmed", "in_progress", "completed",
+                        "cancelled", "late_cancellation", "no_show", "rescheduled",
+                        "double_booking", "pt_speaks_eng", "dr_speaks_es",
+                      ].map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {t(`appointment.status.${s}`, { defaultValue: s.replace(/_/g, " ") })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
               )}
             </div>
 
@@ -390,40 +414,22 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Status */}
+            {/* Interpreter Type */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
-                <InlineRow label={t("appointments.status")} wide>
-                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                    <SelectTrigger className="h-7 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[
-                        "unassigned", "pending_offer", "confirmed", "in_progress", "completed",
-                        "cancelled", "late_cancellation", "no_show", "rescheduled",
-                        "double_booking", "pt_speaks_eng", "dr_speaks_es",
-                      ].map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {t(`appointment.status.${s}`, { defaultValue: s.replace(/_/g, " ") })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </InlineRow>
+                <div className="space-y-1.5">
+                  <span className="text-muted-foreground">{t("appointments.type")}</span>
+                  <div className="flex gap-2">
+                    {certQualTypes.map((ty) => (
+                      <button key={ty.id} type="button" onClick={() => { set("type_id", ty.id); set("interpreter_type_required", ty.name.toLowerCase() as "certified" | "qualified"); }}
+                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.type_id === ty.id ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
+                        {ty.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
-                <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
-              )}
-            </div>
-
-            {/* Date/Time */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.date_time")} wide>
-                  <DateTimePicker value={form.date_time} onChange={(v) => set("date_time", v)} />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.date_time")} value={formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)} />
+                <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
               )}
             </div>
 
@@ -459,25 +465,6 @@ export function AppointmentDetailPage() {
               </div>
             )}
 
-            {/* Interpreter Type */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <div className="space-y-1.5">
-                  <span className="text-muted-foreground">{t("appointments.type")}</span>
-                  <div className="flex gap-2">
-                    {certQualTypes.map((ty) => (
-                      <button key={ty.id} type="button" onClick={() => { set("type_id", ty.id); set("interpreter_type_required", ty.name.toLowerCase() as "certified" | "qualified"); }}
-                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.type_id === ty.id ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
-                        {ty.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
-              )}
-            </div>
-
             {/* Clinic */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
@@ -492,6 +479,22 @@ export function AppointmentDetailPage() {
                 } />
               )}
             </div>
+
+            {/* Clinic confirmed */}
+            {!editing && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                <Field
+                  label={t("appointments.clinic_confirmed")}
+                  value={
+                    a.clinic_confirmed ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">✓ Yes</span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )
+                  }
+                />
+              </div>
+            )}
 
             {/* Clinic phone */}
             {!editing && (

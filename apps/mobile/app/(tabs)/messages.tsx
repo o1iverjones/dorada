@@ -115,7 +115,7 @@ export default function MessagesScreen() {
         name: asset.fileName ?? "photo.jpg",
         type: asset.mimeType ?? "image/jpeg",
       } as unknown as Blob);
-      const res = await api.post<{ url: string }>(
+      const res = await api.uploadFile<{ url: string }>(
         `/messages/conversations/${interpreterId}/media`,
         formData
       );
