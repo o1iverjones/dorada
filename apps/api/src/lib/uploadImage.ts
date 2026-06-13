@@ -43,11 +43,8 @@ export async function uploadImage(data: MultipartFile, gcsDestination: string): 
     throw new ImageUploadError("FILE_TOO_LARGE", "File exceeds the 10 MB limit");
   }
 
-  if (config.NODE_ENV === "production") {
-    const gcsPath = await uploadBuffer(gcsDestination, buffer, data.mimetype);
-    // Return a path-based URL; callers can sign it if needed, but for inline display
-    // we return the public GCS path. For signed URLs add getSignedUrl() here.
-    return gcsPath;
+  if (config.NODE_ENV === "production" || config.GCP_PROJECT_ID) {
+    return uploadBuffer(gcsDestination, buffer, data.mimetype);
   }
 
   // Local dev: save to uploads/images/
