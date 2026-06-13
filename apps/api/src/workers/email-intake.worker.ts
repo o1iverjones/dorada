@@ -11,7 +11,7 @@ import {
   uploadBuffer,
   emailIntakePath,
   confirmationScreenshotPath,
-} from "../integrations/gcs.js";
+} from "../integrations/r2.js";
 import { confirmViaLink } from "../integrations/playwright.js";
 
 interface EmailPollJobData {

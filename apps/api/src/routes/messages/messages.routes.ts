@@ -5,7 +5,7 @@ import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { listConversations, listMessages, sendMessage, markRead, searchMessages } from "./messages.service.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
-import { messageImagePath } from "../../integrations/gcs.js";
+import { messageImagePath } from "../../integrations/r2.js";
 
 export default async function messageRoutes(fastify: FastifyInstance) {
   fastify.get("/search", { preHandler: authenticate }, async (req, reply) => {

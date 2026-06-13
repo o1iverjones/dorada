@@ -7,7 +7,7 @@ import type { JwtPayload } from "../../middleware/auth.js";
 import { listClinics, getClinic, createClinic, updateClinic, deactivateClinic, setInterpreterBlocks, getClinicActivity, getClinicNotes, addClinicNote, listInterpreterNotes, createInterpreterNote, updateInterpreterNote, deleteInterpreterNote, listClinicDoctors, addClinicDoctor, removeClinicDoctor } from "./clinics.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
-import { noteImagePath } from "../../integrations/gcs.js";
+import { noteImagePath } from "../../integrations/r2.js";
 
 export default async function clinicRoutes(fastify: FastifyInstance) {
   const preHandler = [authenticateAdmin, requirePermission("manage_clinics")];

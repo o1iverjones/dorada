@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 import { extname } from "path";
 import type { MultipartFile } from "@fastify/multipart";
-import { uploadBuffer } from "../integrations/gcs.js";
+import { uploadBuffer } from "../integrations/r2.js";
 import { config } from "../config.js";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/heic", "image/webp", "image/gif"]);
@@ -43,7 +43,7 @@ export async function uploadImage(data: MultipartFile, gcsDestination: string): 
     throw new ImageUploadError("FILE_TOO_LARGE", "File exceeds the 10 MB limit");
   }
 
-  if (config.NODE_ENV === "production" || config.GCP_PROJECT_ID) {
+  if (config.NODE_ENV === "production" || config.R2_ACCOUNT_ID) {
     return uploadBuffer(gcsDestination, buffer, data.mimetype);
   }
 

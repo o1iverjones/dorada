@@ -19,7 +19,7 @@ import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { sendExpoPushNotifications } from "../../lib/push.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
-import { noteImagePath } from "../../integrations/gcs.js";
+import { noteImagePath } from "../../integrations/r2.js";
 import { scheduleRemindersForAppointment, cancelRemindersForAppointment } from "../../workers/appointment-reminders.worker.js";
 import {
   listAppointments,

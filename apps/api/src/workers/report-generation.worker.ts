@@ -6,11 +6,10 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { config, redisConnection } from "../config.js";
-import { uploadBuffer, reportPath, getSignedUrl } from "../integrations/gcs.js";
+import { uploadBuffer, reportPath, getSignedUrl } from "../integrations/r2.js";
 
-/** True when GCS credentials are configured (production). */
-function isGcsAvailable(): boolean {
-  return !!(process.env["GOOGLE_APPLICATION_CREDENTIALS"] || process.env["GCP_SERVICE_ACCOUNT_JSON"]);
+function isR2Available(): boolean {
+  return !!(config.R2_ACCOUNT_ID && config.R2_ACCESS_KEY_ID && config.R2_SECRET_ACCESS_KEY);
 }
 
 const LOCAL_REPORTS_DIR = path.join(os.tmpdir(), "dorada-reports");
@@ -58,7 +57,7 @@ export function createReportGenerationWorker(prisma: PrismaClient) {
         let downloadUrl: string;
         let gcsPath: string | undefined;
 
-        if (isGcsAvailable()) {
+        if (isR2Available()) {
           gcsPath = reportPath(reportJobId, format);
           await uploadBuffer(gcsPath, buffer, format === "csv" ? "text/csv" : "application/pdf");
           downloadUrl = await getSignedUrl(gcsPath, 86400);

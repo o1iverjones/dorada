@@ -11,7 +11,7 @@ This file records decisions, conventions, and infrastructure facts that Claude s
 | **Hosting** | Railway | Two environments: `dev` branch → dev env, `main` branch → production |
 | **Database** | PostgreSQL 16 (Railway plugin) | Managed by Prisma v5 |
 | **Cache / Queue** | Redis 7 (Railway plugin) | BullMQ + Socket.io adapter |
-| **File storage** | Google Cloud Storage (GCS) | Dev bucket: `pulpito-media` |
+| **File storage** | **Cloudflare R2** | S3-compatible; integration at `apps/api/src/integrations/r2.ts`. Env vars: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` |
 | **Transactional email** | **Resend** | `lib/email.ts` is the central helper — do NOT use SendGrid (removed) |
 | **SMS** | Twilio | Interpreter login OTP + follow-up prompts |
 | **Push notifications** | **Expo Push Notifications** | Uses `expo-notifications` SDK + Expo's push proxy. No Firebase project needed — Expo manages FCM/APNs routing. Do NOT use Firebase FCM directly. |

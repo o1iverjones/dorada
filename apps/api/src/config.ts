@@ -30,8 +30,11 @@ const ConfigSchema = z.object({
 
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
 
-  GCS_BUCKET: z.string().default("dorada-media"),
-  GCP_PROJECT_ID: z.string().optional(),
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().default("dorada-media"),
+  R2_PUBLIC_URL: z.string().optional(),
 
   ANTHROPIC_API_KEY: z.string().optional(),
   CLAUDE_MODEL: z.string().default("claude-sonnet-4-6"),
