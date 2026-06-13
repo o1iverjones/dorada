@@ -521,7 +521,7 @@ export function CalendarPage() {
               const dayTotal = appointmentsForDate(date).length;
               return (
                 <div key={date.toISOString()} className="p-2 text-center border-r last:border-r-0">
-                  <p className={`text-xs ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
+                  <p className={`text-[0.85rem] ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
                     {formatInTz(date, { weekday: "short" }, tz).toUpperCase()}{" "}
                     {formatInTz(date, { month: "short" }, tz)}{" "}
                     <span className={isToday ? "font-[800]" : "font-bold"}>{formatInTz(date, { day: "numeric" }, tz)}</span>
