@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button.js";
 import { ImageIcon, X } from "lucide-react";
+import { useToast } from "../../hooks/use-toast.js";
 
 const SUGGESTIONS = [
   "Agendada y Asignada",
@@ -26,6 +27,7 @@ interface NoteInputProps {
 }
 
 export function NoteInput({ value, onChange, onSave, isSaving, onUploadImage, placeholder, maxLength = 800, saveLabel = "Save" }: NoteInputProps) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -87,7 +89,9 @@ export function NoteInput({ value, onChange, onSave, isSaving, onUploadImage, pl
     try {
       const url = await onUploadImage(file);
       setImageUrl(url);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      toast({ title: "Image upload failed", description: msg, variant: "destructive" });
       setImagePreview(null);
       setImageUrl(null);
     } finally {
