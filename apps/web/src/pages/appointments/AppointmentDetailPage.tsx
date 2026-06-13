@@ -510,7 +510,11 @@ export function AppointmentDetailPage() {
                   <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => { if (v) { setPendingAgencyId(v); } else { set("agency_id", v); } }} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.agency")} value={(a.agency as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("appointments.agency")} value={
+                  (a.agency as Record<string, unknown>)?.id
+                    ? <button type="button" className="text-primary hover:underline font-medium text-left" onClick={() => navigate(`/agencies/${(a.agency as Record<string, unknown>).id}`)}>{(a.agency as Record<string, unknown>).name as string}</button>
+                    : "—"
+                } />
               )}
             </div>
 
