@@ -180,8 +180,8 @@ export function AppointmentDetailPage() {
         date_time: fromTzDateTimeInput(form.date_time, tz),
         duration_minutes: form.duration_minutes,
         ...(form.type_id ? { type_id: form.type_id } : {}),
-        language: form.language,
-        interpreter_type_required: form.interpreter_type_required,
+        ...(form.language ? { language: form.language } : {}),
+        ...(form.interpreter_type_required ? { interpreter_type_required: form.interpreter_type_required } : {}),
         ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
         ...(form.agency_id ? { agency_id: form.agency_id } : {}),
         ...(form.patient_id ? { patient_id: form.patient_id } : {}),
@@ -193,7 +193,10 @@ export function AppointmentDetailPage() {
         ...(form.status !== (a!.status as string) ? { status: form.status as import("@dorada/types").AppointmentStatus } : {}),
       });
     } catch (err) {
-      toast({ title: err instanceof Error ? err.message : t("common.error"), variant: "destructive" });
+      console.error("[save] appointment update failed:", err);
+      const msg = err instanceof Error ? err.message : "";
+      const code = (err as Record<string, unknown>)?.code as string | undefined;
+      toast({ title: msg || t("common.error"), description: code, variant: "destructive" });
       return;
     }
     if (patientId) {

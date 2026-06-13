@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { config } from "./config.js";
 import { logger } from "./lib/logger.js";
 import { AppError } from "./lib/errors.js";
+import { ZodError } from "zod";
 import prismaPlugin from "./plugins/prisma.js";
 import redisPlugin from "./plugins/redis.js";
 import jwtPlugin from "./plugins/jwt.js";
@@ -53,6 +54,13 @@ export async function buildServer() {
       return reply
         .status(error.statusCode)
         .send({ error: { code: error.code, message: error.message } });
+    }
+    if (error instanceof ZodError) {
+      const first = error.errors[0];
+      const message = first ? `${first.path.join(".")}: ${first.message}` : error.message;
+      return reply
+        .status(400)
+        .send({ error: { code: "VALIDATION_ERROR", message } });
     }
     logger.error({ err: error }, "unhandled error");
     return reply
