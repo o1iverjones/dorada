@@ -17,7 +17,7 @@ export async function uploadBuffer(
 ): Promise<string> {
   const bucket = getStorage().bucket(config.GCS_BUCKET);
   const file = bucket.file(destination);
-  await file.save(buffer, { contentType, resumable: false, public: true });
+  await file.save(buffer, { contentType, resumable: false });
   return `https://storage.googleapis.com/${config.GCS_BUCKET}/${destination}`;
 }
 

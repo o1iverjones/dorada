@@ -155,7 +155,7 @@ export function AppointmentDetailPage() {
       duration_minutes: a!.duration_minutes as number,
       type_id: (a!.type as Record<string, unknown>)?.id as string ?? "",
       language: a!.language as string ?? "",
-      interpreter_type_required: a!.interpreter_type_required as "certified" | "qualified",
+      interpreter_type_required: (a!.interpreter_type_required as string)?.toLowerCase() as "certified" | "qualified",
       clinic_id: (a!.clinic as Record<string, unknown>)?.id as string ?? "",
       agency_id: (a!.agency as Record<string, unknown>)?.id as string ?? "",
       patient_id: (a!.patient as Record<string, unknown>)?.id as string ?? "",
