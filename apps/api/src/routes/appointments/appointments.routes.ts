@@ -307,8 +307,8 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
   // POST /appointments/:id/admin-notes
   fastify.post("/:id/admin-notes", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { content, image_url } = z.object({ content: z.string().min(1).max(800), image_url: z.string().url().nullish() }).parse(req.body);
-    const payload = req.user as JwtPayload;
+    const { content, image_url } = z.object({ content: z.string().max(800), image_url: z.string().url().nullish() }).parse(req.body);
+const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
     return reply.status(201).send(await addAdminNote(id, content, payload.organization_id, actor, fastify.prisma, image_url ?? null));
   });

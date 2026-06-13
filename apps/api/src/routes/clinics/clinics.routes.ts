@@ -86,7 +86,7 @@ export default async function clinicRoutes(fastify: FastifyInstance) {
 
   fastify.post("/:id/admin-notes", { preHandler }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { content, image_url } = z.object({ content: z.string().min(1).max(800), image_url: z.string().url().nullish() }).parse(req.body);
+    const { content, image_url } = z.object({ content: z.string().max(800), image_url: z.string().url().nullish() }).parse(req.body);
     const payload = req.user as JwtPayload;
     const actor = payload.name
       ? { id: payload.sub, name: payload.name }

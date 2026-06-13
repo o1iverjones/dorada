@@ -18,7 +18,7 @@ const SUGGESTIONS = [
 interface NoteInputProps {
   value: string;
   onChange: (value: string) => void;
-  onSave: (imageUrl?: string | null) => void;
+  onSave: (imageUrl?: string | null) => void | Promise<void>;
   isSaving: boolean;
   onUploadImage?: (file: File) => Promise<string>;
   placeholder?: string;
@@ -106,8 +106,8 @@ export function NoteInput({ value, onChange, onSave, isSaving, onUploadImage, pl
     setImageUrl(null);
   }
 
-  function handleSave() {
-    onSave(imageUrl);
+  async function handleSave() {
+    await onSave(imageUrl);
     setImagePreview(null);
     setImageUrl(null);
   }
