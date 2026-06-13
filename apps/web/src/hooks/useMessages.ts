@@ -68,7 +68,7 @@ export function useUploadMessageImage(interpreterId: string) {
     mutationFn: (file: File) => {
       const fd = new FormData();
       fd.append("file", file);
-      return api.post<{ url: string }>(`/messages/conversations/${interpreterId}/media`, fd);
+      return api.uploadFile<{ url: string }>(`/messages/conversations/${interpreterId}/media`, fd);
     },
   });
 }

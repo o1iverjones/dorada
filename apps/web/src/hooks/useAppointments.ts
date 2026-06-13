@@ -128,7 +128,7 @@ export function useUploadAppointmentNoteImage(id: string) {
     mutationFn: (file: File) => {
       const fd = new FormData();
       fd.append("file", file);
-      return api.post<{ url: string }>(`/appointments/${id}/note-image`, fd);
+      return api.uploadFile<{ url: string }>(`/appointments/${id}/note-image`, fd);
     },
   });
 }
