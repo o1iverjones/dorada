@@ -191,7 +191,7 @@ export function NoteInput({ value, onChange, onSave, isSaving, onUploadImage, pl
             </>
           )}
         </div>
-        <Button size="sm" disabled={!value.trim() || isSaving || uploading} onClick={handleSave}>
+        <Button size="sm" disabled={(!value.trim() && !imageUrl) || isSaving || uploading} onClick={handleSave}>
           {saveLabel}
         </Button>
       </div>
