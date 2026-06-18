@@ -434,7 +434,7 @@ export function CalendarPage() {
               )}
             </div>
             <Button variant="outline" size="icon" onClick={next}><ChevronRight className="h-4 w-4" /></Button>
-            <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>{t("calendar.today")}</Button>
+            <Button variant="outline" size="sm" onClick={() => changeDate(new Date())}>{t("calendar.today")}</Button>
           </div>
 
           {/* Collapse toggle */}
@@ -521,10 +521,10 @@ export function CalendarPage() {
               const dayTotal = appointmentsForDate(date).length;
               return (
                 <div key={date.toISOString()} className="p-2 text-center border-r last:border-r-0">
-                  <p className={`text-xs font-medium ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
+                  <p className={`text-[0.85rem] ${isToday ? "text-blue-600" : "text-muted-foreground"}`}>
                     {formatInTz(date, { weekday: "short" }, tz).toUpperCase()}{" "}
                     {formatInTz(date, { month: "short" }, tz)}{" "}
-                    <span className="font-bold">{formatInTz(date, { day: "numeric" }, tz)}</span>
+                    <span className={isToday ? "font-[800]" : "font-bold"}>{formatInTz(date, { day: "numeric" }, tz)}</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Total: {dayTotal}
@@ -559,7 +559,7 @@ export function CalendarPage() {
                 <div key={idx} className="min-h-24 border-b border-r p-1 last:border-r-0 [&:nth-child(7n)]:border-r-0">
                   {date && (
                     <>
-                      <p className={`mb-1 text-xs font-medium ${isToday ? "flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white" : "text-muted-foreground"}`}>
+                      <p className={`mb-1 text-xs font-medium ${isToday ? "flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 font-bold text-white" : "text-muted-foreground"}`}>
                         {date.getDate()}
                       </p>
                       <div className="space-y-0.5">

@@ -71,6 +71,16 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
     return reply.send(await listAllAvailabilityBlocks(payload.organization_id, date_from, date_to, interpreter_id, fastify.prisma));
   });
 
+  fastify.get("/cities", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    const rows = await fastify.prisma.interpreter.findMany({
+      where: { organization_id: payload.organization_id },
+      select: { preferred_cities: true },
+    });
+    const cities = [...new Set(rows.flatMap((r) => r.preferred_cities))].sort();
+    return reply.send(cities);
+  });
+
   fastify.get("/:id", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;

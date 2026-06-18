@@ -23,6 +23,7 @@ import { ClinicsPage } from "./pages/clinics/ClinicsPage.js";
 import { ClinicDetailPage } from "./pages/clinics/ClinicDetailPage.js";
 import { AgenciesPage } from "./pages/agencies/AgenciesPage.js";
 import { AgencyDetailPage } from "./pages/agencies/AgencyDetailPage.js";
+import { NewAgencyPage } from "./pages/agencies/NewAgencyPage.js";
 import { PatientsPage } from "./pages/patients/PatientsPage.js";
 import { PatientDetailPage } from "./pages/patients/PatientDetailPage.js";
 import { ReportsPage } from "./pages/reports/ReportsPage.js";
@@ -107,6 +108,10 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       {
         path: "agencies",
         element: <PermissionGuard permission="manage_clinics"><AgenciesPage /></PermissionGuard>,
+      },
+      {
+        path: "agencies/new",
+        element: <PermissionGuard permission="manage_clinics"><NewAgencyPage /></PermissionGuard>,
       },
       {
         path: "agencies/:id",

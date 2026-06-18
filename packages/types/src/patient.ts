@@ -14,6 +14,7 @@ export const ClaimSchema = z.object({
   adjuster: z.string().nullable(),
   adjuster_phone: z.string().nullable(),
   adjuster_email: z.string().nullable(),
+  status: z.enum(["active", "closed"]).default("active"),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -27,6 +28,7 @@ export const CreateClaimBodySchema = z.object({
   adjuster: z.string().max(255).nullish(),
   adjuster_phone: z.string().max(30).nullish(),
   adjuster_email: z.string().email().max(255).nullish(),
+  status: z.enum(["active", "closed"]).default("active"),
 });
 
 export const UpdateClaimBodySchema = CreateClaimBodySchema.partial();

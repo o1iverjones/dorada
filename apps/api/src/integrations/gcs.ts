@@ -18,7 +18,7 @@ export async function uploadBuffer(
   const bucket = getStorage().bucket(config.GCS_BUCKET);
   const file = bucket.file(destination);
   await file.save(buffer, { contentType, resumable: false });
-  return `gs://${config.GCS_BUCKET}/${destination}`;
+  return `https://storage.googleapis.com/${config.GCS_BUCKET}/${destination}`;
 }
 
 export async function uploadString(
@@ -64,4 +64,12 @@ export function confirmationScreenshotPath(logId: string): string {
 
 export function reportPath(reportJobId: string, format: "pdf" | "csv"): string {
   return `dorada/reports/${reportJobId}/report.${format}`;
+}
+
+export function noteImagePath(entityType: "appointment" | "clinic", entityId: string, filename: string): string {
+  return `dorada/notes/${entityType}/${entityId}/${filename}`;
+}
+
+export function messageImagePath(interpreterId: string, filename: string): string {
+  return `dorada/messages/${interpreterId}/${filename}`;
 }

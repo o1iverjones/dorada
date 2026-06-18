@@ -89,6 +89,7 @@ export async function listMessages(
       data: messages.map((m) => ({
         id: m.id,
         body: m.body,
+        image_url: m.image_url ?? null,
         sender_type: m.sender_type,
         sender: m.sender_type === "admin" && m.sender_user
           ? { id: m.sender_user.id, name: m.sender_user.name }
@@ -119,6 +120,7 @@ export async function listMessages(
     data: data.map((m) => ({
       id: m.id,
       body: m.body,
+      image_url: m.image_url ?? null,
       sender_type: m.sender_type,
       sender: m.sender_type === "admin" && m.sender_user
         ? { id: m.sender_user.id, name: m.sender_user.name }
@@ -185,6 +187,7 @@ export async function sendMessage(
       sender_type: isAdmin ? "admin" : "interpreter",
       sender_user_id: isAdmin ? senderId : null,
       body: body.body,
+      image_url: body.image_url ?? null,
     },
     include: {
       sender_user: { select: { id: true, name: true } },

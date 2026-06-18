@@ -111,13 +111,10 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
     const ext = extname(data.filename || "") || (data.mimetype === "image/png" ? ".png" : data.mimetype === "image/webp" ? ".webp" : ".jpg");
     const filename = `avatars/${payload.sub}/${randomUUID()}${ext}`;
 
-    // Store as a data URL or upload to GCS if configured
     let publicUrl: string;
-    if (config.GCP_PROJECT_ID) {
-      const { uploadBuffer } = await import("../../integrations/gcs.js");
-      await uploadBuffer(filename, buffer, data.mimetype);
-      // Use a public GCS URL
-      publicUrl = `https://storage.googleapis.com/${config.GCS_BUCKET}/${filename}`;
+    if (config.R2_ACCOUNT_ID) {
+      const { uploadBuffer } = await import("../../integrations/r2.js");
+      publicUrl = await uploadBuffer(filename, buffer, data.mimetype);
     } else {
       // Dev fallback: store as base64 data URL
       publicUrl = `data:${data.mimetype};base64,${buffer.toString("base64")}`;

@@ -20,6 +20,7 @@ import { formatPhoneInput } from "../../lib/phone.js";
 import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { toast } from "../../hooks/use-toast.js";
 import { Pencil, Plus, X, Check } from "lucide-react";
 import { Textarea } from "../../components/ui/textarea.js";
@@ -34,6 +35,7 @@ interface Claim {
   adjuster: string | null;
   adjuster_phone: string | null;
   adjuster_email: string | null;
+  status: string;
 }
 
 const emptyClaimForm = {
@@ -45,6 +47,7 @@ const emptyClaimForm = {
   adjuster: "",
   adjuster_phone: "",
   adjuster_email: "",
+  status: "active",
 };
 
 function useIsMobile() {
@@ -156,6 +159,7 @@ export function PatientDetailPage() {
       adjuster: claim.adjuster ?? "",
       adjuster_phone: formatPhoneInput(claim.adjuster_phone ?? ""),
       adjuster_email: claim.adjuster_email ?? "",
+      status: claim.status ?? "active",
     });
     setClaimDialogOpen(true);
   }
@@ -171,6 +175,7 @@ export function PatientDetailPage() {
         adjuster: claimForm.adjuster || null,
         adjuster_phone: claimForm.adjuster_phone || null,
         adjuster_email: claimForm.adjuster_email || null,
+        status: claimForm.status,
       };
       if (editingClaimId) {
         await updateClaim.mutateAsync(payload);
@@ -300,7 +305,12 @@ export function PatientDetailPage() {
                 {claims.map((claim) => (
                   <li key={claim.id} className="rounded-md border p-3 text-sm space-y-1">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="font-mono font-semibold">{claim.case_number}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono font-semibold">{claim.case_number}</span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${claim.status === "closed" ? "bg-muted text-muted-foreground" : "bg-green-100 text-green-800"}`}>
+                          {t(`patients.claim_status_${claim.status}`, { defaultValue: claim.status })}
+                        </span>
+                      </div>
                       <div className="flex gap-1 shrink-0">
                         <button
                           type="button"
@@ -352,26 +362,48 @@ export function PatientDetailPage() {
       {/* Appointment history */}
       <Card>
         <CardHeader><CardTitle>{t("patients.appointment_history")}</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {!appts?.data.length ? (
-            <p className="text-sm text-muted-foreground">{t("patients.no_appointments")}</p>
+            <p className="text-sm text-muted-foreground px-6 py-4">{t("patients.no_appointments")}</p>
           ) : (
-            <ul className="space-y-2">
-              {(appts.data as Array<Record<string, unknown>>).map((a) => (
-                <li key={a.id as string}>
-                  <button
-                    onClick={() => navigate(`/appointments/${a.id as string}`)}
-                    className="w-full flex items-center justify-between rounded-md border p-3 text-sm text-left hover:bg-muted/50 transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium">{formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</p>
-                      <p className="text-muted-foreground">{(a.clinic as Record<string, unknown>)?.name as string ?? "—"}</p>
-                    </div>
-                    <StatusBadge status={a.status as string} />
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.date_time")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.agency")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.referring_physician")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.status")}</th>
+                    <th className="px-4 py-2 text-left font-medium">{t("appointments.interpreter")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(appts.data as Array<Record<string, unknown>>).map((a) => (
+                    <tr
+                      key={a.id as string}
+                      onClick={() => navigate(`/appointments/${a.id as string}`)}
+                      className="border-b last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-2.5 whitespace-nowrap font-medium">
+                        {formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {(a.agency as Record<string, unknown>)?.name as string ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {a.referring_physician as string ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge status={a.status as string} />
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {(a.interpreter as Record<string, unknown>)?.name as string ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -421,6 +453,16 @@ export function PatientDetailPage() {
               <DialogTitle>{editingClaimId ? t("patients.edit_claim") : t("patients.add_claim")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-4 overflow-y-auto flex-1">
+              <div className="space-y-1">
+                <Label>{t("patients.claim_status")}</Label>
+                <Select value={claimForm.status} onValueChange={(v) => setClaimForm(s => ({ ...s, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{t("patients.claim_status_active")}</SelectItem>
+                    <SelectItem value="closed">{t("patients.claim_status_closed")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1">
                 <Label>{t("patients.case_number")}</Label>
                 <Input

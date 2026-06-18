@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getSocket } from "../../lib/socket.js";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useAgencies } from "../../hooks/useAgencies.js";
@@ -17,7 +17,7 @@ import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
 import { MapPin, ParkingCircle, ExternalLink, ClipboardList, StickyNote, Copy, Pencil, FileCheck, Images, AlertTriangle, UserX } from "lucide-react";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
@@ -64,6 +64,9 @@ export function AppointmentDetailPage() {
   const [patientArrivedForm, setPatientArrivedForm] = useState("");
   const [clockOutForm, setClockOutForm] = useState("");
   const [confirmUnassign, setConfirmUnassign] = useState(false);
+  const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
+  const [highlightPo, setHighlightPo] = useState(false);
+  const poRef = useRef<HTMLDivElement>(null);
 
   const { data: appt, isLoading, refetch } = useAppointment(id!);
 
@@ -85,6 +88,7 @@ export function AppointmentDetailPage() {
   const { data: activityLog } = useAppointmentActivity(id!);
   const { data: adminNotes } = useAppointmentNotes(id!);
   const addNote = useAddAppointmentNote(id!);
+  const uploadNoteImage = useUploadAppointmentNoteImage(id!);
   const { data: mediaData } = useAppointmentMedia(id!);
   const manualConfirm = useManualConfirm(id!);
   const unassign = useUnassignInterpreter(id!);
@@ -151,7 +155,7 @@ export function AppointmentDetailPage() {
       duration_minutes: a!.duration_minutes as number,
       type_id: (a!.type as Record<string, unknown>)?.id as string ?? "",
       language: a!.language as string ?? "",
-      interpreter_type_required: a!.interpreter_type_required as "certified" | "qualified",
+      interpreter_type_required: (a!.interpreter_type_required as string)?.toLowerCase() as "certified" | "qualified",
       clinic_id: (a!.clinic as Record<string, unknown>)?.id as string ?? "",
       agency_id: (a!.agency as Record<string, unknown>)?.id as string ?? "",
       patient_id: (a!.patient as Record<string, unknown>)?.id as string ?? "",
@@ -172,32 +176,38 @@ export function AppointmentDetailPage() {
 
   async function save() {
     try {
-      await Promise.all([
-        update.mutateAsync({
-          date_time: fromTzDateTimeInput(form.date_time, tz),
-          duration_minutes: form.duration_minutes,
-          ...(form.type_id ? { type_id: form.type_id } : {}),
-          language: form.language,
-          interpreter_type_required: form.interpreter_type_required,
-          ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
-          ...(form.agency_id ? { agency_id: form.agency_id } : {}),
-          ...(form.patient_id ? { patient_id: form.patient_id } : {}),
-          referring_physician: form.referring_physician || undefined,
-          po_number: form.po_number || undefined,
-          billing_interpreter: form.billing_interpreter || null,
-          pre_auth_amount: form.pre_auth_amount,
-          pre_auth_mileage: Math.round(form.pre_auth_mileage),
-          status: form.status as import("@dorada/types").AppointmentStatus,
-        }),
-        patientId
-          ? updatePatient.mutateAsync({ date_of_birth: form.dob || null })
-          : Promise.resolve(),
-      ]);
-      toast({ title: t("appointments.updated") });
-      setEditing(false);
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
+      await update.mutateAsync({
+        date_time: fromTzDateTimeInput(form.date_time, tz),
+        duration_minutes: form.duration_minutes,
+        ...(form.type_id ? { type_id: form.type_id } : {}),
+        ...(form.language ? { language: form.language } : {}),
+        ...(form.interpreter_type_required ? { interpreter_type_required: form.interpreter_type_required } : {}),
+        ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
+        ...(form.agency_id ? { agency_id: form.agency_id } : {}),
+        ...(form.patient_id ? { patient_id: form.patient_id } : {}),
+        referring_physician: form.referring_physician || undefined,
+        po_number: form.po_number || undefined,
+        billing_interpreter: form.billing_interpreter || null,
+        pre_auth_amount: form.pre_auth_amount,
+        pre_auth_mileage: Math.round(form.pre_auth_mileage),
+        ...(form.status !== (a!.status as string) ? { status: form.status as import("@dorada/types").AppointmentStatus } : {}),
+      });
+    } catch (err) {
+      console.error("[save] appointment update failed:", err);
+      const msg = err instanceof Error ? err.message : "";
+      const code = (err as Record<string, unknown>)?.code as string | undefined;
+      toast({ title: msg || t("common.error"), description: code, variant: "destructive" });
+      return;
     }
+    if (patientId) {
+      try {
+        await updatePatient.mutateAsync({ date_of_birth: form.dob || null });
+      } catch {
+        // DOB update failure is non-fatal; appointment was already saved
+      }
+    }
+    toast({ title: t("appointments.updated") });
+    setEditing(false);
   }
 
   async function handleCancel() {
@@ -249,7 +259,6 @@ export function AppointmentDetailPage() {
                       referring_physician: a.referring_physician,
                       pre_auth_amount: a.pre_auth_amount,
                       pre_auth_mileage: a.pre_auth_mileage,
-                      po_number: a.po_number,
                     },
                   },
                 })}>
@@ -324,13 +333,50 @@ export function AppointmentDetailPage() {
             </div>
 
             {/* PO Number */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
+            <div ref={poRef} className={`px-6 py-2.5 even:bg-muted/40 transition-colors duration-300 ${highlightPo ? "ring-2 ring-inset ring-destructive bg-destructive/5" : ""}`}>
               {editing ? (
                 <InlineRow label={t("appointments.po_number")}>
                   <Input className="h-7 text-sm" value={form.po_number} onChange={(e) => set("po_number", e.target.value)} placeholder="—" />
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.po_number")} value={(a.po_number as string) ?? "—"} />
+              )}
+            </div>
+
+            {/* Date/Time */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing ? (
+                <InlineRow label={t("appointments.date_time")} wide>
+                  <DateTimePicker value={form.date_time} onChange={(v) => set("date_time", v)} />
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.date_time")} value={formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)} />
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing ? (
+                <InlineRow label={t("appointments.status")} wide>
+                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                    <SelectTrigger className="h-7 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        "unassigned", "pending_offer", "confirmed", "in_progress", "completed",
+                        "cancelled", "late_cancellation", "no_show", "rescheduled",
+                        "double_booking", "pt_speaks_eng", "dr_speaks_es",
+                      ].map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {t(`appointment.status.${s}`, { defaultValue: s.replace(/_/g, " ") })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
               )}
             </div>
 
@@ -371,40 +417,22 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Status */}
+            {/* Interpreter Type */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
-                <InlineRow label={t("appointments.status")} wide>
-                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                    <SelectTrigger className="h-7 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[
-                        "unassigned", "pending_offer", "confirmed", "in_progress", "completed",
-                        "cancelled", "late_cancellation", "no_show", "rescheduled",
-                        "double_booking", "pt_speaks_eng", "dr_speaks_es",
-                      ].map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {t(`appointment.status.${s}`, { defaultValue: s.replace(/_/g, " ") })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </InlineRow>
+                <div className="space-y-1.5">
+                  <span className="text-muted-foreground">{t("appointments.type")}</span>
+                  <div className="flex gap-2">
+                    {certQualTypes.map((ty) => (
+                      <button key={ty.id} type="button" onClick={() => { set("type_id", ty.id); set("interpreter_type_required", ty.name.toLowerCase() as "certified" | "qualified"); }}
+                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.type_id === ty.id ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
+                        {ty.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
-                <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
-              )}
-            </div>
-
-            {/* Date/Time */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.date_time")} wide>
-                  <DateTimePicker value={form.date_time} onChange={(v) => set("date_time", v)} />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.date_time")} value={formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)} />
+                <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
               )}
             </div>
 
@@ -440,25 +468,6 @@ export function AppointmentDetailPage() {
               </div>
             )}
 
-            {/* Interpreter Type */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <div className="space-y-1.5">
-                  <span className="text-muted-foreground">{t("appointments.type")}</span>
-                  <div className="flex gap-2">
-                    {certQualTypes.map((ty) => (
-                      <button key={ty.id} type="button" onClick={() => { set("type_id", ty.id); set("interpreter_type_required", ty.name.toLowerCase() as "certified" | "qualified"); }}
-                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.type_id === ty.id ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
-                        {ty.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
-              )}
-            </div>
-
             {/* Clinic */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
@@ -474,6 +483,22 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
+            {/* Clinic confirmed */}
+            {!editing && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                <Field
+                  label={t("appointments.clinic_confirmed")}
+                  value={
+                    a.clinic_confirmed ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">✓ Yes</span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )
+                  }
+                />
+              </div>
+            )}
+
             {/* Clinic phone */}
             {!editing && (
               <div className="px-6 py-2.5 even:bg-muted/40">
@@ -485,10 +510,14 @@ export function AppointmentDetailPage() {
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
                 <InlineRow label={t("appointments.agency")}>
-                  <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => set("agency_id", v)} placeholder={t("common.search")} />
+                  <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => { if (v) { setPendingAgencyId(v); } else { set("agency_id", v); } }} placeholder={t("common.search")} />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.agency")} value={(a.agency as Record<string, unknown>)?.name as string ?? "—"} />
+                <Field label={t("appointments.agency")} value={
+                  (a.agency as Record<string, unknown>)?.id
+                    ? <button type="button" className="text-primary hover:underline font-medium text-left" onClick={() => navigate(`/agencies/${(a.agency as Record<string, unknown>).id}`)}>{(a.agency as Record<string, unknown>).name as string}</button>
+                    : "—"
+                } />
               )}
             </div>
 
@@ -537,7 +566,11 @@ export function AppointmentDetailPage() {
 
         <div className="space-y-6">
           <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
-          <BillingCard appointmentId={id!} appointment={a} />
+          <BillingCard appointmentId={id!} appointment={a} onPoRequired={() => {
+            poRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            setHighlightPo(true);
+            setTimeout(() => setHighlightPo(false), 3000);
+          }} />
         </div>
 
         {a.shift_notes && (
@@ -856,8 +889,9 @@ export function AppointmentDetailPage() {
             <NoteInput
               value={noteText}
               onChange={setNoteText}
-              onSave={async () => { await addNote.mutateAsync(noteText.trim()); setNoteText(""); }}
+              onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
               isSaving={addNote.isPending}
+              onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
               placeholder={t("appointments.admin_notes_placeholder")}
               saveLabel={t("common.save")}
             />
@@ -871,6 +905,11 @@ export function AppointmentDetailPage() {
                       <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
+                    {n.image_url && (
+                      <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
+                        <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
@@ -942,11 +981,24 @@ export function AppointmentDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={pendingAgencyId !== null} onOpenChange={(open) => { if (!open) setPendingAgencyId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("appointments.agency")}</DialogTitle>
+            <DialogDescription>{t("appointments.agency_order_check")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingAgencyId(null)}>{t("common.no")}</Button>
+            <Button onClick={() => { set("agency_id", pendingAgencyId!); setPendingAgencyId(null); }}>{t("common.yes")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function BillingCard({ appointmentId, appointment }: { appointmentId: string; appointment: Record<string, unknown> }) {
+function BillingCard({ appointmentId, appointment, onPoRequired }: { appointmentId: string; appointment: Record<string, unknown>; onPoRequired: () => void }) {
   const { t } = useTranslation();
   const patch = usePatchBilling(appointmentId);
 
@@ -1024,7 +1076,14 @@ function BillingCard({ appointmentId, appointment }: { appointmentId: string; ap
               {t("appointments.billing_pending_approval")}
             </button>
             <button
-              onClick={() => toggle("billing_approval_status", "approved")}
+              onClick={() => {
+                if (!b.po_number) {
+                  toast({ title: t("appointments.po_number_required"), variant: "destructive" });
+                  onPoRequired();
+                  return;
+                }
+                toggle("billing_approval_status", "approved");
+              }}
               disabled={patch.isPending}
               className={`px-3 py-1.5 transition-colors ${approvalStatus === "approved" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
             >

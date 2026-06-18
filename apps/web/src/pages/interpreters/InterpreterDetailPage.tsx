@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useInterpreter, useUpdateInterpreter, useDeactivateInterpreter } from "../../hooks/useInterpreters.js";
+import { useInterpreter, useUpdateInterpreter, useDeactivateInterpreter, useInterpreterCities } from "../../hooks/useInterpreters.js";
 import { useShowLanguage } from "../../hooks/useSettings.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -27,6 +27,7 @@ export function InterpreterDetailPage() {
   const { data, isLoading } = useInterpreter(id!);
   const update = useUpdateInterpreter(id!);
   const deactivate = useDeactivateInterpreter(id!);
+  const { data: allCities } = useInterpreterCities();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, unknown>>({});
@@ -323,8 +324,46 @@ export function InterpreterDetailPage() {
           <CardHeader><CardTitle>{t("interpreters.coverage")}</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {editing ? (
-              <div className="space-y-2">
-                <Label>{t("interpreters.preferred_cities")}</Label>
+              <div className="space-y-3">
+                {/* Clickable city chips from all cities in use */}
+                {(allCities ?? []).length > 0 && (() => {
+                  const selected = (editForm.preferred_cities as string[]) ?? [];
+                  const filtered = cityInput.trim()
+                    ? (allCities ?? []).filter((c) => c.toLowerCase().includes(cityInput.trim().toLowerCase()))
+                    : (allCities ?? []);
+                  if (filtered.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {filtered.map((city) => {
+                        const isSelected = selected.includes(city);
+                        return (
+                          <button
+                            key={city}
+                            type="button"
+                            onClick={() => setEditForm(s => {
+                              const cur = (s.preferred_cities as string[]) ?? [];
+                              return {
+                                ...s,
+                                preferred_cities: isSelected
+                                  ? cur.filter((c) => c !== city)
+                                  : [...cur, city],
+                              };
+                            })}
+                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              isSelected
+                                ? "bg-emerald-100 border-emerald-400 text-emerald-800 hover:bg-emerald-200"
+                                : "bg-muted border-transparent text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                            }`}
+                          >
+                            {city}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* Search / add new city */}
                 <div className="flex gap-2">
                   <Input
                     value={cityInput}
@@ -343,35 +382,22 @@ export function InterpreterDetailPage() {
                       }
                     }}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const city = cityInput.trim();
-                      if (!city) return;
-                      const current = (editForm.preferred_cities as string[]) ?? [];
-                      if (!current.includes(city)) {
-                        setEditForm(s => ({ ...s, preferred_cities: [...current, city] }));
-                      }
-                      setCityInput("");
-                    }}
-                  >
-                    {t("common.add")}
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {((editForm.preferred_cities as string[]) ?? []).map((city) => (
-                    <span key={city} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                      {city}
-                      <button
-                        type="button"
-                        onClick={() => setEditForm(s => ({ ...s, preferred_cities: (s.preferred_cities as string[]).filter((c) => c !== city) }))}
-                        className="ml-1 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
+                  {cityInput.trim() && !(allCities ?? []).some((c) => c.toLowerCase() === cityInput.trim().toLowerCase()) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const city = cityInput.trim();
+                        const current = (editForm.preferred_cities as string[]) ?? [];
+                        if (!current.includes(city)) {
+                          setEditForm(s => ({ ...s, preferred_cities: [...current, city] }));
+                        }
+                        setCityInput("");
+                      }}
+                    >
+                      {t("common.add")}
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (

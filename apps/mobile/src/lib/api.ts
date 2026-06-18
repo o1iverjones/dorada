@@ -12,8 +12,9 @@ class ApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await SecureStore.getItemAsync("dorada_access_token");
+  const isFormData = init.body instanceof FormData;
   const headers: Record<string, string> = {
-    ...(init.body ? { "Content-Type": "application/json" } : {}),
+    ...(!isFormData && init.body ? { "Content-Type": "application/json" } : {}),
     ...(init.headers as Record<string, string>),
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -81,4 +82,6 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  uploadFile: <T>(path: string, formData: FormData) =>
+    request<T>(path, { method: "POST", body: formData as unknown as BodyInit }),
 };

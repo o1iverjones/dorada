@@ -59,16 +59,18 @@ const ADMIN_RESOLVABLE_STATUSES = [
 ];
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-  unassigned:    [...ADMIN_RESOLVABLE_STATUSES],
+  unassigned:    ["pending_offer", ...ADMIN_RESOLVABLE_STATUSES],
   pending_offer: ["confirmed", ...ADMIN_RESOLVABLE_STATUSES],
   confirmed:     ["in_progress", ...ADMIN_RESOLVABLE_STATUSES],
   in_progress:   ["completed", ...ADMIN_RESOLVABLE_STATUSES],
   completed:     [...ADMIN_RESOLVABLE_STATUSES],
+  declined:      ["unassigned", "pending_offer", ...ADMIN_RESOLVABLE_STATUSES],
   // Allow re-classification between admin-resolvable statuses
-  ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)])),
+  ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ["unassigned", "pending_offer", "confirmed", ...ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)]])),
 };
 
 function assertValidTransition(from: string, to: string) {
+  if (from === to) return;
   if (!STATUS_TRANSITIONS[from]?.includes(to)) {
     throw new ValidationError("INVALID_STATUS_TRANSITION", `Cannot transition from ${from} to ${to}`);
   }
@@ -173,11 +175,12 @@ export async function addAdminNote(
   organizationId: string,
   actor: { id: string; name: string },
   prisma: PrismaClient,
+  imageUrl: string | null = null,
 ) {
   const appt = await prisma.appointment.findUnique({ where: { id }, select: { organization_id: true, po_number: true, patient: { select: { name: true } } } });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
   const note = await prisma.appointmentNote.create({
-    data: { appointment_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name },
+    data: { appointment_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: imageUrl },
   });
   await logActivity(id, organizationId, "note_added", actor.name, actor.id, null, prisma, appt!.patient?.name, appt!.po_number);
   return note;

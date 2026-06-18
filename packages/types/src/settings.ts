@@ -30,6 +30,8 @@ export const SystemSettingsSchema = z.object({
   allow_manual_confirm: z.boolean(),
   show_language: z.boolean(),
   long_appointment_alert_minutes: z.number().int().positive(),
+  clinic_confirmation_enabled: z.boolean(),
+  clinic_confirmation_time: z.string(),
 });
 
 export const UpdateSystemSettingsBodySchema = z.object({
@@ -46,6 +48,8 @@ export const UpdateSystemSettingsBodySchema = z.object({
   allow_manual_confirm: z.boolean().optional(),
   show_language: z.boolean().optional(),
   long_appointment_alert_minutes: z.number().int().positive().optional(),
+  clinic_confirmation_enabled: z.boolean().optional(),
+  clinic_confirmation_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 });
 
 export const CreateAppointmentTypeBodySchema = z.object({
@@ -85,7 +89,7 @@ export type SuperAdminSettings = z.infer<typeof SuperAdminSettingsSchema>;
 export const AdminAlertSchema = z.object({
   id: z.string(),
   organization_id: z.string(),
-  type: z.enum(["offer_declined", "long_appointment"]),
+  type: z.enum(["offer_declined", "long_appointment", "stale_billing"]),
   appointment_id: z.string().nullable(),
   message: z.string(),
   is_read: z.boolean(),

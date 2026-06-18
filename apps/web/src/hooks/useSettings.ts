@@ -100,3 +100,42 @@ export function useLocaleStrings(locale: string) {
     queryFn: () => api.get<{ data: unknown[] }>(`/settings/locale-strings?locale=${locale}`),
   });
 }
+
+export interface ReminderConfig {
+  id: string;
+  offset_minutes: number;
+  label: string;
+}
+
+export function useReminderConfigs() {
+  return useQuery({
+    queryKey: ["reminder-configs"],
+    queryFn: () => api.get<ReminderConfig[]>("/settings/reminder-configs"),
+  });
+}
+
+export function useCreateReminderConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { offset_minutes: number; label: string }) =>
+      api.post<ReminderConfig>("/settings/reminder-configs", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reminder-configs"] }),
+  });
+}
+
+export function useUpdateReminderConfig(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { offset_minutes?: number; label?: string }) =>
+      api.patch<ReminderConfig>(`/settings/reminder-configs/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reminder-configs"] }),
+  });
+}
+
+export function useDeleteReminderConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/settings/reminder-configs/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reminder-configs"] }),
+  });
+}

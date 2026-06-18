@@ -32,6 +32,8 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
     allow_manual_confirm: settings?.allow_manual_confirm ?? false,
     show_language: settings?.show_language ?? true,
     long_appointment_alert_minutes: settings?.long_appointment_alert_minutes ?? 105,
+    clinic_confirmation_enabled: settings?.clinic_confirmation_enabled ?? false,
+    clinic_confirmation_time: settings?.clinic_confirmation_time ?? "08:00",
     languages,
     appointment_types: appointmentTypes,
   };
@@ -54,6 +56,8 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       ...(body.allow_manual_confirm !== undefined ? { allow_manual_confirm: body.allow_manual_confirm } : {}),
       ...(body.show_language !== undefined ? { show_language: body.show_language } : {}),
       ...(body.long_appointment_alert_minutes !== undefined ? { long_appointment_alert_minutes: body.long_appointment_alert_minutes } : {}),
+      ...(body.clinic_confirmation_enabled !== undefined ? { clinic_confirmation_enabled: body.clinic_confirmation_enabled } : {}),
+      ...(body.clinic_confirmation_time !== undefined ? { clinic_confirmation_time: body.clinic_confirmation_time } : {}),
     },
     create: {
       organization_id: organizationId,
@@ -66,6 +70,8 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       allow_manual_confirm: body.allow_manual_confirm ?? false,
       show_language: body.show_language ?? true,
       long_appointment_alert_minutes: body.long_appointment_alert_minutes ?? 105,
+      clinic_confirmation_enabled: body.clinic_confirmation_enabled ?? false,
+      clinic_confirmation_time: body.clinic_confirmation_time ?? "08:00",
     },
   });
 
@@ -151,6 +157,48 @@ export async function deleteInterpreterRate(id: string, organizationId: string, 
   const rate = await prisma.interpreterRate.findUnique({ where: { id } });
   if (!rate || rate.organization_id !== organizationId) throw new NotFoundError("RATE_NOT_FOUND", "Rate not found");
   await prisma.interpreterRate.update({ where: { id }, data: { is_active: false } });
+}
+
+// ─── Interpreter Reminder Configs ────────────────────────────────────────────
+
+export async function listReminderConfigs(organizationId: string, prisma: PrismaClient) {
+  return prisma.appointmentReminderConfig.findMany({
+    where: { organization_id: organizationId, is_active: true },
+    orderBy: { offset_minutes: "desc" },
+  });
+}
+
+export async function createReminderConfig(
+  body: { offset_minutes: number; label: string },
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  return prisma.appointmentReminderConfig.create({
+    data: { organization_id: organizationId, offset_minutes: body.offset_minutes, label: body.label },
+  });
+}
+
+export async function updateReminderConfig(
+  id: string,
+  body: { offset_minutes?: number; label?: string },
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const config = await prisma.appointmentReminderConfig.findUnique({ where: { id } });
+  if (!config || config.organization_id !== organizationId) throw new NotFoundError("REMINDER_NOT_FOUND", "Reminder not found");
+  return prisma.appointmentReminderConfig.update({
+    where: { id },
+    data: {
+      ...(body.offset_minutes !== undefined ? { offset_minutes: body.offset_minutes } : {}),
+      ...(body.label !== undefined ? { label: body.label } : {}),
+    },
+  });
+}
+
+export async function deleteReminderConfig(id: string, organizationId: string, prisma: PrismaClient) {
+  const config = await prisma.appointmentReminderConfig.findUnique({ where: { id } });
+  if (!config || config.organization_id !== organizationId) throw new NotFoundError("REMINDER_NOT_FOUND", "Reminder not found");
+  await prisma.appointmentReminderConfig.update({ where: { id }, data: { is_active: false } });
 }
 
 export async function getLocalizationStrings(locale: string, organizationId: string, prisma: PrismaClient) {

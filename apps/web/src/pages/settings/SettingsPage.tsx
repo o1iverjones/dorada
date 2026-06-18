@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates, useUpdateAppointmentType, useDeleteAppointmentType } from "../../hooks/useSettings.js";
+import { useSystemSettings, useUpdateSystemSettings, useInterpreterRates, useUpdateAppointmentType, useDeleteAppointmentType, useReminderConfigs, useCreateReminderConfig, useUpdateReminderConfig, useDeleteReminderConfig, type ReminderConfig } from "../../hooks/useSettings.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -17,6 +17,69 @@ import { cn } from "../../lib/utils.js";
 
 interface Language { id?: string; code: string; name: string; active: boolean; }
 interface AppointmentType { id: string; name: string; pay_model: string; minimum_billable_minutes: number; is_active: boolean; }
+
+function ReminderRow({ reminder, t }: { reminder: ReminderConfig; t: (k: string) => string }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ label: "", offset_minutes: 0 });
+  const update = useUpdateReminderConfig(reminder.id);
+  const remove = useDeleteReminderConfig();
+
+  function startEdit() {
+    setForm({ label: reminder.label, offset_minutes: reminder.offset_minutes });
+    setEditing(true);
+  }
+
+  async function save() {
+    try {
+      await update.mutateAsync({ label: form.label, offset_minutes: form.offset_minutes });
+      setEditing(false);
+      toast({ title: t("common.saved") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded-md border p-3 space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input
+            value={form.label}
+            onChange={(e) => setForm(s => ({ ...s, label: e.target.value }))}
+            placeholder={t("settings.reminder_label")}
+          />
+          <div className="relative">
+            <Input
+              type="number"
+              min={1}
+              value={form.offset_minutes}
+              onChange={(e) => setForm(s => ({ ...s, offset_minutes: parseInt(e.target.value) || 0 }))}
+              className="pr-10"
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">min</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={save} disabled={!form.label.trim() || form.offset_minutes < 1 || update.isPending}>{t("common.save_changes")}</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-md border p-3 text-sm">
+      <div>
+        <p className="font-medium">{reminder.label}</p>
+        <p className="text-xs text-muted-foreground">{reminder.offset_minutes} {t("settings.reminder_offset")}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={startEdit} className="text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+        <button type="button" onClick={() => remove.mutate(reminder.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></button>
+      </div>
+    </div>
+  );
+}
 
 function AppointmentTypeRow({ ty, t }: { ty: AppointmentType; t: (k: string) => string }) {
   const [editing, setEditing] = useState(false);
@@ -341,6 +404,10 @@ export function SettingsPage() {
 
   const { data: ratesData, refetch: refetchRates } = useInterpreterRates();
   const rates = ratesData?.data ?? [];
+  const { data: reminderConfigs } = useReminderConfigs();
+  const reminders = (reminderConfigs ?? []) as ReminderConfig[];
+  const createReminder = useCreateReminderConfig();
+  const [newReminder, setNewReminder] = useState({ label: "", offset_minutes: "" });
 
   const createRate = useMutation({
     mutationFn: (body: { title: string; amount: number }) => api.post("/settings/interpreter-rates", body),
@@ -439,67 +506,6 @@ export function SettingsPage() {
       <Button onClick={saveSettings} disabled={update.isPending}>{t("common.save_changes")}</Button>
 
       <Card>
-        <CardHeader><CardTitle>{t("settings.languages")}</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {languages.filter((l) => l.active).map((l) => (
-              removingMode ? (
-                <button
-                  key={l.code}
-                  type="button"
-                  onClick={() => {
-                    const merged = languages.map((x) =>
-                      x.code === l.code ? { code: x.code, name: x.name, active: false } : { code: x.code, name: x.name, active: x.active }
-                    );
-                    patchLanguages.mutate({ languages: merged });
-                  }}
-                  className="rounded-full border px-3 py-1 text-sm cursor-pointer animate-pulse shadow-[0_0_0_3px_hsl(var(--destructive)/0.3)] hover:bg-destructive/10 hover:shadow-[0_0_0_3px_hsl(var(--destructive)/0.6)] transition-all"
-                >
-                  {l.name}
-                </button>
-              ) : (
-                <span key={l.code} className="rounded-full border px-3 py-1 text-sm">{l.name}</span>
-              )
-            ))}
-          </div>
-          <div className="flex gap-2">
-            {!removingMode && (
-              <>
-                <Input placeholder={t("settings.new_language")} value={newLang.name} onChange={(e) => setNewLang(s => ({ ...s, name: e.target.value, code: e.target.value.trim().toLowerCase().slice(0, 10).replace(/\s+/g, "_") }))} className="max-w-xs" />
-                <Button onClick={addLanguage} disabled={!newLang.name.trim() || patchLanguages.isPending}>{t("common.add")}</Button>
-              </>
-            )}
-            {canRemoveLanguages && (
-              <Button onClick={() => setRemovingMode((v) => !v)}>
-                {removingMode ? t("settings.languages_done") : t("settings.remove_languages")}
-              </Button>
-            )}
-          </div>
-          {hasPermission("manage_system_settings") && (
-            <div className="border-t pt-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{t("settings.show_language")}</p>
-                <p className="text-xs text-muted-foreground">{t("settings.show_language_description")}</p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={((settings as Record<string, unknown>)?.show_language ?? true) as boolean}
-                onClick={() => update.mutate({ show_language: !(((settings as Record<string, unknown>)?.show_language) ?? true) })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "bg-primary" : "bg-input"
-                }`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "translate-x-6" : "translate-x-1"
-                }`} />
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader><CardTitle>{t("settings.interpreter_rates")}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -571,6 +577,90 @@ export function SettingsPage() {
           <Button onClick={addType} disabled={!newType.name || createType.isPending}>{t("settings.add_type")}</Button>
         </CardContent>
       </Card>
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.interpreter_reminders")}</CardTitle>
+            <CardDescription>{t("settings.reminders_description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              {reminders.map((r) => <ReminderRow key={r.id} reminder={r} t={t} />)}
+              {reminders.length === 0 && <p className="text-sm text-muted-foreground">{t("settings.no_reminders")}</p>}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder={t("settings.reminder_label")}
+                value={newReminder.label}
+                onChange={(e) => setNewReminder(s => ({ ...s, label: e.target.value }))}
+                className="max-w-xs"
+              />
+              <div className="relative max-w-36">
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="60"
+                  value={newReminder.offset_minutes}
+                  onChange={(e) => setNewReminder(s => ({ ...s, offset_minutes: e.target.value }))}
+                  className="pr-10"
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">min</span>
+              </div>
+              <Button
+                onClick={() => {
+                  createReminder.mutate(
+                    { label: newReminder.label.trim(), offset_minutes: parseInt(newReminder.offset_minutes) },
+                    { onSuccess: () => setNewReminder({ label: "", offset_minutes: "" }) },
+                  );
+                }}
+                disabled={!newReminder.label.trim() || !newReminder.offset_minutes || createReminder.isPending}
+              >
+                {t("settings.add_reminder")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.clinic_confirmation")}</CardTitle>
+            <CardDescription>{t("settings.clinic_confirmation_description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.clinic_confirmation_enabled")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={((settings as Record<string, unknown>)?.clinic_confirmation_enabled ?? false) as boolean}
+                onClick={() => update.mutate({ clinic_confirmation_enabled: !((settings as Record<string, unknown>)?.clinic_confirmation_enabled as boolean ?? false) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  (settings as Record<string, unknown>)?.clinic_confirmation_enabled ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  (settings as Record<string, unknown>)?.clinic_confirmation_enabled ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.clinic_confirmation_time")}</Label>
+              <Input
+                type="time"
+                className="max-w-xs"
+                value={((settings as Record<string, unknown>)?.clinic_confirmation_time as string) ?? "08:00"}
+                onChange={(e) => update.mutate({ clinic_confirmation_time: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">{t("settings.clinic_confirmation_time_hint")}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {hasPermission("manage_system_settings") && (
         <Card>
@@ -669,6 +759,67 @@ export function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader><CardTitle>{t("settings.languages")}</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {languages.filter((l) => l.active).map((l) => (
+              removingMode ? (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => {
+                    const merged = languages.map((x) =>
+                      x.code === l.code ? { code: x.code, name: x.name, active: false } : { code: x.code, name: x.name, active: x.active }
+                    );
+                    patchLanguages.mutate({ languages: merged });
+                  }}
+                  className="rounded-full border px-3 py-1 text-sm cursor-pointer animate-pulse shadow-[0_0_0_3px_hsl(var(--destructive)/0.3)] hover:bg-destructive/10 hover:shadow-[0_0_0_3px_hsl(var(--destructive)/0.6)] transition-all"
+                >
+                  {l.name}
+                </button>
+              ) : (
+                <span key={l.code} className="rounded-full border px-3 py-1 text-sm">{l.name}</span>
+              )
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {!removingMode && (
+              <>
+                <Input placeholder={t("settings.new_language")} value={newLang.name} onChange={(e) => setNewLang(s => ({ ...s, name: e.target.value, code: e.target.value.trim().toLowerCase().slice(0, 10).replace(/\s+/g, "_") }))} className="max-w-xs" />
+                <Button onClick={addLanguage} disabled={!newLang.name.trim() || patchLanguages.isPending}>{t("common.add")}</Button>
+              </>
+            )}
+            {canRemoveLanguages && (
+              <Button onClick={() => setRemovingMode((v) => !v)}>
+                {removingMode ? t("settings.languages_done") : t("settings.remove_languages")}
+              </Button>
+            )}
+          </div>
+          {hasPermission("manage_system_settings") && (
+            <div className="border-t pt-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.show_language")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.show_language_description")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={((settings as Record<string, unknown>)?.show_language ?? true) as boolean}
+                onClick={() => update.mutate({ show_language: !(((settings as Record<string, unknown>)?.show_language) ?? true) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  ((settings as Record<string, unknown>)?.show_language ?? true) ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {hasPermission("manage_system_settings") && <CsvImportCard />}
     </div>

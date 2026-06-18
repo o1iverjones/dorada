@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Socket } from "socket.io-client";
 import { getSocket } from "../../lib/socket.js";
 import { useQueryClient } from "@tanstack/react-query";
-import { useConversations, useMessages, useSendMessage, useMessageSearch } from "../../hooks/useMessages.js";
+import { useConversations, useMessages, useSendMessage, useMessageSearch, useUploadMessageImage } from "../../hooks/useMessages.js";
 import type { MessageSearchResult } from "../../hooks/useMessages.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
@@ -13,11 +13,12 @@ import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { cn } from "../../lib/utils.js";
-import { Send } from "lucide-react";
+import { Send, ImageIcon, X } from "lucide-react";
 
 interface Message {
   id: string;
   body: string;
+  image_url: string | null;
   sender_type: "admin" | "interpreter";
   sender: { id: string; name: string };
   sent_at: string;
@@ -41,6 +42,10 @@ export function MessagesPage() {
   const [msgSearch, setMsgSearch] = useState("");
   const [highlightMsgId, setHighlightMsgId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
   const [peerTyping, setPeerTyping] = useState(false);
   const [typingTimer, setTypingTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -54,6 +59,7 @@ export function MessagesPage() {
   const { data: thread } = useMessages(selectedId ?? "");
   const { data: searchResults, isFetching: searchFetching } = useMessageSearch(msgSearch);
   const send = useSendMessage(selectedId ?? "");
+  const uploadImage = useUploadMessageImage(selectedId ?? "");
 
   const convs = (conversations?.data ?? []) as Conversation[];
 
@@ -152,6 +158,8 @@ export function MessagesPage() {
   useEffect(() => {
     if (!selectedId) return;
     setRealtimeMessages([]);
+    setImagePreview(null);
+    setImageUrl(null);
     setPeerTyping(false);
     markConversationRead(selectedId);
     socketRef.current?.emit("join_conversation", { interpreter_id: selectedId });
@@ -182,13 +190,32 @@ export function MessagesPage() {
     setHighlightMsgId(result.id);
   }
 
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedId) return;
+    setImagePreview(URL.createObjectURL(file));
+    setImageUrl(null);
+    setImageUploading(true);
+    try {
+      const res = await uploadImage.mutateAsync(file);
+      setImageUrl(res.url);
+    } catch {
+      setImagePreview(null);
+    } finally {
+      setImageUploading(false);
+      e.target.value = "";
+    }
+  }
+
   async function handleSend() {
-    if (!draft.trim() || !selectedId) return;
+    if ((!draft.trim() && !imageUrl) || !selectedId) return;
     if (typingTimer) clearTimeout(typingTimer);
     socketRef.current?.emit("typing_stop", { interpreter_id: selectedId });
     try {
-      await send.mutateAsync({ body: draft });
+      await send.mutateAsync({ body: draft || " ", image_url: imageUrl });
       setDraft("");
+      setImagePreview(null);
+      setImageUrl(null);
     } catch { /* fire and forget */ }
   }
 
@@ -327,7 +354,12 @@ export function MessagesPage() {
                         msg.sender_type === "admin" ? "bg-primary text-primary-foreground" : "bg-muted",
                       )}
                     >
-                      <p>{msg.body}</p>
+                      {msg.image_url && (
+                        <a href={msg.image_url} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                          <img src={msg.image_url} alt="attachment" className="max-w-full rounded-md object-cover" style={{ maxHeight: 200 }} />
+                        </a>
+                      )}
+                      {msg.body.trim() && <p>{msg.body}</p>}
                       <p className={cn("mt-1 text-xs", msg.sender_type === "admin" ? "text-primary-foreground/70" : "text-muted-foreground")}>
                         {formatInTz(msg.sent_at, { hour: "2-digit", minute: "2-digit" }, tz)}
                       </p>
@@ -343,15 +375,51 @@ export function MessagesPage() {
                 )}
                 <div ref={bottomRef} />
               </div>
-              <div className="border-t p-3">
+              <div className="border-t p-3 space-y-2">
+                {imagePreview && (
+                  <div className="relative inline-block">
+                    <img src={imagePreview} alt="attachment preview" className="h-20 w-auto rounded-md border object-cover" />
+                    {imageUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/40">
+                        <span className="text-xs text-white">Uploading…</span>
+                      </div>
+                    )}
+                    {!imageUploading && (
+                      <button
+                        type="button"
+                        onClick={() => { setImagePreview(null); setImageUrl(null); }}
+                        className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                )}
                 <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/gif"
+                    className="hidden"
+                    onChange={handleImageSelect}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    disabled={!selectedId || imageUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach image"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                  </Button>
                   <Input
                     value={draft}
                     onChange={(e) => handleDraftChange(e.target.value)}
                     placeholder={t("messages.placeholder")}
                     className="flex-1"
                   />
-                  <Button type="submit" size="icon" disabled={!draft.trim() || send.isPending}>
+                  <Button type="submit" size="icon" disabled={(!draft.trim() && !imageUrl) || send.isPending || imageUploading}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </form>

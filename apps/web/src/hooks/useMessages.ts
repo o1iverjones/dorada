@@ -62,3 +62,13 @@ export function useMarkRead(interpreterId: string) {
     },
   });
 }
+
+export function useUploadMessageImage(interpreterId: string) {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return api.uploadFile<{ url: string }>(`/messages/conversations/${interpreterId}/media`, fd);
+    },
+  });
+}

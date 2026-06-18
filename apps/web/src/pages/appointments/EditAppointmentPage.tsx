@@ -22,6 +22,7 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog.js";
 
 const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 
@@ -59,6 +60,7 @@ export function EditAppointmentPage() {
   const { data: ratesData } = useInterpreterRates();
 
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
+  const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
   const { data: clinicDoctors } = useClinicDoctors(selectedClinicId);
 
   const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
@@ -199,7 +201,7 @@ export function EditAppointmentPage() {
 
             <FormField label={t("appointments.agency")} error={errors.agency_id?.message}>
               <Controller name="agency_id" control={control} render={({ field }) => (
-                <AutocompleteInput options={agencyOptions} value={field.value ?? ""} onChange={field.onChange} placeholder={t("common.search")} />
+                <AutocompleteInput options={agencyOptions} value={field.value ?? ""} onChange={(v) => { if (v) { setPendingAgencyId(v); } else { field.onChange(v); } }} placeholder={t("common.search")} />
               )} />
             </FormField>
 
@@ -265,6 +267,19 @@ export function EditAppointmentPage() {
           </form>
         </CardContent>
       </Card>
+
+      <Dialog open={pendingAgencyId !== null} onOpenChange={(open) => { if (!open) setPendingAgencyId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("appointments.agency")}</DialogTitle>
+            <DialogDescription>{t("appointments.agency_order_check")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingAgencyId(null)}>{t("common.no")}</Button>
+            <Button onClick={() => { setValue("agency_id", pendingAgencyId!); setPendingAgencyId(null); }}>{t("common.yes")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

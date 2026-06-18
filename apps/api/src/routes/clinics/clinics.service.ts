@@ -182,11 +182,12 @@ export async function addClinicNote(
   organizationId: string,
   actor: { id: string; name: string },
   prisma: PrismaClient,
+  imageUrl: string | null = null,
 ) {
   const clinic = await prisma.clinic.findUnique({ where: { id }, select: { organization_id: true, name: true } });
   ensureTenant(clinic, organizationId);
   const note = await prisma.clinicNote.create({
-    data: { clinic_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name },
+    data: { clinic_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: imageUrl },
   });
   await prisma.activityLog.create({
     data: {

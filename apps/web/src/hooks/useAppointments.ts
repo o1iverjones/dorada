@@ -113,11 +113,22 @@ export function useAppointmentNotes(id: string) {
 export function useAddAppointmentNote(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) => api.post(`/appointments/${id}/admin-notes`, { content }),
+    mutationFn: ({ content, image_url }: { content: string; image_url?: string | null }) =>
+      api.post(`/appointments/${id}/admin-notes`, { content, image_url }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["appointments", id, "notes"] });
       qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
       qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
+  });
+}
+
+export function useUploadAppointmentNoteImage(id: string) {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return api.uploadFile<{ url: string }>(`/appointments/${id}/note-image`, fd);
     },
   });
 }

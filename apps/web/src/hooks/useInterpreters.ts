@@ -36,6 +36,14 @@ export function useUpdateInterpreter(id: string) {
   });
 }
 
+export function useInterpreterCities() {
+  return useQuery({
+    queryKey: ["interpreter-cities"],
+    queryFn: () => api.get<string[]>("/interpreters/cities"),
+    staleTime: 30_000,
+  });
+}
+
 export function useDeactivateInterpreter(id: string) {
   const qc = useQueryClient();
   return useMutation({
