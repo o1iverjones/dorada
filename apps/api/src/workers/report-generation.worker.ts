@@ -9,7 +9,7 @@ import { config, redisConnection } from "../config.js";
 import { uploadBuffer, reportPath, getSignedUrl } from "../integrations/r2.js";
 
 function isR2Available(): boolean {
-  return !!(config.R2_ACCOUNT_ID && config.R2_ACCESS_KEY_ID && config.R2_SECRET_ACCESS_KEY);
+  return !!(config.R2_ACCOUNT_ID && config.R2_ACCESS_KEY_ID && config.R2_SECRET_ACCESS_ID);
 }
 
 const LOCAL_REPORTS_DIR = path.join(os.tmpdir(), "dorada-reports");
