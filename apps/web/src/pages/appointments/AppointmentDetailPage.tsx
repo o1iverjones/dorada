@@ -65,6 +65,7 @@ export function AppointmentDetailPage() {
   const [clockOutForm, setClockOutForm] = useState("");
   const [confirmUnassign, setConfirmUnassign] = useState(false);
   const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
+  const [activityPage, setActivityPage] = useState(0);
   const [highlightPo, setHighlightPo] = useState(false);
   const poRef = useRef<HTMLDivElement>(null);
 
@@ -948,23 +949,54 @@ export function AppointmentDetailPage() {
           <CardContent>
             {!((activityLog as Array<Record<string, unknown>>) ?? []).length ? (
               <p className="text-sm text-muted-foreground">{t("appointments.no_activity")}</p>
-            ) : (
-              <ol className="relative border-l border-border ml-2 space-y-4">
-                {(activityLog as Array<Record<string, unknown>>).map((entry) => (
-                  <li key={entry.id as string} className="ml-4">
-                    <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border bg-background border-border" />
-                    <p className="text-xs text-muted-foreground">
-                      {formatInTz(entry.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
-                      {" · "}
-                      <span className="font-medium text-foreground">{entry.admin_name as string}</span>
-                    </p>
-                    <p className="text-sm mt-0.5 capitalize">{t(`appointments.activity_${entry.action as string}`, { defaultValue: entry.action as string })}
-                      {entry.detail ? <span className="text-muted-foreground"> — {entry.detail as string}</span> : null}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            )}
+            ) : (() => {
+              const allEntries = activityLog as Array<Record<string, unknown>>;
+              const PAGE_SIZE = 15;
+              const totalPages = Math.ceil(allEntries.length / PAGE_SIZE);
+              const pageEntries = allEntries.slice(activityPage * PAGE_SIZE, (activityPage + 1) * PAGE_SIZE);
+              return (
+                <>
+                  <ol className="relative border-l border-border ml-2 space-y-4">
+                    {pageEntries.map((entry) => (
+                      <li key={entry.id as string} className="ml-4">
+                        <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border bg-background border-border" />
+                        <p className="text-xs text-muted-foreground">
+                          {formatInTz(entry.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                          {" · "}
+                          <span className="font-medium text-foreground">{entry.admin_name as string}</span>
+                        </p>
+                        <p className="text-sm mt-0.5 capitalize">{t(`appointments.activity_${entry.action as string}`, { defaultValue: entry.action as string })}
+                          {entry.detail ? <span className="text-muted-foreground"> — {entry.detail as string}</span> : null}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => setActivityPage((p) => Math.max(0, p - 1))}
+                        disabled={activityPage === 0}
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        ← Previous
+                      </button>
+                      <span className="text-xs text-muted-foreground">
+                        {activityPage + 1} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActivityPage((p) => Math.min(totalPages - 1, p + 1))}
+                        disabled={activityPage === totalPages - 1}
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

@@ -408,8 +408,21 @@ export function InterpreterDetailPage() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {((interp.preferred_cities as string[]) ?? []).map((city) => (
-                      <span key={city} className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                      <span key={city} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium">
                         {city}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = ((interp.preferred_cities as string[]) ?? []).filter((c) => c !== city);
+                            update.mutate({ preferred_cities: updated }, {
+                              onError: () => toast({ title: t("common.error"), variant: "destructive" }),
+                            });
+                          }}
+                          className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                          aria-label={`Remove ${city}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </span>
                     ))}
                   </div>
