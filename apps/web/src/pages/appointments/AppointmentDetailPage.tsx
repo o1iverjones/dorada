@@ -53,19 +53,26 @@ type FormState = {
 function ClinicConfirmedToggle({ appointmentId, confirmed, label }: { appointmentId: string; confirmed: boolean; label: string }) {
   const patch = usePatchBilling(appointmentId);
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <button
-        type="button"
-        onClick={() => patch.mutate({ clinic_confirmed: !confirmed })}
-        disabled={patch.isPending}
-        className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
-        style={confirmed
-          ? { backgroundColor: "rgb(220 252 231)", color: "rgb(22 101 52)" }
-          : { backgroundColor: "rgb(243 244 246)", color: "rgb(107 114 128)" }}
-      >
-        {confirmed ? "✓ Confirmed" : "Not Confirmed"}
-      </button>
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => patch.mutate({ clinic_confirmed: false })}
+          disabled={patch.isPending}
+          className={`px-3 py-1.5 transition-colors ${!confirmed ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+        >
+          Not Confirmed
+        </button>
+        <button
+          type="button"
+          onClick={() => patch.mutate({ clinic_confirmed: true })}
+          disabled={patch.isPending}
+          className={`px-3 py-1.5 transition-colors ${confirmed ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
+        >
+          Confirmed
+        </button>
+      </div>
     </div>
   );
 }
