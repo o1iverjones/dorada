@@ -27,6 +27,11 @@ import { PhoneLink } from "../../components/shared/PhoneLink.js";
 
 const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
 
+function formatDuration(minutes: number): string {
+  const hrs = parseFloat((minutes / 60).toFixed(2));
+  return `${hrs} ${hrs === 1 ? "hr" : "hrs"}`;
+}
+
 type FormState = {
   date_time: string;
   duration_minutes: number;
@@ -455,7 +460,7 @@ export function AppointmentDetailPage() {
                   <DurationInput value={form.duration_minutes} onChange={(mins) => set("duration_minutes", mins)} className="h-7 text-sm" />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.duration")} value={`${a.duration_minutes} min`} />
+                <Field label={t("appointments.duration")} value={formatDuration(a.duration_minutes as number)} />
               )}
             </div>
 
@@ -867,8 +872,8 @@ export function AppointmentDetailPage() {
             <>
               <div className="border-t" />
               <div className="space-y-2">
-                {a.actual_duration_minutes && <Field label={t("appointments.actual_duration")} value={`${a.actual_duration_minutes} min`} />}
-                {a.billable_duration_minutes && <Field label={t("appointments.billable_duration")} value={`${a.billable_duration_minutes} min`} />}
+                {a.actual_duration_minutes && <Field label={t("appointments.actual_duration")} value={formatDuration(a.actual_duration_minutes as number)} />}
+                {a.billable_duration_minutes && <Field label={t("appointments.billable_duration")} value={formatDuration(a.billable_duration_minutes as number)} />}
               </div>
             </>
           )}
