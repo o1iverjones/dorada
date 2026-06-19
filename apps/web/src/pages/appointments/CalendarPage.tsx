@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAppointments } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinics } from "../../hooks/useClinics.js";
+import { useAgencies } from "../../hooks/useAgencies.js";
 import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
@@ -84,6 +85,7 @@ export function CalendarPage() {
   function changeDate(d: Date) { localStorage.setItem("dorada_calendar_date", d.toISOString()); setCurrentDate(d); }
   const [interpreterFilter, setInterpreterFilter] = useState("");
   const [clinicFilter, setClinicFilter] = useState("all");
+  const [agencyFilter, setAgencyFilter] = useState("all");
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [showBlocks, setShowBlocks] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
@@ -148,6 +150,7 @@ export function CalendarPage() {
   const apptParams: Record<string, string> = { date_from: dateFrom, date_to: dateTo, limit: "500" };
   if (interpreterFilter) apptParams.interpreter_id = interpreterFilter;
   if (clinicFilter !== "all") apptParams.clinic_id = clinicFilter;
+  if (agencyFilter !== "all") apptParams.agency_id = agencyFilter;
   if (statusValues.length > 0) apptParams.status = statusValues.join(",");
   if (activeFilters.has("billing_billed")) apptParams.billing_billed = "true";
   if (activeFilters.has("billing_invoiced")) apptParams.billing_invoiced = "true";
@@ -159,6 +162,7 @@ export function CalendarPage() {
   const { data } = useAppointments(apptParams);
   const { data: interpretersData } = useInterpreters({ limit: "100" });
   const { data: clinicsData } = useClinics({ limit: "100" });
+  const { data: agenciesData } = useAgencies({ limit: "100" });
 
   const blockParams = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
   if (interpreterFilter) blockParams.set("interpreter_id", interpreterFilter);
@@ -477,6 +481,14 @@ export function CalendarPage() {
                   placeholder={t("appointments.clinic")}
                 />
               </div>
+              <div className="w-52">
+                <AutocompleteInput
+                  options={((agenciesData?.data ?? []) as Array<{ id: string; name: string }>).map((a) => ({ value: a.id, label: a.name }))}
+                  value={agencyFilter === "all" ? "" : agencyFilter}
+                  onChange={(v) => setAgencyFilter(v || "all")}
+                  placeholder={t("appointments.agency")}
+                />
+              </div>
               <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
                 <CalendarOff className="h-4 w-4" />
                 {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
@@ -484,8 +496,8 @@ export function CalendarPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setActiveFilters(new Set()); }}
-                className={(interpreterFilter || clinicFilter !== "all" || activeFilters.size > 0)
+                onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setAgencyFilter("all"); setActiveFilters(new Set()); }}
+                className={(interpreterFilter || clinicFilter !== "all" || agencyFilter !== "all" || activeFilters.size > 0)
                   ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
                   : "opacity-40 cursor-default"}
               >
