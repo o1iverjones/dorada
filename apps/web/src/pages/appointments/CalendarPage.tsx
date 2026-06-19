@@ -253,6 +253,10 @@ export function CalendarPage() {
 
   function apptColorClass(a: Record<string, unknown>) {
     const status = a.status as string;
+    // Billing approved always renders green regardless of appointment status
+    if ((a.billing_approval_status as string) === "approved") {
+      return "bg-green-100 border-green-300 text-green-800";
+    }
     // Certain terminal/non-active statuses always use their status colour regardless of interpreter
     if (status === "cancelled" || status === "completed" || status === "declined" || status === "unassigned") {
       return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
