@@ -46,6 +46,7 @@ model Organization {
   invoices             Invoice[]
   insurance_companies  InsuranceCompany[]
   admin_alerts         AdminAlert[]
+  cities               City[]
 
   @@map("organizations")
 }
@@ -872,4 +873,16 @@ model SuperAdminSettings {
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("super_admin_settings")
+}
+
+model City {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, name])
+  @@map("cities")
 }

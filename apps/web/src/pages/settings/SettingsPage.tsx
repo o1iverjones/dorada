@@ -11,12 +11,121 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { toast } from "../../hooks/use-toast.js";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Pencil, Check, X, Upload, Download, CheckCircle, XCircle, AlertCircle, FileText } from "lucide-react";
+import { Trash2, Pencil, Check, X, Upload, Download, CheckCircle, XCircle, AlertCircle, FileText, MapPin } from "lucide-react";
 import { useAuthStore } from "../../store/auth.js";
+import { useCities, useCreateCity, useRenameCity, useDeleteCity } from "../../hooks/useCities.js";
 import { cn } from "../../lib/utils.js";
 
 interface Language { id?: string; code: string; name: string; active: boolean; }
 interface AppointmentType { id: string; name: string; pay_model: string; minimum_billable_minutes: number; is_active: boolean; }
+
+function CitiesCard() {
+  const { data: cities = [] } = useCities();
+  const createCity = useCreateCity();
+  const renameCity = useRenameCity();
+  const deleteCity = useDeleteCity();
+  const [newCityName, setNewCityName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+
+  function startRename(city: { id: string; name: string }) {
+    setEditingId(city.id);
+    setEditingName(city.name);
+  }
+
+  function commitRename() {
+    if (!editingId || !editingName.trim()) return;
+    renameCity.mutate(
+      { id: editingId, name: editingName.trim() },
+      {
+        onSuccess: () => setEditingId(null),
+        onError: () => toast({ title: "A city with that name already exists.", variant: "destructive" }),
+      },
+    );
+  }
+
+  function addCity() {
+    const name = newCityName.trim();
+    if (!name) return;
+    createCity.mutate(name, {
+      onSuccess: () => setNewCityName(""),
+      onError: () => toast({ title: "A city with that name already exists.", variant: "destructive" }),
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-4 w-4" /> Coverage Cities
+        </CardTitle>
+        <CardDescription>Manage the list of cities available for interpreter coverage areas. Renaming or deleting a city updates all interpreters automatically.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          {(cities as Array<{ id: string; name: string }>).map((city) => (
+            <div key={city.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              {editingId === city.id ? (
+                <Input
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="h-7 text-sm max-w-xs"
+                  autoFocus
+                />
+              ) : (
+                <span className="font-medium">{city.name}</span>
+              )}
+              <div className="flex items-center gap-2">
+                {editingId === city.id ? (
+                  <>
+                    <button type="button" onClick={commitRename} disabled={renameCity.isPending} className="text-primary hover:opacity-70">
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={() => setEditingId(null)} className="text-muted-foreground hover:opacity-70">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => startRename(city)} className="text-muted-foreground hover:text-foreground">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteCity.mutate(city.id)}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          {(cities as Array<unknown>).length === 0 && (
+            <p className="text-sm text-muted-foreground">No cities added yet.</p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="City name"
+            value={newCityName}
+            onChange={(e) => setNewCityName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") addCity(); }}
+            className="max-w-xs"
+          />
+          <Button onClick={addCity} disabled={!newCityName.trim() || createCity.isPending}>
+            Add city
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function ReminderRow({ reminder, t }: { reminder: ReminderConfig; t: (k: string) => string }) {
   const [editing, setEditing] = useState(false);
@@ -577,6 +686,8 @@ export function SettingsPage() {
           <Button onClick={addType} disabled={!newType.name || createType.isPending}>{t("settings.add_type")}</Button>
         </CardContent>
       </Card>
+
+      <CitiesCard />
 
       {hasPermission("manage_system_settings") && (
         <Card>
