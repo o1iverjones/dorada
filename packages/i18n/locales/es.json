@@ -359,9 +359,12 @@
     "empty": "No se encontraron usuarios administradores.",
     "created": "Usuario creado.",
     "updated": "Usuario actualizado.",
+    "deleted": "Usuario eliminado.",
     "edit": "Editar usuario",
     "new_password_optional": "Nueva contraseña (opcional)",
-    "leave_blank_to_keep": "Dejar en blanco para mantener la contraseña actual"
+    "leave_blank_to_keep": "Dejar en blanco para mantener la contraseña actual",
+    "delete_confirm_title": "¿Eliminar usuario?",
+    "delete_confirm_body": "¿Estás seguro de que deseas eliminar a {{name}}? Esta acción no se puede deshacer."
   },
   "appointments": {
     "title": "Citas",

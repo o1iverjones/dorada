@@ -11,7 +11,7 @@ import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { Plus, Pencil, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Eye, EyeOff, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth.js";
 
@@ -28,6 +28,7 @@ export function AdminUsersPage() {
   const [editUser, setEditUser] = useState<null | { id: string; name: string; email: string; role: { id: string; name: string }; is_active: boolean }>(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", password: "", role_id: "", is_active: true });
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<null | { id: string; name: string }>(null);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -47,6 +48,11 @@ export function AdminUsersPage() {
   const update = useMutation({
     mutationFn: ({ id, body }: { id: string; body: unknown }) => api.patch(`/admin-users/${id}`, body),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); setEditUser(null); setShowEditPassword(false); },
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin-users/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); setDeleteTarget(null); },
   });
 
   function openEdit(user: typeof editUser) {
@@ -109,13 +115,22 @@ export function AdminUsersPage() {
         const rowIsElevated = fullRole?.permissions.includes("manage_system_settings") ?? false;
         if (rowIsElevated && !isSuperAdmin) return null;
         return (
-          <button
-            type="button"
-            onClick={() => openEdit(r as typeof editUser)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => openEdit(r as typeof editUser)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget({ id: r.id as string, name: r.name as string })}
+              className="text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         );
       },
     }] : []),
@@ -233,6 +248,32 @@ export function AdminUsersPage() {
               <Button type="submit" disabled={create.isPending || !form.name || !form.email || form.password.length < 10}>{t("common.create")}</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{t("admin_users.delete_confirm_title")}</DialogTitle></DialogHeader>
+          <p className="py-2 text-sm text-muted-foreground">
+            {t("admin_users.delete_confirm_body", { name: deleteTarget?.name ?? "" })}
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>{t("common.cancel")}</Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={async () => {
+                try {
+                  await remove.mutateAsync(deleteTarget!.id);
+                  toast({ title: t("admin_users.deleted") });
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("common.delete")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

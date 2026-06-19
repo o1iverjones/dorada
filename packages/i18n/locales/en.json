@@ -359,9 +359,12 @@
     "empty": "No admin users found.",
     "created": "User created.",
     "updated": "User updated.",
+    "deleted": "User deleted.",
     "edit": "Edit user",
     "new_password_optional": "New password (optional)",
-    "leave_blank_to_keep": "Leave blank to keep current password"
+    "leave_blank_to_keep": "Leave blank to keep current password",
+    "delete_confirm_title": "Delete user?",
+    "delete_confirm_body": "Are you sure you want to delete {{name}}? This action cannot be undone."
   },
   "appointments": {
     "title": "Appointments",
