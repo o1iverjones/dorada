@@ -764,6 +764,35 @@ export function SettingsPage() {
 
       {hasPermission("manage_system_settings") && (
         <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.clinic_summary_emails")}</CardTitle>
+            <CardDescription>{t("settings.clinic_summary_emails_description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.clinic_summary_emails_enabled")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={((settings as Record<string, unknown>)?.clinic_summary_emails_enabled ?? false) as boolean}
+                onClick={() => update.mutate({ clinic_summary_emails_enabled: !((settings as Record<string, unknown>)?.clinic_summary_emails_enabled as boolean ?? false) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  (settings as Record<string, unknown>)?.clinic_summary_emails_enabled ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  (settings as Record<string, unknown>)?.clinic_summary_emails_enabled ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
           <CardHeader><CardTitle>{t("settings.super_admin_options")}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
 

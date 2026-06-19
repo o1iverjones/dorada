@@ -232,9 +232,12 @@ model Clinic {
   billing_hourly_rate   Decimal? @db.Decimal(10, 2)
   billing_flat_rate     Decimal? @db.Decimal(10, 2)
   billing_invoice_cycle String   @default("monthly")
-  is_active             Boolean  @default(true)
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  is_active                    Boolean  @default(true)
+  summary_emails_enabled       Boolean  @default(false)
+  summary_email_days           Int[]    @default([])
+  summary_email_last_sent_date String?
+  created_at                   DateTime @default(now())
+  updated_at                   DateTime @updatedAt
 
   organization         Organization            @relation(fields: [organization_id], references: [id])
   appointments         Appointment[]
@@ -782,6 +785,7 @@ model SystemSettings {
   clinic_confirmation_enabled         Boolean  @default(false)
   clinic_confirmation_time            String   @default("08:00")
   clinic_confirmation_last_sent_date  String?
+  clinic_summary_emails_enabled       Boolean  @default(false)
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])

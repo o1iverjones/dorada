@@ -23,6 +23,63 @@ import { toast } from "../../hooks/use-toast.js";
 import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus, AlertTriangle, Stethoscope, X } from "lucide-react";
 import { useAuthStore } from "../../store/auth.js";
 
+const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function SummaryEmailsCard({ clinic, update }: { clinic: Record<string, unknown>; update: ReturnType<typeof useUpdateClinic> }) {
+  const { t } = useTranslation();
+  const enabled = (clinic.summary_emails_enabled as boolean) ?? false;
+  const days = (clinic.summary_email_days as number[]) ?? [];
+
+  function toggleDay(dow: number) {
+    const next = days.includes(dow) ? days.filter((d) => d !== dow) : [...days, dow].sort((a, b) => a - b);
+    update.mutate({ summary_email_days: next });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("settings.clinic_summary_emails_per_clinic")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{t("clinics.primary_contact_email")}: {(clinic.primary_contact as Record<string, unknown> | null)?.email as string ?? "—"}</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            onClick={() => update.mutate({ summary_emails_enabled: !enabled })}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enabled ? "bg-primary" : "bg-input"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
+        {enabled && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{t("settings.clinic_summary_emails_days_label")}</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {DOW_LABELS.map((label, dow) => (
+                <button
+                  key={dow}
+                  type="button"
+                  onClick={() => toggleDay(dow)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                    days.includes(dow)
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">{t("settings.clinic_summary_emails_days_hint")}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ClinicDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -259,6 +316,9 @@ export function ClinicDetailPage() {
           parking={clinic.parking as string | null}
         />
       </div>
+
+      {/* Summary Emails */}
+      <SummaryEmailsCard clinic={clinic} update={update} />
 
       {/* Excluded Interpreters */}
       <Card>

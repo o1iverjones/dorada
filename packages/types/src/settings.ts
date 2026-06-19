@@ -32,6 +32,7 @@ export const SystemSettingsSchema = z.object({
   long_appointment_alert_minutes: z.number().int().positive(),
   clinic_confirmation_enabled: z.boolean(),
   clinic_confirmation_time: z.string(),
+  clinic_summary_emails_enabled: z.boolean(),
 });
 
 export const UpdateSystemSettingsBodySchema = z.object({
@@ -50,6 +51,7 @@ export const UpdateSystemSettingsBodySchema = z.object({
   long_appointment_alert_minutes: z.number().int().positive().optional(),
   clinic_confirmation_enabled: z.boolean().optional(),
   clinic_confirmation_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  clinic_summary_emails_enabled: z.boolean().optional(),
 });
 
 export const CreateAppointmentTypeBodySchema = z.object({
