@@ -59,6 +59,7 @@ export function InterpreterDetailPage() {
       state: interp.state ?? "",
       zip_code: interp.zip_code ?? "",
       preferred_cities: (interp.preferred_cities as string[] | undefined) ?? [],
+      payment_method: interp.payment_method ?? "",
     });
     setEditing(true);
   }
@@ -82,6 +83,7 @@ export function InterpreterDetailPage() {
       payload.state = (f.state as string)?.trim() || null;
       payload.zip_code = (f.zip_code as string)?.trim() || null;
       payload.preferred_cities = (f.preferred_cities as string[]) ?? [];
+      payload.payment_method = (f.payment_method as string)?.trim() || null;
       const ecName = String(f.emergency_contact_name ?? "").trim();
       const ecPhone = String(f.emergency_contact_phone ?? "").trim();
       if (ecName || ecPhone) {
@@ -237,6 +239,14 @@ export function InterpreterDetailPage() {
                     disabled={editForm.type !== "certified" && editForm.type !== "qualified_and_certified"}
                     value={editForm.pay_rate_certified as number ?? ""}
                     onChange={(e) => setEditForm(s => ({ ...s, pay_rate_certified: parseFloat(e.target.value) }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.payment_method")}</Label>
+                  <Input
+                    value={editForm.payment_method as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, payment_method: e.target.value }))}
+                    placeholder="—"
                   />
                 </div>
               </div>
