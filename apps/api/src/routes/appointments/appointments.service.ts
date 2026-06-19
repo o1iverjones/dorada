@@ -346,6 +346,11 @@ export async function patchClockTimes(
   const outTime = clockOut ?? appt!.clock_out_time;
   const actualMinutes = inTime && outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : undefined;
 
+  const shouldComplete =
+    clockOut !== undefined &&
+    appt!.status !== "completed" &&
+    appt!.status !== "cancelled";
+
   const updated = await prisma.appointment.update({
     where: { id },
     data: {
@@ -353,6 +358,7 @@ export async function patchClockTimes(
       ...(patientArrived !== undefined ? { patient_arrived_at: patientArrived } : {}),
       ...(clockOut !== undefined ? { clock_out_time: clockOut } : {}),
       ...(actualMinutes !== undefined ? { actual_duration_minutes: actualMinutes } : {}),
+      ...(shouldComplete ? { status: "completed" } : {}),
     },
   });
 
