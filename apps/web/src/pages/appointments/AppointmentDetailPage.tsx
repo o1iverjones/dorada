@@ -291,7 +291,7 @@ export function AppointmentDetailPage() {
               ) : (
                 <Field label={t("appointments.patient")} value={
                   <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-bold text-primary hover:underline">
-                    {(a.patient as Record<string, unknown>)?.name as string ?? "—"}
+                    {((a.patient as Record<string, unknown>)?.name as string ?? "—").toUpperCase()}
                   </button>
                 } />
               )}
