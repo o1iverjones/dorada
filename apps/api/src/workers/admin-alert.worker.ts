@@ -76,12 +76,16 @@ async function runStaleBillingCheck(prisma: PrismaClient, emitter: Emitter) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 40);
 
-  // Find appointments older than 40 days that are billed or invoiced but not yet paid
+  // Find appointments older than 40 days that are billed or invoiced but not yet paid.
+  // Must use OR for the payment status check because NULL != 'paid' is NULL in SQL,
+  // so { not: "paid" } would silently exclude rows where the field was never set.
   const stale = await prisma.appointment.findMany({
     where: {
       date_time: { lt: cutoff },
-      OR: [{ billing_billed: true }, { billing_invoiced: true }],
-      billing_payment_status: { not: "paid" },
+      AND: [
+        { OR: [{ billing_billed: true }, { billing_invoiced: true }] },
+        { OR: [{ billing_payment_status: null }, { billing_payment_status: "not_paid" }] },
+      ],
       status: { notIn: ["cancelled"] },
     },
     select: {
