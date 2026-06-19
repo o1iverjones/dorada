@@ -292,8 +292,11 @@ model Agency {
   rate_qme                           Decimal? @db.Decimal(8,2)
   miles                              Decimal? @db.Decimal(8,2)
   reporting_info                     String?
+  reporting_contact                  String?
   followup_info                      String?
+  followup_contact                   String?
   invoice_info                       String?
+  invoice_contact                    String?
   email_intake_enabled               Boolean  @default(false)
   email_intake_sender_domains        String[] @default([])
   email_intake_confirmation_override String?

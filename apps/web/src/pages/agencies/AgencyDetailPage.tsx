@@ -49,8 +49,11 @@ interface AgencyData {
   rate_qme?: number | null;
   miles?: number | null;
   reporting_info?: string | null;
+  reporting_contact?: string | null;
   followup_info?: string | null;
+  followup_contact?: string | null;
   invoice_info?: string | null;
+  invoice_contact?: string | null;
   email_intake?: {
     reply_from_email?: string | null;
     reply_from_name?: string | null;
@@ -85,8 +88,11 @@ export function AgencyDetailPage() {
       rate_qme: agency.rate_qme ?? "",
       miles: agency.miles ?? "",
       reporting_info: agency.reporting_info ?? "",
+      reporting_contact: agency.reporting_contact ?? "",
       followup_info: agency.followup_info ?? "",
+      followup_contact: agency.followup_contact ?? "",
       invoice_info: agency.invoice_info ?? "",
+      invoice_contact: agency.invoice_contact ?? "",
       notes: agency.notes ?? "",
       // email_intake fields — sourced from the nested object
       reply_from_email: intake?.reply_from_email ?? "",
@@ -118,8 +124,11 @@ export function AgencyDetailPage() {
         rate_qme: f.rate_qme !== "" && f.rate_qme != null ? Number(f.rate_qme) : null,
         miles: f.miles !== "" && f.miles != null ? Number(f.miles) : null,
         reporting_info: (f.reporting_info as string) || null,
+        reporting_contact: (f.reporting_contact as string)?.trim() || null,
         followup_info: (f.followup_info as string) || null,
+        followup_contact: (f.followup_contact as string)?.trim() || null,
         invoice_info: (f.invoice_info as string) || null,
+        invoice_contact: (f.invoice_contact as string)?.trim() || null,
         notes: (f.notes as string)?.trim() || null,
         // email_intake is a nested object in the API schema
         email_intake: hasEmailIntake ? {
@@ -235,21 +244,39 @@ export function AgencyDetailPage() {
                 <div className="space-y-1">
                   <Label>{t("agencies.reporting_info")}</Label>
                   <ContactSelect value={form.reporting_info as string} onChange={(v) => set("reporting_info", v)} />
+                  {(form.reporting_info === "Phone" || form.reporting_info === "Text") && (
+                    <Input value={form.reporting_contact as string ?? ""} onChange={(e) => set("reporting_contact", e.target.value)} placeholder="Phone number" />
+                  )}
+                  {form.reporting_info === "Email" && (
+                    <Input type="email" value={form.reporting_contact as string ?? ""} onChange={(e) => set("reporting_contact", e.target.value)} placeholder="Email address" />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label>{t("agencies.followup_info")}</Label>
                   <ContactSelect value={form.followup_info as string} onChange={(v) => set("followup_info", v)} />
+                  {(form.followup_info === "Phone" || form.followup_info === "Text") && (
+                    <Input value={form.followup_contact as string ?? ""} onChange={(e) => set("followup_contact", e.target.value)} placeholder="Phone number" />
+                  )}
+                  {form.followup_info === "Email" && (
+                    <Input type="email" value={form.followup_contact as string ?? ""} onChange={(e) => set("followup_contact", e.target.value)} placeholder="Email address" />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label>{t("agencies.invoice_info")}</Label>
                   <ContactSelect value={form.invoice_info as string} onChange={(v) => set("invoice_info", v)} />
+                  {(form.invoice_info === "Phone" || form.invoice_info === "Text") && (
+                    <Input value={form.invoice_contact as string ?? ""} onChange={(e) => set("invoice_contact", e.target.value)} placeholder="Phone number" />
+                  )}
+                  {form.invoice_info === "Email" && (
+                    <Input type="email" value={form.invoice_contact as string ?? ""} onChange={(e) => set("invoice_contact", e.target.value)} placeholder="Email address" />
+                  )}
                 </div>
               </div>
             ) : (
               <>
-                <Field label={t("agencies.reporting_info")} value={agency.reporting_info} />
-                <Field label={t("agencies.followup_info")} value={agency.followup_info} />
-                <Field label={t("agencies.invoice_info")} value={agency.invoice_info} />
+                <Field label={t("agencies.reporting_info")} value={agency.reporting_info ? `${agency.reporting_info}${agency.reporting_contact ? ` — ${agency.reporting_contact}` : ""}` : null} />
+                <Field label={t("agencies.followup_info")} value={agency.followup_info ? `${agency.followup_info}${agency.followup_contact ? ` — ${agency.followup_contact}` : ""}` : null} />
+                <Field label={t("agencies.invoice_info")} value={agency.invoice_info ? `${agency.invoice_info}${agency.invoice_contact ? ` — ${agency.invoice_contact}` : ""}` : null} />
               </>
             )}
           </CardContent>
