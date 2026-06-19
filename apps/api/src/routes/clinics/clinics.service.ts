@@ -40,7 +40,7 @@ function formatClinic(c: {
 }) {
   return {
     id: c.id, name: c.name, address: c.address, city: c.city, state: c.state, zip_code: c.zip_code, parking: c.parking, phone: c.phone,
-    primary_contact: c.primary_contact_name ? {
+    primary_contact: (c.primary_contact_name || c.primary_contact_email || c.primary_contact_phone) ? {
       name: c.primary_contact_name,
       phone: c.primary_contact_phone,
       email: c.primary_contact_email,
@@ -110,9 +110,9 @@ export async function createClinic(body: CreateClinicBody, organizationId: strin
       location_lng: coords ? coords[1] : null,
       parking: body.parking ?? null,
       phone: body.phone ?? null,
-      primary_contact_name: body.primary_contact?.name ?? null,
-      primary_contact_phone: body.primary_contact?.phone ?? null,
-      primary_contact_email: body.primary_contact?.email ?? null,
+      primary_contact_name: body.primary_contact?.name || null,
+      primary_contact_phone: body.primary_contact?.phone || null,
+      primary_contact_email: body.primary_contact?.email || null,
       billing_model: body.billing.model,
       billing_hourly_rate: body.billing.hourly_rate ?? null,
       billing_flat_rate: body.billing.flat_rate ?? null,
@@ -156,7 +156,7 @@ export async function updateClinic(id: string, body: UpdateClinicBody, organizat
       ...(body.parking !== undefined ? { parking: body.parking } : {}),
       ...(body.phone !== undefined ? { phone: body.phone } : {}),
       ...(body.primary_contact
-        ? { primary_contact_name: body.primary_contact.name, primary_contact_phone: body.primary_contact.phone ?? null, primary_contact_email: body.primary_contact.email ?? null }
+        ? { primary_contact_name: body.primary_contact.name || null, primary_contact_phone: body.primary_contact.phone || null, primary_contact_email: body.primary_contact.email || null }
         : {}),
       ...(body.billing ? { billing_model: body.billing.model, billing_hourly_rate: body.billing.hourly_rate ?? null, billing_flat_rate: body.billing.flat_rate ?? null, billing_invoice_cycle: body.billing.invoice_cycle } : {}),
       ...(body.is_active !== undefined ? { is_active: body.is_active } : {}),
