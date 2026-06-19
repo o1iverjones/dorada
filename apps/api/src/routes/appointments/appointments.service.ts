@@ -96,6 +96,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
     ...(query.interpreter_id ? { interpreter_id: query.interpreter_id } : {}),
     ...(query.clinic_id ? { clinic_id: query.clinic_id } : {}),
     ...(query.agency_id ? { agency_id: query.agency_id } : {}),
+    ...(query.patient_id ? { patient_id: query.patient_id } : {}),
     ...(query.language ? { language: query.language } : {}),
     ...(query.type_id ? { type_id: query.type_id } : {}),
     ...((query.date_from || query.date_to) ? { date_time: dateFilter } : {}),

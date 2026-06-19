@@ -85,6 +85,7 @@ export const AppointmentListQuerySchema = z.object({
   interpreter_id: UuidSchema.optional(),
   clinic_id: UuidSchema.optional(),
   agency_id: UuidSchema.optional(),
+  patient_id: UuidSchema.optional(),
   language: z.string().optional(),
   type_id: UuidSchema.optional(),
   date_from: z.string().date().optional(),
