@@ -359,9 +359,17 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.interpreter")} value={
-                  <span className="font-bold">
-                    {(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")}
-                  </span>
+                  (a.interpreter as Record<string, unknown>)?.id ? (
+                    <button
+                      type="button"
+                      className="font-bold text-primary hover:underline text-left"
+                      onClick={() => navigate(`/interpreters/${(a.interpreter as Record<string, unknown>).id}`)}
+                    >
+                      {(a.interpreter as Record<string, unknown>).name as string}
+                    </button>
+                  ) : (
+                    <span className="font-bold">{t("appointments.unassigned")}</span>
+                  )
                 } />
               )}
             </div>
