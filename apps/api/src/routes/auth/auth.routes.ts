@@ -91,6 +91,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // GET /auth/dev/otp/:phone — DEV ONLY: returns the pending OTP from Redis so
   // we can test interpreter login without a real Twilio integration.
   if (config.APP_ENV !== "production") {
+    // POST /auth/dev/trigger-stale-billing — immediately enqueues a stale-billing-check job
+    fastify.post("/dev/trigger-stale-billing", async (_request, reply) => {
+      const { adminAlertQueue } = await import("../../workers/admin-alert.worker.js");
+      await adminAlertQueue.add("stale-billing-check", {});
+      return reply.send({ triggered: true });
+    });
     fastify.get("/dev/otp/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };
       const normalized = phone.replace(/\D/g, "");

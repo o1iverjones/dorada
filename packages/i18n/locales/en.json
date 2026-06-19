@@ -423,7 +423,7 @@
     "billing_pending_approval": "Pending approval",
     "billing_approved": "Approved",
     "po_number_required": "PO number required before approving",
-    "clinic_confirmed": "Clinic confirmed",
+    "clinic_confirmed": "Clinic / Patient Confirmed",
     "clock_in": "Clock in",
     "patient_arrived": "Patient arrived",
     "clock_out": "Clock out",

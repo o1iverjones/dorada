@@ -191,6 +191,7 @@ export interface BillingFields {
   billing_retro: boolean;
   billing_payment_status: "not_paid" | "paid";
   billing_approval_status: "pending_approval" | "approved";
+  clinic_confirmed: boolean;
 }
 
 export function usePatchBilling(id: string) {

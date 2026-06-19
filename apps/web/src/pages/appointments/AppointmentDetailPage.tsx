@@ -50,6 +50,33 @@ type FormState = {
   status: string;
 };
 
+function ClinicConfirmedToggle({ appointmentId, confirmed, label }: { appointmentId: string; confirmed: boolean; label: string }) {
+  const patch = usePatchBilling(appointmentId);
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => patch.mutate({ clinic_confirmed: false })}
+          disabled={patch.isPending}
+          className={`px-3 py-1.5 transition-colors ${!confirmed ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+        >
+          Not Confirmed
+        </button>
+        <button
+          type="button"
+          onClick={() => patch.mutate({ clinic_confirmed: true })}
+          disabled={patch.isPending}
+          className={`px-3 py-1.5 transition-colors ${confirmed ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
+        >
+          Confirmed
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function AppointmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -332,9 +359,17 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.interpreter")} value={
-                  <span className="font-bold">
-                    {(a.interpreter as Record<string, unknown>)?.name as string ?? t("appointments.unassigned")}
-                  </span>
+                  (a.interpreter as Record<string, unknown>)?.id ? (
+                    <button
+                      type="button"
+                      className="font-bold text-primary hover:underline text-left"
+                      onClick={() => navigate(`/interpreters/${(a.interpreter as Record<string, unknown>).id}`)}
+                    >
+                      {(a.interpreter as Record<string, unknown>).name as string}
+                    </button>
+                  ) : (
+                    <span className="font-bold">{t("appointments.unassigned")}</span>
+                  )
                 } />
               )}
             </div>
@@ -500,19 +535,10 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Clinic confirmed */}
+            {/* Clinic / Patient Confirmed toggle */}
             {!editing && (
               <div className="px-6 py-2.5 even:bg-muted/40">
-                <Field
-                  label={t("appointments.clinic_confirmed")}
-                  value={
-                    a.clinic_confirmed ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">✓ Yes</span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">—</span>
-                    )
-                  }
-                />
+                <ClinicConfirmedToggle appointmentId={a.id as string} confirmed={a.clinic_confirmed as boolean ?? false} label={t("appointments.clinic_confirmed")} />
               </div>
             )}
 
