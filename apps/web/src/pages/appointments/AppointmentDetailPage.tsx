@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getSocket } from "../../lib/socket.js";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, useDeleteOffer, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useAgencies } from "../../hooks/useAgencies.js";
@@ -92,6 +92,7 @@ export function AppointmentDetailPage() {
   const { data: mediaData } = useAppointmentMedia(id!);
   const manualConfirm = useManualConfirm(id!);
   const unassign = useUnassignInterpreter(id!);
+  const deleteOffer = useDeleteOffer(id!);
 
   // Lookup data for edit mode
   const { data: clinicsData } = useClinics({ limit: "500" });
@@ -658,6 +659,17 @@ export function AppointmentDetailPage() {
                               {t("appointments.manually_confirm")}
                             </label>
                           )}
+                          <button
+                            type="button"
+                            disabled={deleteOffer.isPending}
+                            onClick={() => deleteOffer.mutate(o.id as string, {
+                              onSuccess: () => toast({ title: "Offer deleted" }),
+                              onError: () => toast({ title: t("common.error"), variant: "destructive" }),
+                            })}
+                            className="text-xs font-medium text-red-600 hover:text-red-800 hover:underline disabled:opacity-40"
+                          >
+                            Delete offer
+                          </button>
                         </>
                       )}
                     </div>

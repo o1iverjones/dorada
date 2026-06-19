@@ -68,6 +68,18 @@ export function useOfferAppointment(id: string) {
   });
 }
 
+export function useDeleteOffer(appointmentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (offerId: string) => api.delete(`/appointments/${appointmentId}/offers/${offerId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", appointmentId] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["appointments", appointmentId, "activity"] });
+    },
+  });
+}
+
 export function useManualConfirm(id: string) {
   const qc = useQueryClient();
   return useMutation({

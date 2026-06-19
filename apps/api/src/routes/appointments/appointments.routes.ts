@@ -50,6 +50,7 @@ import {
   manualConfirmInterpreter,
   unassignInterpreter,
   patchBilling,
+  deleteOffer,
 } from "./appointments.service.js";
 
 async function resolveActor(payload: JwtPayload, fastify: FastifyInstance) {
@@ -374,6 +375,15 @@ const payload = req.user as JwtPayload;
     fastify.io.to(`notify:${payload.organization_id}`).emit("alert:new", { alert });
 
     return reply.send(result);
+  });
+
+  // DELETE /appointments/:id/offers/:offer_id — admin rescinds a pending offer
+  fastify.delete("/:id/offers/:offer_id", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id, offer_id } = req.params as { id: string; offer_id: string };
+    const payload = req.user as JwtPayload;
+    await deleteOffer(id, offer_id, payload.organization_id, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "deleted" });
+    return reply.status(204).send();
   });
 
   // POST /appointments/:id/manual-confirm — admin manually assigns an interpreter (feature-flagged)
