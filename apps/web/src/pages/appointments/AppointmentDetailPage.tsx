@@ -364,7 +364,7 @@ export function AppointmentDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {[
-                        "unassigned", "pending_offer", "confirmed", "in_progress", "completed",
+                        "unassigned", "pending_offer", "accepted", "in_progress", "completed",
                         "cancelled", "late_cancellation", "no_show", "rescheduled",
                         "double_booking", "pt_speaks_eng", "dr_speaks_es",
                       ].map((s) => (
@@ -640,7 +640,7 @@ export function AppointmentDetailPage() {
                                 disabled={manualConfirm.isPending}
                                 onChange={() => {
                                   manualConfirm.mutate((o.interpreter as Record<string, unknown>)?.id as string, {
-                                    onSuccess: () => toast({ title: t("appointments.manually_confirmed") }),
+                                    onSuccess: () => toast({ title: t("appointments.manually_accepted") }),
                                     onError: () => toast({ title: t("common.error"), variant: "destructive" }),
                                   });
                                 }}
@@ -691,7 +691,7 @@ export function AppointmentDetailPage() {
         </Card>
       )}
 
-      {(a.status === "confirmed" || a.status === "in_progress" || a.status === "completed") && <Card>
+      {(a.status === "accepted" || a.status === "in_progress" || a.status === "completed") && <Card>
         <CardHeader>
           <CardTitle>{t("appointments.time_tracking")}</CardTitle>
         </CardHeader>

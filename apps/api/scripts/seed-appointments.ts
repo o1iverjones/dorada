@@ -205,7 +205,7 @@ async function main() {
     try {
       // Determine status based on date and interpreter assignment
       const isPast = dateTime <= new Date();
-      const apptStatus = isPast ? "completed" : (interpreterId ? "confirmed" : "unassigned");
+      const apptStatus = isPast ? "completed" : (interpreterId ? "accepted" : "unassigned");
 
       const newAppt = await prisma.appointment.create({
         data: {

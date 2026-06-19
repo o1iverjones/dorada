@@ -113,7 +113,7 @@ export async function deactivateAppointmentType(id: string, organizationId: stri
   if (!type || type.organization_id !== organizationId) throw new NotFoundError("APPOINTMENT_TYPE_NOT_FOUND", "Not found");
 
   const upcoming = await prisma.appointment.count({
-    where: { type_id: id, status: { in: ["confirmed", "in_progress"] }, date_time: { gte: new Date() } },
+    where: { type_id: id, status: { in: ["accepted", "in_progress"] }, date_time: { gte: new Date() } },
   });
   if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Type has upcoming appointments");
 

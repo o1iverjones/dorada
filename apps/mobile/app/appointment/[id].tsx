@@ -306,7 +306,7 @@ export default function AppointmentDetailScreen() {
         <Text style={styles.value}>{appt.language as string}</Text>
       </View>
 
-      {appt.status === "confirmed" && (
+      {appt.status === "accepted" && (
         <TouchableOpacity style={[styles.btn, styles.primaryBtn]} onPress={handleClockIn} disabled={clockIn.isPending}>
           <Ionicons name="enter-outline" size={20} color="#fff" />
           <Text style={styles.btnText}>{t("appointments.clock_in")}</Text>

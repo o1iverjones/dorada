@@ -60,13 +60,13 @@ const ADMIN_RESOLVABLE_STATUSES = [
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   unassigned:    ["pending_offer", ...ADMIN_RESOLVABLE_STATUSES],
-  pending_offer: ["confirmed", ...ADMIN_RESOLVABLE_STATUSES],
-  confirmed:     ["in_progress", ...ADMIN_RESOLVABLE_STATUSES],
+  pending_offer: ["accepted", ...ADMIN_RESOLVABLE_STATUSES],
+  accepted:      ["in_progress", ...ADMIN_RESOLVABLE_STATUSES],
   in_progress:   ["completed", ...ADMIN_RESOLVABLE_STATUSES],
   completed:     [...ADMIN_RESOLVABLE_STATUSES],
   declined:      ["unassigned", "pending_offer", ...ADMIN_RESOLVABLE_STATUSES],
   // Allow re-classification between admin-resolvable statuses
-  ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ["unassigned", "pending_offer", "confirmed", ...ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)]])),
+  ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ["unassigned", "pending_offer", "accepted", ...ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)]])),
 };
 
 function assertValidTransition(from: string, to: string) {
@@ -386,7 +386,7 @@ export async function unassignInterpreter(id: string, organizationId: string, ac
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
 
   if (!appt!.interpreter_id) throw new ConflictError("NO_INTERPRETER", "Appointment has no interpreter assigned");
-  if (!["confirmed", "pending_offer", "unassigned"].includes(appt!.status)) {
+  if (!["accepted", "pending_offer", "unassigned"].includes(appt!.status)) {
     throw new ValidationError("INVALID_STATUS_TRANSITION", "Cannot unassign interpreter from an appointment that is in progress or completed");
   }
 
@@ -593,22 +593,22 @@ export async function confirmOffer(
     throw new ConflictError("OFFER_EXPIRED", "Offer has expired");
   }
   if (offer.appointment.interpreter_id) {
-    throw new ConflictError("ALREADY_CONFIRMED", "Another interpreter already confirmed");
+    throw new ConflictError("ALREADY_ACCEPTED", "Another interpreter already accepted");
   }
 
   await prisma.$transaction([
     prisma.appointment.update({
       where: { id: appointmentId },
-      data: { interpreter_id: interpreterId, status: "confirmed" },
+      data: { interpreter_id: interpreterId, status: "accepted" },
     }),
-    prisma.appointmentOffer.update({ where: { id: offerId }, data: { status: "confirmed", responded_at: new Date() } }),
+    prisma.appointmentOffer.update({ where: { id: offerId }, data: { status: "accepted", responded_at: new Date() } }),
     prisma.appointmentOffer.updateMany({
       where: { appointment_id: appointmentId, id: { not: offerId }, status: "pending" },
       data: { status: "expired" },
     }),
   ]);
 
-  return { appointment: { id: appointmentId, status: "confirmed" } };
+  return { appointment: { id: appointmentId, status: "accepted" } };
 }
 
 export async function manualConfirmInterpreter(
@@ -636,7 +636,7 @@ export async function manualConfirmInterpreter(
   await prisma.$transaction([
     prisma.appointment.update({
       where: { id: appointmentId },
-      data: { interpreter_id: interpreterId, status: "confirmed" },
+      data: { interpreter_id: interpreterId, status: "accepted" },
     }),
     prisma.appointmentOffer.updateMany({
       where: { appointment_id: appointmentId, status: "pending" },
@@ -644,7 +644,7 @@ export async function manualConfirmInterpreter(
     }),
   ]);
 
-  return { appointment: { id: appointmentId, status: "confirmed" } };
+  return { appointment: { id: appointmentId, status: "accepted" } };
 }
 
 export async function declineOffer(
@@ -692,7 +692,7 @@ export async function clockIn(
   if (!appt || appt.interpreter_id !== interpreterId) {
     throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
   }
-  if (appt.status !== "confirmed") throw new ValidationError("INVALID_STATUS_TRANSITION", "Appointment must be confirmed");
+  if (appt.status !== "accepted") throw new ValidationError("INVALID_STATUS_TRANSITION", "Appointment must be accepted");
   if (appt.clock_in_time) throw new ConflictError("ALREADY_CLOCKED_IN", "Already clocked in");
 
   // Compute distance from clinic if both interpreter and clinic coordinates are available

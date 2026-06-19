@@ -209,7 +209,7 @@ async function performConfirmation(
 ) {
   if (method === "reply_email") {
     try {
-      const template = log.agency?.email_intake_reply_template ?? "Your appointment has been confirmed.";
+      const template = log.agency?.email_intake_reply_template ?? "Your appointment has been accepted.";
       await sendEmail({
         to: log.from_email,
         subject: "Appointment Confirmation",

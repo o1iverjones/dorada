@@ -348,7 +348,7 @@ export function DashboardPage() {
                           {(() => {
                             const statusColors: Record<string, string> = {
                               unassigned:    "bg-gray-100 border-gray-300 text-gray-500",
-                              confirmed:     "bg-green-100 border-green-300 text-green-800",
+                              accepted:      "bg-green-100 border-green-300 text-green-800",
                               pending_offer: "bg-yellow-100 border-yellow-300 text-yellow-800",
                               in_progress:   "bg-blue-100 border-blue-300 text-blue-800",
                               completed:     "bg-green-100 border-green-300 text-green-800",

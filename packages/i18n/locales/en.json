@@ -123,7 +123,7 @@
   "appointment": {
     "status.unassigned": "Unassigned",
     "status.pending_offer": "Pending offer",
-    "status.confirmed": "Confirmed",
+    "status.accepted": "Accepted",
     "status.declined": "Declined",
     "status.in_progress": "In progress",
     "status.completed": "Completed",
@@ -189,7 +189,7 @@
     "create.title": "Add interpreter",
     "edit.title": "Edit interpreter",
     "deactivate.confirm": "Deactivate this interpreter? They will no longer be able to receive appointments or log in.",
-    "error.hasUpcomingAppointments": "This interpreter has upcoming confirmed appointments. Resolve them before deactivating."
+    "error.hasUpcomingAppointments": "This interpreter has upcoming accepted appointments. Resolve them before deactivating."
   },
   "clinic": {
     "billing.model.hourly": "Hourly",
@@ -382,7 +382,7 @@
     "activity_note_added": "Note added",
     "activity_clock_times_edited": "Clock times edited",
     "activity_interpreter_unassigned": "Interpreter unassigned",
-    "activity_manually_confirmed": "Interpreter manually confirmed",
+    "activity_manually_accepted": "Interpreter manually accepted",
     "location": "Location",
     "no_address": "No address on file",
     "open_maps": "Open in Maps",
@@ -465,7 +465,7 @@
     "offer_pending": "Awaiting response",
     "offer_declined": "Declined",
     "manually_confirm": "Manually confirm",
-    "manually_confirmed": "Interpreter manually confirmed",
+    "manually_accepted": "Interpreter manually accepted",
     "unavailable": "Unavailable",
     "upcoming": "Upcoming",
     "offers": "Offers",
@@ -494,7 +494,7 @@
   },
   "calendar": {
     "status_pending_offer": "Offered",
-    "status_confirmed": "Confirmed",
+    "status_accepted": "Accepted",
     "status_in_progress": "In Progress",
     "status_completed": "Completed",
     "status_unassigned": "Unassigned",
@@ -861,7 +861,7 @@
     "clinic_confirmation_time": "Daily send time",
     "clinic_confirmation_time_hint": "Time is based on your organization's timezone.",
     "interpreter_reminders": "Interpreter reminders",
-    "reminders_description": "Push notifications sent to interpreters before confirmed appointments.",
+    "reminders_description": "Push notifications sent to interpreters before accepted appointments.",
     "reminder_label": "Label",
     "reminder_offset": "Minutes before appointment",
     "add_reminder": "Add reminder",

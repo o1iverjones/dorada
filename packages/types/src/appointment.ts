@@ -11,7 +11,7 @@ export const AppointmentTypeSchema = z.object({
 export const AppointmentOfferSchema = z.object({
   id: UuidSchema,
   interpreter: z.object({ id: UuidSchema, name: z.string() }),
-  status: z.enum(["pending", "confirmed", "declined", "expired"]),
+  status: z.enum(["pending", "accepted", "declined", "expired"]),
   offered_at: z.string().datetime(),
   expires_at: z.string().datetime().nullable(),
 });

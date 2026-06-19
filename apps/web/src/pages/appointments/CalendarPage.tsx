@@ -18,7 +18,7 @@ type View = "month" | "week" | "day";
 
 const STATUS_COLORS: Record<string, string> = {
   unassigned: "bg-gray-100 border-gray-300 text-gray-500",
-  confirmed: "bg-green-100 border-green-300 text-green-800",
+  accepted: "bg-green-100 border-green-300 text-green-800",
   pending_offer: "bg-yellow-100 border-yellow-300 text-yellow-800",
   in_progress: "bg-green-100 border-green-300 text-blue-800",
   completed: "bg-green-100 border-green-300 text-green-800",
@@ -263,8 +263,8 @@ export function CalendarPage() {
       if (hasPendingOffer) return "bg-orange-100 border-orange-300 text-orange-900";
       return "bg-gray-100 border-gray-300 text-gray-500";
     }
-    // Confirmed + billing pending approval → blue
-    if (status === "confirmed" && (a.billing_approval_status as string) === "pending_approval") {
+    // Accepted + billing pending approval → blue
+    if (status === "accepted" && (a.billing_approval_status as string) === "pending_approval") {
       return "bg-blue-100 border-blue-400 text-blue-900";
     }
     return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
@@ -511,7 +511,7 @@ export function CalendarPage() {
               options={[
                 { key: "status:unassigned", label: "Unassigned" },
                 { key: "status:pending_offer", label: "Pending Offer" },
-                { key: "status:confirmed", label: "Confirmed" },
+                { key: "status:accepted", label: "Accepted" },
                 { key: "status:in_progress", label: "In Progress" },
                 { key: "status:completed", label: "Completed" },
                 { key: "status:cancelled", label: "Cancelled" },
