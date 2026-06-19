@@ -146,6 +146,7 @@ export function CalendarPage() {
   const statusValues = [...activeFilters].filter((k) => k.startsWith("status:")).map((k) => k.slice(7));
   const billingPaymentStatusOptions = ["paid", "not_paid"].filter((v) => activeFilters.has(`billing_payment_status:${v}`));
   const billingApprovalStatusOptions = ["pending_approval", "approved"].filter((v) => activeFilters.has(`billing_approval_status:${v}`));
+  const clinicConfirmedOptions = ["true", "false"].filter((v) => activeFilters.has(`clinic_confirmed:${v}`));
 
   const apptParams: Record<string, string> = { date_from: dateFrom, date_to: dateTo, limit: "500" };
   if (interpreterFilter) apptParams.interpreter_id = interpreterFilter;
@@ -158,6 +159,7 @@ export function CalendarPage() {
   if (activeFilters.has("billing_payment_under_claim")) apptParams.billing_payment_under_claim = "true";
   if (billingPaymentStatusOptions.length === 1) apptParams.billing_payment_status = billingPaymentStatusOptions[0];
   if (billingApprovalStatusOptions.length === 1) apptParams.billing_approval_status = billingApprovalStatusOptions[0];
+  if (clinicConfirmedOptions.length === 1) apptParams.clinic_confirmed = clinicConfirmedOptions[0];
 
   const { data } = useAppointments(apptParams);
   const { data: interpretersData } = useInterpreters({ limit: "100" });
@@ -538,6 +540,15 @@ export function CalendarPage() {
                 { key: "billing_payment_status:not_paid", label: "Not Paid" },
                 { key: "billing_approval_status:pending_approval", label: "Pending Approval" },
                 { key: "billing_approval_status:approved", label: "Approved" },
+              ]}
+              activeFilters={activeFilters}
+              onToggle={(key) => setActiveFilters((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}
+            />
+            <FilterChipGroup
+              label="Confirmation"
+              options={[
+                { key: "clinic_confirmed:true", label: "Confirmed" },
+                { key: "clinic_confirmed:false", label: "Not Confirmed" },
               ]}
               activeFilters={activeFilters}
               onToggle={(key) => setActiveFilters((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}

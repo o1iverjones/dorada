@@ -200,6 +200,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
       billing_retro: z.boolean().optional(),
       billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
       billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
+      clinic_confirmed: z.boolean().optional(),
     }).parse(req.body);
     const updated = await patchBilling(id, body, payload.organization_id, actor, fastify.prisma);
     return reply.send({ ok: true, billing: {
@@ -211,6 +212,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
       billing_retro: updated.billing_retro,
       billing_payment_status: updated.billing_payment_status,
       billing_approval_status: updated.billing_approval_status,
+      clinic_confirmed: updated.clinic_confirmed,
     }});
   });
 

@@ -107,6 +107,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
     ...(query.billing_payment_under_claim !== undefined ? { billing_payment_under_claim: query.billing_payment_under_claim } : {}),
     ...(query.billing_payment_status ? { billing_payment_status: query.billing_payment_status } : {}),
     ...(query.billing_approval_status ? { billing_approval_status: query.billing_approval_status } : {}),
+    ...(query.clinic_confirmed !== undefined ? { clinic_confirmed: query.clinic_confirmed } : {}),
   };
 
   const items = await prisma.appointment.findMany({
@@ -416,6 +417,7 @@ export async function patchBilling(
     billing_retro?: boolean;
     billing_payment_status?: string;
     billing_approval_status?: string;
+    clinic_confirmed?: boolean;
   },
   organizationId: string,
   actor: { id: string; name: string },
@@ -437,6 +439,7 @@ export async function patchBilling(
     billing_payment_under_claim:  "Payment Under Claim",
     billing_pending_auth:         "Pending Auth",
     billing_retro:                "Retro",
+    clinic_confirmed:             "Clinic/Patient Confirmed",
   };
   const STATUS_LABELS: Record<string, string> = {
     billing_payment_status:  "Payment",

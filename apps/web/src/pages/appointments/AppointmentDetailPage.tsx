@@ -50,6 +50,26 @@ type FormState = {
   status: string;
 };
 
+function ClinicConfirmedToggle({ appointmentId, confirmed, label }: { appointmentId: string; confirmed: boolean; label: string }) {
+  const patch = usePatchBilling(appointmentId);
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <button
+        type="button"
+        onClick={() => patch.mutate({ clinic_confirmed: !confirmed })}
+        disabled={patch.isPending}
+        className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+        style={confirmed
+          ? { backgroundColor: "rgb(220 252 231)", color: "rgb(22 101 52)" }
+          : { backgroundColor: "rgb(243 244 246)", color: "rgb(107 114 128)" }}
+      >
+        {confirmed ? "✓ Confirmed" : "Not Confirmed"}
+      </button>
+    </div>
+  );
+}
+
 export function AppointmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -500,19 +520,10 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Clinic confirmed */}
+            {/* Clinic / Patient Confirmed toggle */}
             {!editing && (
               <div className="px-6 py-2.5 even:bg-muted/40">
-                <Field
-                  label={t("appointments.clinic_confirmed")}
-                  value={
-                    a.clinic_confirmed ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">✓ Yes</span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">—</span>
-                    )
-                  }
-                />
+                <ClinicConfirmedToggle appointmentId={a.id as string} confirmed={a.clinic_confirmed as boolean ?? false} label={t("appointments.clinic_confirmed")} />
               </div>
             )}
 

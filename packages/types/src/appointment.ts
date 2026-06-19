@@ -98,6 +98,7 @@ export const AppointmentListQuerySchema = z.object({
   billing_payment_under_claim: z.coerce.boolean().optional(),
   billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
   billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
+  clinic_confirmed: z.coerce.boolean().optional(),
 });
 
 export type AppointmentType = z.infer<typeof AppointmentTypeSchema>;
