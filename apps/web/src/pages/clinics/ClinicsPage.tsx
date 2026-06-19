@@ -84,6 +84,7 @@ export function ClinicsPage() {
     { key: "address", header: t("clinics.address") },
     { key: "phone", header: t("clinics.phone"), render: (row: typeof allClinics[number]) => formatPhone(row.phone as string) },
     { key: "primary_contact_name", header: t("clinics.primary_contact") },
+    { key: "primary_contact_email", header: t("clinics.primary_contact_email"), render: (row: typeof allClinics[number]) => (row.primary_contact as Record<string, unknown> | null)?.email as string ?? "—" },
   ];
 
   return (
