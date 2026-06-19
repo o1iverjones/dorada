@@ -85,16 +85,14 @@ export function AlertsPage() {
                           {t("dashboard.view_appointment")}
                         </Link>
                       )}
-                      {isUnread && (
-                        <button
-                          onClick={() => markAlertRead.mutate(alert.id as string)}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                          title={t("dashboard.mark_read")}
-                          disabled={markAlertRead.isPending}
-                        >
-                          <CheckCheck className="h-5 w-5" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => markAlertRead.mutate(alert.id as string)}
+                        className={`transition-colors ${isUnread ? "text-primary hover:text-primary/70" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                        title={isUnread ? t("dashboard.mark_read") : t("dashboard.mark_unread")}
+                        disabled={markAlertRead.isPending}
+                      >
+                        <CheckCheck className="h-5 w-5" />
+                      </button>
                     </div>
                   </li>
                 );

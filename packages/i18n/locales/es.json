@@ -303,6 +303,7 @@
     "no_alerts": "Sin alertas — todo al día.",
     "mark_all_read": "Marcar todo como leído",
     "mark_read": "Marcar como leído",
+    "mark_unread": "Marcar como no leído",
     "view_appointment": "Ver cita",
     "view_all": "Ver todo",
     "view_all_alerts": "Ver las {{count}} alertas de hoy →"
