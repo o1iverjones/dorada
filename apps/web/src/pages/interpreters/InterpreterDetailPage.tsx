@@ -335,12 +335,13 @@ export function InterpreterDetailPage() {
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-3">
-                {/* Clickable city chips from all cities in use */}
-                {(allCities ?? []).length > 0 && (() => {
+                {/* Clickable city chips from all cities in use + any custom cities already selected */}
+                {(() => {
                   const selected = (editForm.preferred_cities as string[]) ?? [];
+                  const universe = Array.from(new Set([...(allCities ?? []), ...selected])).sort();
                   const filtered = cityInput.trim()
-                    ? (allCities ?? []).filter((c) => c.toLowerCase().includes(cityInput.trim().toLowerCase()))
-                    : (allCities ?? []);
+                    ? universe.filter((c) => c.toLowerCase().includes(cityInput.trim().toLowerCase()))
+                    : universe;
                   if (filtered.length === 0) return null;
                   return (
                     <div className="flex flex-wrap gap-1.5">
