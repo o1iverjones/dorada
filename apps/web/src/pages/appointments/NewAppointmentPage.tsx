@@ -57,7 +57,7 @@ export function NewAppointmentPage() {
   const { data: ratesData } = useInterpreterRates();
 
   const [selectedClinicId, setSelectedClinicId] = useState<string>(prefill?.clinic_id ?? "");
-  const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
+  const [pendingSubmit, setPendingSubmit] = useState<FormData | null>(null);
   const { data: clinicDoctors } = useClinicDoctors(selectedClinicId);
 
   const apptTypes = ((settings as Record<string, unknown> | undefined)?.appointment_types ?? []) as Array<{ id: string; name: string }>;
@@ -100,18 +100,25 @@ export function NewAppointmentPage() {
     }
   }, [showLanguage]); // intentionally omitting other deps
 
-  async function onSubmit(data: FormData) {
+  function onSubmit(data: FormData) {
+    setPendingSubmit(data);
+  }
+
+  async function confirmCreate() {
+    if (!pendingSubmit) return;
     try {
       const appt = await create.mutateAsync({
-        ...data,
-        date_time: fromTzDateTimeInput(data.date_time, tz),
-        pre_auth_mileage: Math.round(data.pre_auth_mileage),
+        ...pendingSubmit,
+        date_time: fromTzDateTimeInput(pendingSubmit.date_time, tz),
+        pre_auth_mileage: Math.round(pendingSubmit.pre_auth_mileage),
       }) as { id: string };
       toast({ title: t("appointments.created") });
       navigate(`/appointments/${appt.id}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("common.error");
       toast({ title: msg, variant: "destructive" });
+    } finally {
+      setPendingSubmit(null);
     }
   }
 
@@ -201,7 +208,7 @@ export function NewAppointmentPage() {
                 <AutocompleteInput
                   options={agencyOptions}
                   value={field.value ?? ""}
-                  onChange={(v) => { if (v) { setPendingAgencyId(v); } else { field.onChange(v); } }}
+                  onChange={(v) => field.onChange(v)}
                   placeholder={t("common.search")}
                 />
               )} />
@@ -263,15 +270,15 @@ export function NewAppointmentPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={pendingAgencyId !== null} onOpenChange={(open) => { if (!open) setPendingAgencyId(null); }}>
+      <Dialog open={pendingSubmit !== null} onOpenChange={(open) => { if (!open) setPendingSubmit(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("appointments.agency")}</DialogTitle>
+            <DialogTitle>Attention!</DialogTitle>
             <DialogDescription>{t("appointments.agency_order_check")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingAgencyId(null)}>{t("common.no")}</Button>
-            <Button onClick={() => { setValue("agency_id", pendingAgencyId!); setPendingAgencyId(null); }}>{t("common.yes")}</Button>
+            <Button variant="outline" onClick={() => setPendingSubmit(null)}>{t("common.no")}</Button>
+            <Button onClick={confirmCreate} disabled={create.isPending}>{create.isPending ? t("common.saving") : t("common.yes")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
