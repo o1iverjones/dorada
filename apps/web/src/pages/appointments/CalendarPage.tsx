@@ -10,7 +10,6 @@ import { formatInTz } from "../../lib/timezone.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Button } from "../../components/ui/button.js";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, CalendarOff, CalendarDays } from "lucide-react";
 import { api } from "../../lib/api.js";
 
@@ -85,7 +84,7 @@ export function CalendarPage() {
   function changeDate(d: Date) { localStorage.setItem("dorada_calendar_date", d.toISOString()); setCurrentDate(d); }
   const [interpreterFilter, setInterpreterFilter] = useState("");
   const [clinicFilter, setClinicFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [showBlocks, setShowBlocks] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [tooltip, setTooltip] = useState<{ appt: Record<string, unknown>; x: number; y: number } | null>(null);
@@ -142,10 +141,20 @@ export function CalendarPage() {
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
+  const statusValues = [...activeFilters].filter((k) => k.startsWith("status:")).map((k) => k.slice(7));
+  const billingPaymentStatusOptions = ["paid", "not_paid"].filter((v) => activeFilters.has(`billing_payment_status:${v}`));
+  const billingApprovalStatusOptions = ["pending_approval", "approved"].filter((v) => activeFilters.has(`billing_approval_status:${v}`));
+
   const apptParams: Record<string, string> = { date_from: dateFrom, date_to: dateTo, limit: "500" };
   if (interpreterFilter) apptParams.interpreter_id = interpreterFilter;
   if (clinicFilter !== "all") apptParams.clinic_id = clinicFilter;
-  if (statusFilter !== "all") apptParams.status = statusFilter;
+  if (statusValues.length > 0) apptParams.status = statusValues.join(",");
+  if (activeFilters.has("billing_billed")) apptParams.billing_billed = "true";
+  if (activeFilters.has("billing_invoiced")) apptParams.billing_invoiced = "true";
+  if (activeFilters.has("billing_retro")) apptParams.billing_retro = "true";
+  if (activeFilters.has("billing_payment_under_claim")) apptParams.billing_payment_under_claim = "true";
+  if (billingPaymentStatusOptions.length === 1) apptParams.billing_payment_status = billingPaymentStatusOptions[0];
+  if (billingApprovalStatusOptions.length === 1) apptParams.billing_approval_status = billingApprovalStatusOptions[0];
 
   const { data } = useAppointments(apptParams);
   const { data: interpretersData } = useInterpreters({ limit: "100" });
@@ -449,60 +458,74 @@ export function CalendarPage() {
 
         {/* Collapsible filters */}
         {filtersExpanded && (
-          <div className="flex flex-wrap items-center gap-3 py-3 border-b">
-            {/* Interpreter autocomplete */}
-            <div className="w-52">
-              <AutocompleteInput
-                options={interpreterOptions}
-                value={interpreterFilter}
-                onChange={setInterpreterFilter}
-                placeholder={t("appointments.filter_interpreter")}
-              />
+          <div className="py-3 border-b space-y-3">
+            {/* Row 1: autocompletes + blocks toggle + clear */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="w-52">
+                <AutocompleteInput
+                  options={interpreterOptions}
+                  value={interpreterFilter}
+                  onChange={setInterpreterFilter}
+                  placeholder={t("appointments.filter_interpreter")}
+                />
+              </div>
+              <div className="w-52">
+                <AutocompleteInput
+                  options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
+                  value={clinicFilter === "all" ? "" : clinicFilter}
+                  onChange={(v) => setClinicFilter(v || "all")}
+                  placeholder={t("appointments.clinic")}
+                />
+              </div>
+              <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
+                <CalendarOff className="h-4 w-4" />
+                {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setActiveFilters(new Set()); }}
+                className={(interpreterFilter || clinicFilter !== "all" || activeFilters.size > 0)
+                  ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
+                  : "opacity-40 cursor-default"}
+              >
+                {t("common.clear")}
+              </Button>
             </div>
 
-            {/* Clinic autocomplete */}
-            <div className="w-52">
-              <AutocompleteInput
-                options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
-                value={clinicFilter === "all" ? "" : clinicFilter}
-                onChange={(v) => setClinicFilter(v || "all")}
-                placeholder={t("appointments.clinic")}
-              />
-            </div>
-
-            {/* Status filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder={t("common.status")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("common.all")}</SelectItem>
-                <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
-                <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
-                <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
-                <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
-                <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
-                <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>
-                <SelectItem value="declined">{t("calendar.status_declined")}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Schedule blocks toggle */}
-            <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
-              <CalendarOff className="h-4 w-4" />
-              {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setStatusFilter("all"); }}
-              className={(interpreterFilter || clinicFilter !== "all" || statusFilter !== "all")
-                ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
-                : "opacity-40 cursor-default"}
-            >
-              {t("common.clear")}
-            </Button>
+            {/* Row 2: status + billing filter chips */}
+            <FilterChipGroup
+              label="Status"
+              options={[
+                { key: "status:unassigned", label: "Unassigned" },
+                { key: "status:pending_offer", label: "Pending Offer" },
+                { key: "status:confirmed", label: "Confirmed" },
+                { key: "status:in_progress", label: "In Progress" },
+                { key: "status:completed", label: "Completed" },
+                { key: "status:cancelled", label: "Cancelled" },
+                { key: "status:declined", label: "Declined" },
+                { key: "status:no_show", label: "No Show" },
+                { key: "status:late_cancellation", label: "Late Cancel" },
+                { key: "status:rescheduled", label: "Rescheduled" },
+              ]}
+              activeFilters={activeFilters}
+              onToggle={(key) => setActiveFilters((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}
+            />
+            <FilterChipGroup
+              label="Billing"
+              options={[
+                { key: "billing_billed", label: "Billed" },
+                { key: "billing_invoiced", label: "Invoiced" },
+                { key: "billing_retro", label: "Retro" },
+                { key: "billing_payment_under_claim", label: "Payment Under Claim" },
+                { key: "billing_payment_status:paid", label: "Paid" },
+                { key: "billing_payment_status:not_paid", label: "Not Paid" },
+                { key: "billing_approval_status:pending_approval", label: "Pending Approval" },
+                { key: "billing_approval_status:approved", label: "Approved" },
+              ]}
+              activeFilters={activeFilters}
+              onToggle={(key) => setActiveFilters((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}
+            />
           </div>
         )}
 
@@ -627,6 +650,41 @@ export function CalendarPage() {
       )}
 
       {tooltip && <ApptTooltip appt={tooltip.appt} x={tooltip.x} y={tooltip.y} />}
+    </div>
+  );
+}
+
+// ─── Filter chip group ────────────────────────────────────────────────────────
+
+function FilterChipGroup({
+  label,
+  options,
+  activeFilters,
+  onToggle,
+}: {
+  label: string;
+  options: Array<{ key: string; label: string }>;
+  activeFilters: Set<string>;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">{label}</span>
+      {options.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onToggle(opt.key)}
+          className={[
+            "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+            activeFilters.has(opt.key)
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-input hover:bg-muted",
+          ].join(" ")}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 }

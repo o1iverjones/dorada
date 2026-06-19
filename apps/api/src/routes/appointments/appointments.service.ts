@@ -100,6 +100,12 @@ export async function listAppointments(query: AppointmentListQuery, organization
     ...(query.type_id ? { type_id: query.type_id } : {}),
     ...((query.date_from || query.date_to) ? { date_time: dateFilter } : {}),
     ...(query.cursor ? { id: { gt: query.cursor } } : {}),
+    ...(query.billing_billed !== undefined ? { billing_billed: query.billing_billed } : {}),
+    ...(query.billing_invoiced !== undefined ? { billing_invoiced: query.billing_invoiced } : {}),
+    ...(query.billing_retro !== undefined ? { billing_retro: query.billing_retro } : {}),
+    ...(query.billing_payment_under_claim !== undefined ? { billing_payment_under_claim: query.billing_payment_under_claim } : {}),
+    ...(query.billing_payment_status ? { billing_payment_status: query.billing_payment_status } : {}),
+    ...(query.billing_approval_status ? { billing_approval_status: query.billing_approval_status } : {}),
   };
 
   const items = await prisma.appointment.findMany({
