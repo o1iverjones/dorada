@@ -256,7 +256,6 @@ export function DashboardPage() {
                   <span className="flex-1 text-center">Clock In/Out</span>
                   <span className="flex-1 text-center">Scheduled</span>
                   <span className="w-20">Status</span>
-                  <span className="w-14">Approve</span>
                 </div>
                 <ul className="space-y-[1em]">
                 {(todayAppts.data as Array<Record<string, unknown>>).map((appt) => {
@@ -289,9 +288,6 @@ export function DashboardPage() {
 
                   const status = appt.status as string;
                   const isPendingOffer = status === "pending_offer";
-                  const hasClockOut = !!appt.clock_out_time;
-                  const invoice = appt.invoice as Record<string, unknown> | null | undefined;
-                  const invoiceHref = invoice?.id ? `/invoices` : `/invoices`;
                   const actualMins = appt.actual_duration_minutes as number | null;
                   const isLongAppt = actualMins != null && actualMins > 120;
                   const distMiles = appt.clock_in_distance_miles as number | null;
@@ -348,7 +344,7 @@ export function DashboardPage() {
                           {(() => {
                             const statusColors: Record<string, string> = {
                               unassigned:    "bg-gray-100 border-gray-300 text-gray-500",
-                              confirmed:     "bg-green-100 border-green-300 text-green-800",
+                              accepted:      "bg-green-100 border-green-300 text-green-800",
                               pending_offer: "bg-yellow-100 border-yellow-300 text-yellow-800",
                               in_progress:   "bg-blue-100 border-blue-300 text-blue-800",
                               completed:     "bg-green-100 border-green-300 text-green-800",
@@ -384,17 +380,6 @@ export function DashboardPage() {
                           )}
                         </div>
 
-                        {/* Approve button */}
-                        <Link
-                          to={invoiceHref}
-                          onClick={(e) => !hasClockOut && e.preventDefault()}
-                          className={`shrink-0 w-14 inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors whitespace-nowrap
-                            ${hasClockOut
-                              ? "border-green-600 bg-green-50 text-green-700 hover:bg-green-100"
-                              : "border-border text-muted-foreground cursor-not-allowed opacity-40 pointer-events-none"}`}
-                        >
-                          Approve
-                        </Link>
                       </div>
                     </li>
                   );

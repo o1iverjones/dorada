@@ -11,7 +11,7 @@ export const AppointmentTypeSchema = z.object({
 export const AppointmentOfferSchema = z.object({
   id: UuidSchema,
   interpreter: z.object({ id: UuidSchema, name: z.string() }),
-  status: z.enum(["pending", "confirmed", "declined", "expired"]),
+  status: z.enum(["pending", "accepted", "declined", "expired"]),
   offered_at: z.string().datetime(),
   expires_at: z.string().datetime().nullable(),
 });
@@ -85,12 +85,19 @@ export const AppointmentListQuerySchema = z.object({
   interpreter_id: UuidSchema.optional(),
   clinic_id: UuidSchema.optional(),
   agency_id: UuidSchema.optional(),
+  patient_id: UuidSchema.optional(),
   language: z.string().optional(),
   type_id: UuidSchema.optional(),
   date_from: z.string().date().optional(),
   date_to: z.string().date().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(25),
+  billing_billed: z.coerce.boolean().optional(),
+  billing_invoiced: z.coerce.boolean().optional(),
+  billing_retro: z.coerce.boolean().optional(),
+  billing_payment_under_claim: z.coerce.boolean().optional(),
+  billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
+  billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
 });
 
 export type AppointmentType = z.infer<typeof AppointmentTypeSchema>;

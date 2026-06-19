@@ -278,9 +278,9 @@ export async function deactivateClinic(id: string, organizationId: string, prism
   ensureTenant(clinic, organizationId);
 
   const upcoming = await prisma.appointment.count({
-    where: { clinic_id: id, status: { in: ["confirmed", "in_progress"] }, date_time: { gte: new Date() } },
+    where: { clinic_id: id, status: { in: ["accepted", "in_progress"] }, date_time: { gte: new Date() } },
   });
-  if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Clinic has upcoming confirmed appointments");
+  if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Clinic has upcoming accepted appointments");
 
   await prisma.clinic.update({ where: { id }, data: { is_active: false } });
 }

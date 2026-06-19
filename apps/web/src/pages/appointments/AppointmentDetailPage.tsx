@@ -290,8 +290,8 @@ export function AppointmentDetailPage() {
                 </InlineRow>
               ) : (
                 <Field label={t("appointments.patient")} value={
-                  <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-bold text-primary hover:underline">
-                    {(a.patient as Record<string, unknown>)?.name as string ?? "—"}
+                  <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-bold text-primary hover:underline text-base">
+                    {((a.patient as Record<string, unknown>)?.name as string ?? "—").toUpperCase()}
                   </button>
                 } />
               )}
@@ -364,7 +364,7 @@ export function AppointmentDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {[
-                        "unassigned", "pending_offer", "confirmed", "in_progress", "completed",
+                        "unassigned", "pending_offer", "accepted", "in_progress", "completed",
                         "cancelled", "late_cancellation", "no_show", "rescheduled",
                         "double_booking", "pt_speaks_eng", "dr_speaks_es",
                       ].map((s) => (
@@ -395,6 +395,16 @@ export function AppointmentDetailPage() {
               ) : (
                 <Field label={t("appointments.billing_interpreter")} value={(a.billing_interpreter as string) ?? "—"} />
               )}
+            </div>
+
+            {/* Interpreter B cert number */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {(() => {
+                const interpBName = editing ? form.billing_interpreter : (a.billing_interpreter as string | null);
+                const interpB = interpBName ? allInterpreterList.find((i) => (i.name as string) === interpBName) : null;
+                const certNum = (interpB?.certificate_number as string | null) ?? null;
+                return <Field label="Cert number" value={certNum ?? "—"} />;
+              })()}
             </div>
 
             {/* DOB */}
@@ -640,7 +650,7 @@ export function AppointmentDetailPage() {
                                 disabled={manualConfirm.isPending}
                                 onChange={() => {
                                   manualConfirm.mutate((o.interpreter as Record<string, unknown>)?.id as string, {
-                                    onSuccess: () => toast({ title: t("appointments.manually_confirmed") }),
+                                    onSuccess: () => toast({ title: t("appointments.manually_accepted") }),
                                     onError: () => toast({ title: t("common.error"), variant: "destructive" }),
                                   });
                                 }}
@@ -691,7 +701,7 @@ export function AppointmentDetailPage() {
         </Card>
       )}
 
-      {(a.status === "confirmed" || a.status === "in_progress" || a.status === "completed") && <Card>
+      {(a.status === "accepted" || a.status === "in_progress" || a.status === "completed") && <Card>
         <CardHeader>
           <CardTitle>{t("appointments.time_tracking")}</CardTitle>
         </CardHeader>

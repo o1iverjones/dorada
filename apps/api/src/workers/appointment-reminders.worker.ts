@@ -24,7 +24,7 @@ export function createAppointmentRemindersWorker(prisma: PrismaClient) {
       });
 
       if (!appointment || appointment.organization_id !== organizationId) return;
-      if (appointment.status !== "confirmed") return;
+      if (appointment.status !== "accepted") return;
       if (!appointment.interpreter?.fcm_token) return;
 
       const dateStr = new Date(appointment.date_time).toLocaleDateString("en-US", {

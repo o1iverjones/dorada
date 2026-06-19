@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "../ui/badge.js";
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
-  confirmed: "success",
+  accepted: "success",
   completed: "secondary",
   pending_offer: "warning",
   in_progress: "default",

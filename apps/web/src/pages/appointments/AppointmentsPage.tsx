@@ -16,7 +16,7 @@ import { Input } from "../../components/ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { Plus, TriangleAlert, Clock, UserRound } from "lucide-react";
 
-const NOT_COMPLETED = "unassigned,pending_offer,confirmed,in_progress,cancelled,declined";
+const NOT_COMPLETED = "unassigned,pending_offer,accepted,in_progress,cancelled,declined";
 const STORAGE_KEY = "appointments_filters";
 
 function loadFilters(searchParams: URLSearchParams) {
@@ -234,7 +234,7 @@ export function AppointmentsPage() {
             <SelectItem value="all">{t("common.all")}</SelectItem>
             <SelectItem value="unassigned">{t("calendar.status_unassigned")}</SelectItem>
             <SelectItem value="pending_offer">{t("calendar.status_pending_offer")}</SelectItem>
-            <SelectItem value="confirmed">{t("calendar.status_confirmed")}</SelectItem>
+            <SelectItem value="accepted">{t("calendar.status_accepted")}</SelectItem>
             <SelectItem value="in_progress">{t("calendar.status_in_progress")}</SelectItem>
             <SelectItem value="completed">{t("calendar.status_completed")}</SelectItem>
             <SelectItem value="cancelled">{t("calendar.status_cancelled")}</SelectItem>

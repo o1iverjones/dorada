@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { C } from "../../src/theme";
 
 const STATUS_COLORS: Record<string, string> = {
-  confirmed: C.success,
+  accepted: C.success,
   pending_offer: C.warning,
   in_progress: C.inProgress,
   completed: C.completed,
@@ -18,7 +18,7 @@ export default function AppointmentsScreen() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"upcoming" | "offers" | "history">("upcoming");
 
-  const { data: appts, isLoading: apptLoading, refetch: refetchAppts } = useMyAppointments({ status: "confirmed,in_progress", limit: "30" });
+  const { data: appts, isLoading: apptLoading, refetch: refetchAppts } = useMyAppointments({ status: "accepted,in_progress", limit: "30" });
   const { data: offers, isLoading: offersLoading, refetch: refetchOffers } = useAppointmentOffers();
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useMyAppointments({ status: "completed", limit: "50" });
 

@@ -146,9 +146,9 @@ export async function deactivateAgency(id: string, organizationId: string, prism
   ensureTenant(agency, organizationId);
 
   const upcoming = await prisma.appointment.count({
-    where: { agency_id: id, status: { in: ["confirmed", "in_progress"] }, date_time: { gte: new Date() } },
+    where: { agency_id: id, status: { in: ["accepted", "in_progress"] }, date_time: { gte: new Date() } },
   });
-  if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Agency has upcoming confirmed appointments");
+  if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Agency has upcoming accepted appointments");
 
   await prisma.agency.update({ where: { id }, data: { is_active: false } });
 }

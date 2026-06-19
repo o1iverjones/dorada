@@ -213,9 +213,9 @@ export async function deactivateInterpreter(id: string, organizationId: string, 
   ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
 
   const upcoming = await prisma.appointment.count({
-    where: { interpreter_id: id, status: { in: ["confirmed", "in_progress"] }, date_time: { gte: new Date() } },
+    where: { interpreter_id: id, status: { in: ["accepted", "in_progress"] }, date_time: { gte: new Date() } },
   });
-  if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Interpreter has upcoming confirmed appointments");
+  if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Interpreter has upcoming accepted appointments");
 
   await prisma.interpreter.update({ where: { id }, data: { is_active: false } });
 }
@@ -271,12 +271,12 @@ export async function createAvailabilityBlock(
   const conflict = await prisma.appointment.findFirst({
     where: {
       interpreter_id: interpreterId,
-      status: { in: ["confirmed", "in_progress"] },
+      status: { in: ["accepted", "in_progress"] },
       date_time: { gte: new Date(body.from), lte: new Date(body.to) },
     },
   });
   if (conflict) {
-    throw new ConflictError("AVAILABILITY_CONFLICTS_WITH_APPOINTMENT", "Block overlaps a confirmed appointment");
+    throw new ConflictError("AVAILABILITY_CONFLICTS_WITH_APPOINTMENT", "Block overlaps an accepted appointment");
   }
 
   return prisma.availabilityBlock.create({

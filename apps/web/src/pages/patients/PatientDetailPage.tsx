@@ -378,7 +378,7 @@ export function PatientDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(appts.data as Array<Record<string, unknown>>).map((a) => (
+                  {(appts.data as Array<Record<string, unknown>>).slice().reverse().map((a) => (
                     <tr
                       key={a.id as string}
                       onClick={() => navigate(`/appointments/${a.id as string}`)}

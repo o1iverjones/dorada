@@ -333,7 +333,7 @@ const payload = req.user as JwtPayload;
     const { id, offer_id } = req.params as { id: string; offer_id: string };
     const payload = req.user as JwtPayload;
     const result = await confirmOffer(id, offer_id, payload.sub, fastify.prisma);
-    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "confirmed" });
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "accepted" });
     // Schedule reminders (fire-and-forget)
     const { getQueues } = await import("../../workers/queues.js");
     const appt = await fastify.prisma.appointment.findUnique({ where: { id }, select: { date_time: true } });
