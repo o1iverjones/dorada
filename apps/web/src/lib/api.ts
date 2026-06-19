@@ -24,6 +24,22 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
 
   if (res.status === 401) {
+    // Only attempt refresh + redirect if we sent a token (i.e. an authenticated session expired).
+    // If we had no token, this is a public endpoint (e.g. login with wrong credentials) — just
+    // throw so the caller's error handler can show the appropriate message.
+    if (!token) {
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      const errorObj = body.error;
+      const code =
+        typeof errorObj === "object" && errorObj !== null
+          ? ((errorObj as Record<string, unknown>).code as string | undefined)
+          : undefined;
+      const message =
+        typeof errorObj === "object" && errorObj !== null
+          ? ((errorObj as Record<string, unknown>).message as string | undefined)
+          : (body.message as string | undefined);
+      throw new ApiError(401, code ?? "UNAUTHORIZED", message || res.statusText || "Unauthorized");
+    }
     const refreshed = await tryRefresh();
     if (refreshed) {
       headers["Authorization"] = `Bearer ${localStorage.getItem("dorada_access_token")}`;

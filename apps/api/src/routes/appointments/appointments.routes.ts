@@ -50,6 +50,7 @@ import {
   manualConfirmInterpreter,
   unassignInterpreter,
   patchBilling,
+  deleteOffer,
 } from "./appointments.service.js";
 
 async function resolveActor(payload: JwtPayload, fastify: FastifyInstance) {
@@ -138,13 +139,15 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
             if (!existing) {
               const appt = await fastify.prisma.appointment.findUnique({
                 where: { id },
-                select: { date_time: true, po_number: true },
+                select: { date_time: true, po_number: true, clock_out_time: true, status: true },
               });
+              // Don't alert if the appointment is already clocked out or completed
+              if (!appt || appt.clock_out_time || appt.status === "completed") return;
               const hours = Math.floor(alertMinutes / 60);
               const mins = alertMinutes % 60;
               const durationStr = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-              const dateStr = appt ? new Date(appt.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-              const poStr = appt?.po_number ? ` (PO: ${appt.po_number})` : "";
+              const dateStr = new Date(appt.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              const poStr = appt.po_number ? ` (PO: ${appt.po_number})` : "";
               const alert = await fastify.prisma.adminAlert.create({
                 data: {
                   organization_id: payload.organization_id,
@@ -171,6 +174,10 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
         const { getQueues } = await import("../../workers/queues.js");
         const job = await getQueues().adminAlertQueue.getJob(`long-appt:${id}`);
         if (job) await job.remove();
+        // Also delete any DB alert that was already created immediately (delay < 0 path)
+        await fastify.prisma.adminAlert.deleteMany({
+          where: { appointment_id: id, type: "long_appointment" },
+        });
       } catch (err) {
         fastify.log.error(err, "Failed to cancel long-appointment alert");
       }
@@ -374,6 +381,15 @@ const payload = req.user as JwtPayload;
     fastify.io.to(`notify:${payload.organization_id}`).emit("alert:new", { alert });
 
     return reply.send(result);
+  });
+
+  // DELETE /appointments/:id/offers/:offer_id — admin rescinds a pending offer
+  fastify.delete("/:id/offers/:offer_id", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id, offer_id } = req.params as { id: string; offer_id: string };
+    const payload = req.user as JwtPayload;
+    await deleteOffer(id, offer_id, payload.organization_id, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:offer_updated", { appointmentId: id, status: "deleted" });
+    return reply.status(204).send();
   });
 
   // POST /appointments/:id/manual-confirm — admin manually assigns an interpreter (feature-flagged)

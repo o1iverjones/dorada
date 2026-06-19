@@ -59,6 +59,7 @@ export function InterpreterDetailPage() {
       state: interp.state ?? "",
       zip_code: interp.zip_code ?? "",
       preferred_cities: (interp.preferred_cities as string[] | undefined) ?? [],
+      payment_method: interp.payment_method ?? "",
     });
     setEditing(true);
   }
@@ -82,6 +83,7 @@ export function InterpreterDetailPage() {
       payload.state = (f.state as string)?.trim() || null;
       payload.zip_code = (f.zip_code as string)?.trim() || null;
       payload.preferred_cities = (f.preferred_cities as string[]) ?? [];
+      payload.payment_method = (f.payment_method as string)?.trim() || null;
       const ecName = String(f.emergency_contact_name ?? "").trim();
       const ecPhone = String(f.emergency_contact_phone ?? "").trim();
       if (ecName || ecPhone) {
@@ -239,6 +241,14 @@ export function InterpreterDetailPage() {
                     onChange={(e) => setEditForm(s => ({ ...s, pay_rate_certified: parseFloat(e.target.value) }))}
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label>{t("interpreters.payment_method")}</Label>
+                  <Input
+                    value={editForm.payment_method as string ?? ""}
+                    onChange={(e) => setEditForm(s => ({ ...s, payment_method: e.target.value }))}
+                    placeholder="—"
+                  />
+                </div>
               </div>
             ) : (
               <>
@@ -325,12 +335,13 @@ export function InterpreterDetailPage() {
           <CardContent className="space-y-3 text-sm">
             {editing ? (
               <div className="space-y-3">
-                {/* Clickable city chips from all cities in use */}
-                {(allCities ?? []).length > 0 && (() => {
+                {/* Clickable city chips from all cities in use + any custom cities already selected */}
+                {(() => {
                   const selected = (editForm.preferred_cities as string[]) ?? [];
+                  const universe = Array.from(new Set([...(allCities ?? []), ...selected])).sort();
                   const filtered = cityInput.trim()
-                    ? (allCities ?? []).filter((c) => c.toLowerCase().includes(cityInput.trim().toLowerCase()))
-                    : (allCities ?? []);
+                    ? universe.filter((c) => c.toLowerCase().includes(cityInput.trim().toLowerCase()))
+                    : universe;
                   if (filtered.length === 0) return null;
                   return (
                     <div className="flex flex-wrap gap-1.5">
@@ -408,8 +419,21 @@ export function InterpreterDetailPage() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {((interp.preferred_cities as string[]) ?? []).map((city) => (
-                      <span key={city} className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                      <span key={city} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium">
                         {city}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = ((interp.preferred_cities as string[]) ?? []).filter((c) => c !== city);
+                            update.mutate({ preferred_cities: updated }, {
+                              onError: () => toast({ title: t("common.error"), variant: "destructive" }),
+                            });
+                          }}
+                          className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                          aria-label={`Remove ${city}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </span>
                     ))}
                   </div>

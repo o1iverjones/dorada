@@ -575,6 +575,35 @@ export async function offerAppointment(
   return { offers: created };
 }
 
+export async function deleteOffer(
+  appointmentId: string,
+  offerId: string,
+  organizationId: string,
+  prisma: PrismaClient,
+) {
+  const offer = await prisma.appointmentOffer.findUnique({
+    where: { id: offerId },
+    include: { appointment: true },
+  });
+
+  if (!offer || offer.appointment_id !== appointmentId || offer.appointment.organization_id !== organizationId) {
+    throw new NotFoundError("OFFER_NOT_FOUND", "Offer not found");
+  }
+  if (offer.status !== "pending") {
+    throw new ConflictError("OFFER_NOT_PENDING", "Only pending offers can be deleted");
+  }
+
+  await prisma.appointmentOffer.delete({ where: { id: offerId } });
+
+  // If no pending offers remain, revert appointment to unassigned
+  const remainingPending = await prisma.appointmentOffer.count({
+    where: { appointment_id: appointmentId, status: "pending" },
+  });
+  if (remainingPending === 0 && offer.appointment.status === "pending_offer") {
+    await prisma.appointment.update({ where: { id: appointmentId }, data: { status: "unassigned" } });
+  }
+}
+
 export async function confirmOffer(
   appointmentId: string,
   offerId: string,

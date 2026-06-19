@@ -46,6 +46,7 @@ model Organization {
   invoices             Invoice[]
   insurance_companies  InsuranceCompany[]
   admin_alerts         AdminAlert[]
+  cities               City[]
 
   @@map("organizations")
 }
@@ -292,8 +293,11 @@ model Agency {
   rate_qme                           Decimal? @db.Decimal(8,2)
   miles                              Decimal? @db.Decimal(8,2)
   reporting_info                     String?
+  reporting_contact                  String?
   followup_info                      String?
+  followup_contact                   String?
   invoice_info                       String?
+  invoice_contact                    String?
   email_intake_enabled               Boolean  @default(false)
   email_intake_sender_domains        String[] @default([])
   email_intake_confirmation_override String?
@@ -869,4 +873,16 @@ model SuperAdminSettings {
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("super_admin_settings")
+}
+
+model City {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, name])
+  @@map("cities")
 }

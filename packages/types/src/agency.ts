@@ -27,8 +27,11 @@ export const AgencySchema = z.object({
   rate_qme: z.number().nullable(),
   miles: z.number().nullable(),
   reporting_info: z.string().nullable(),
+  reporting_contact: z.string().nullable(),
   followup_info: z.string().nullable(),
+  followup_contact: z.string().nullable(),
   invoice_info: z.string().nullable(),
+  invoice_contact: z.string().nullable(),
   email_intake: EmailIntakeConfigSchema.nullable(),
   is_active: z.boolean(),
   created_at: z.string().datetime(),
@@ -49,8 +52,11 @@ export const CreateAgencyBodySchema = z.object({
   rate_qme: z.number().nonnegative().nullish(),
   miles: z.number().nonnegative().nullish(),
   reporting_info: z.string().max(50).nullish(),
+  reporting_contact: z.string().max(255).nullish(),
   followup_info: z.string().max(50).nullish(),
+  followup_contact: z.string().max(255).nullish(),
   invoice_info: z.string().max(50).nullish(),
+  invoice_contact: z.string().max(255).nullish(),
   email_intake: EmailIntakeConfigSchema.optional(),
 });
 

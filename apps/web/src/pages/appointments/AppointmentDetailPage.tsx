@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getSocket } from "../../lib/socket.js";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, type BillingFields } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, useDeleteOffer, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useAgencies } from "../../hooks/useAgencies.js";
@@ -26,6 +26,11 @@ import { DurationInput } from "../../components/shared/DurationInput.js";
 import { PhoneLink } from "../../components/shared/PhoneLink.js";
 
 const LANGUAGES = ["Spanish", "French", "Tagalog", "Russian", "Mandarin"];
+
+function formatDuration(minutes: number): string {
+  const hrs = parseFloat((minutes / 60).toFixed(2));
+  return `${hrs} ${hrs === 1 ? "hr" : "hrs"}`;
+}
 
 type FormState = {
   date_time: string;
@@ -65,6 +70,7 @@ export function AppointmentDetailPage() {
   const [clockOutForm, setClockOutForm] = useState("");
   const [confirmUnassign, setConfirmUnassign] = useState(false);
   const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
+  const [activityPage, setActivityPage] = useState(0);
   const [highlightPo, setHighlightPo] = useState(false);
   const poRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +98,7 @@ export function AppointmentDetailPage() {
   const { data: mediaData } = useAppointmentMedia(id!);
   const manualConfirm = useManualConfirm(id!);
   const unassign = useUnassignInterpreter(id!);
+  const deleteOffer = useDeleteOffer(id!);
 
   // Lookup data for edit mode
   const { data: clinicsData } = useClinics({ limit: "500" });
@@ -453,7 +460,7 @@ export function AppointmentDetailPage() {
                   <DurationInput value={form.duration_minutes} onChange={(mins) => set("duration_minutes", mins)} className="h-7 text-sm" />
                 </InlineRow>
               ) : (
-                <Field label={t("appointments.duration")} value={`${a.duration_minutes} min`} />
+                <Field label={t("appointments.duration")} value={formatDuration(a.duration_minutes as number)} />
               )}
             </div>
 
@@ -658,6 +665,17 @@ export function AppointmentDetailPage() {
                               {t("appointments.manually_confirm")}
                             </label>
                           )}
+                          <button
+                            type="button"
+                            disabled={deleteOffer.isPending}
+                            onClick={() => deleteOffer.mutate(o.id as string, {
+                              onSuccess: () => toast({ title: "Offer deleted" }),
+                              onError: () => toast({ title: t("common.error"), variant: "destructive" }),
+                            })}
+                            className="text-xs font-medium text-red-600 hover:text-red-800 hover:underline disabled:opacity-40"
+                          >
+                            Delete offer
+                          </button>
                         </>
                       )}
                     </div>
@@ -854,8 +872,8 @@ export function AppointmentDetailPage() {
             <>
               <div className="border-t" />
               <div className="space-y-2">
-                {a.actual_duration_minutes && <Field label={t("appointments.actual_duration")} value={`${a.actual_duration_minutes} min`} />}
-                {a.billable_duration_minutes && <Field label={t("appointments.billable_duration")} value={`${a.billable_duration_minutes} min`} />}
+                {a.actual_duration_minutes && <Field label={t("appointments.actual_duration")} value={formatDuration(a.actual_duration_minutes as number)} />}
+                {a.billable_duration_minutes && <Field label={t("appointments.billable_duration")} value={formatDuration(a.billable_duration_minutes as number)} />}
               </div>
             </>
           )}
@@ -936,23 +954,54 @@ export function AppointmentDetailPage() {
           <CardContent>
             {!((activityLog as Array<Record<string, unknown>>) ?? []).length ? (
               <p className="text-sm text-muted-foreground">{t("appointments.no_activity")}</p>
-            ) : (
-              <ol className="relative border-l border-border ml-2 space-y-4">
-                {(activityLog as Array<Record<string, unknown>>).map((entry) => (
-                  <li key={entry.id as string} className="ml-4">
-                    <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border bg-background border-border" />
-                    <p className="text-xs text-muted-foreground">
-                      {formatInTz(entry.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
-                      {" · "}
-                      <span className="font-medium text-foreground">{entry.admin_name as string}</span>
-                    </p>
-                    <p className="text-sm mt-0.5 capitalize">{t(`appointments.activity_${entry.action as string}`, { defaultValue: entry.action as string })}
-                      {entry.detail ? <span className="text-muted-foreground"> — {entry.detail as string}</span> : null}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            )}
+            ) : (() => {
+              const allEntries = activityLog as Array<Record<string, unknown>>;
+              const PAGE_SIZE = 15;
+              const totalPages = Math.ceil(allEntries.length / PAGE_SIZE);
+              const pageEntries = allEntries.slice(activityPage * PAGE_SIZE, (activityPage + 1) * PAGE_SIZE);
+              return (
+                <>
+                  <ol className="relative border-l border-border ml-2 space-y-4">
+                    {pageEntries.map((entry) => (
+                      <li key={entry.id as string} className="ml-4">
+                        <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border bg-background border-border" />
+                        <p className="text-xs text-muted-foreground">
+                          {formatInTz(entry.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                          {" · "}
+                          <span className="font-medium text-foreground">{entry.admin_name as string}</span>
+                        </p>
+                        <p className="text-sm mt-0.5 capitalize">{t(`appointments.activity_${entry.action as string}`, { defaultValue: entry.action as string })}
+                          {entry.detail ? <span className="text-muted-foreground"> — {entry.detail as string}</span> : null}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => setActivityPage((p) => Math.max(0, p - 1))}
+                        disabled={activityPage === 0}
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        ← Previous
+                      </button>
+                      <span className="text-xs text-muted-foreground">
+                        {activityPage + 1} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActivityPage((p) => Math.min(totalPages - 1, p + 1))}
+                        disabled={activityPage === totalPages - 1}
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

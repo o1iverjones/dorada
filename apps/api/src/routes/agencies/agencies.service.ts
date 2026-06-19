@@ -14,7 +14,9 @@ function formatAgency(a: {
   notes: string | null; is_active: boolean; created_at: Date; updated_at: Date;
   contact_method: string | null; telephone: string | null; id_number: string | null;
   rate_qualified: unknown; rate_certified: unknown; rate_qme: unknown; miles: unknown;
-  reporting_info: string | null; followup_info: string | null; invoice_info: string | null;
+  reporting_info: string | null; reporting_contact: string | null;
+  followup_info: string | null; followup_contact: string | null;
+  invoice_info: string | null; invoice_contact: string | null;
   email_intake_enabled: boolean;
   email_intake_sender_domains: string[];
   email_intake_confirmation_override: string | null;
@@ -36,8 +38,11 @@ function formatAgency(a: {
     rate_qme: a.rate_qme != null ? Number(a.rate_qme) : null,
     miles: a.miles != null ? Number(a.miles) : null,
     reporting_info: a.reporting_info,
+    reporting_contact: a.reporting_contact,
     followup_info: a.followup_info,
+    followup_contact: a.followup_contact,
     invoice_info: a.invoice_info,
+    invoice_contact: a.invoice_contact,
     email_intake: a.email_intake_enabled ? {
       sender_domains: a.email_intake_sender_domains,
       confirmation_method_override: a.email_intake_confirmation_override,
@@ -96,8 +101,11 @@ export async function createAgency(body: CreateAgencyBody, organizationId: strin
       rate_qme: body.rate_qme ?? null,
       miles: body.miles ?? null,
       reporting_info: body.reporting_info ?? null,
+      reporting_contact: body.reporting_contact ?? null,
       followup_info: body.followup_info ?? null,
+      followup_contact: body.followup_contact ?? null,
       invoice_info: body.invoice_info ?? null,
+      invoice_contact: body.invoice_contact ?? null,
       email_intake_enabled: !!body.email_intake,
       email_intake_sender_domains: body.email_intake?.sender_domains ?? [],
       email_intake_confirmation_override: body.email_intake?.confirmation_method_override ?? null,
@@ -127,8 +135,11 @@ export async function updateAgency(id: string, body: UpdateAgencyBody, organizat
       ...(body.rate_qme !== undefined ? { rate_qme: body.rate_qme } : {}),
       ...(body.miles !== undefined ? { miles: body.miles } : {}),
       ...(body.reporting_info !== undefined ? { reporting_info: body.reporting_info } : {}),
+      ...(body.reporting_contact !== undefined ? { reporting_contact: body.reporting_contact } : {}),
       ...(body.followup_info !== undefined ? { followup_info: body.followup_info } : {}),
+      ...(body.followup_contact !== undefined ? { followup_contact: body.followup_contact } : {}),
       ...(body.invoice_info !== undefined ? { invoice_info: body.invoice_info } : {}),
+      ...(body.invoice_contact !== undefined ? { invoice_contact: body.invoice_contact } : {}),
       ...(body.email_intake !== undefined ? {
         email_intake_enabled: !!body.email_intake,
         email_intake_sender_domains: body.email_intake?.sender_domains ?? [],
