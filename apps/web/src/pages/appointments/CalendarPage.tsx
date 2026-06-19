@@ -545,7 +545,7 @@ export function CalendarPage() {
               onToggle={(key) => setActiveFilters((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}
             />
             <FilterChipGroup
-              label="Confirmation"
+              label="Confirm"
               options={[
                 { key: "clinic_confirmed:true", label: "Confirmed" },
                 { key: "clinic_confirmed:false", label: "Not Confirmed" },
