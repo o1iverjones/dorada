@@ -397,6 +397,16 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
+            {/* Interpreter B cert number */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {(() => {
+                const interpBName = editing ? form.billing_interpreter : (a.billing_interpreter as string | null);
+                const interpB = interpBName ? allInterpreterList.find((i) => (i.name as string) === interpBName) : null;
+                const certNum = (interpB?.certificate_number as string | null) ?? null;
+                return <Field label="Cert number" value={certNum ?? "—"} />;
+              })()}
+            </div>
+
             {/* DOB */}
             <div className="px-6 py-2.5 even:bg-muted/40">
               {editing ? (
