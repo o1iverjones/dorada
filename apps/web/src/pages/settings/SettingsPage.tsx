@@ -62,50 +62,39 @@ function CitiesCard() {
         <CardDescription>Manage the list of cities available for interpreter coverage areas. Renaming or deleting a city updates all interpreters automatically.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          {(cities as Array<{ id: string; name: string }>).map((city) => (
-            <div key={city.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              {editingId === city.id ? (
-                <Input
+        <div className="flex flex-wrap gap-2">
+          {(cities as Array<{ id: string; name: string }>).map((city) =>
+            editingId === city.id ? (
+              <span key={city.id} className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1">
+                <input
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") commitRename();
                     if (e.key === "Escape") setEditingId(null);
                   }}
-                  className="h-7 text-sm max-w-xs"
+                  className="w-28 bg-transparent text-xs outline-none"
                   autoFocus
                 />
-              ) : (
-                <span className="font-medium">{city.name}</span>
-              )}
-              <div className="flex items-center gap-2">
-                {editingId === city.id ? (
-                  <>
-                    <button type="button" onClick={commitRename} disabled={renameCity.isPending} className="text-primary hover:opacity-70">
-                      <Check className="h-4 w-4" />
-                    </button>
-                    <button type="button" onClick={() => setEditingId(null)} className="text-muted-foreground hover:opacity-70">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" onClick={() => startRename(city)} className="text-muted-foreground hover:text-foreground">
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteCity.mutate(city.id)}
-                      className="text-destructive hover:text-destructive/80"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
+                <button type="button" onClick={commitRename} disabled={renameCity.isPending} className="text-primary hover:opacity-70">
+                  <Check className="h-3 w-3" />
+                </button>
+                <button type="button" onClick={() => setEditingId(null)} className="text-muted-foreground hover:opacity-70">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ) : (
+              <span key={city.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                {city.name}
+                <button type="button" onClick={() => startRename(city)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Pencil className="h-3 w-3" />
+                </button>
+                <button type="button" onClick={() => deleteCity.mutate(city.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )
+          )}
           {(cities as Array<unknown>).length === 0 && (
             <p className="text-sm text-muted-foreground">No cities added yet.</p>
           )}
