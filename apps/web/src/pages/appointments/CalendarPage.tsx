@@ -456,62 +456,66 @@ export function CalendarPage() {
             <Button variant="outline" size="sm" onClick={() => changeDate(new Date())}>{t("calendar.today")}</Button>
           </div>
 
-          {/* Collapse toggle */}
+        </div>
+
+        {/* Always-visible: search fields + expand-chips button */}
+        <div className="flex flex-wrap items-center gap-3 py-3 border-b">
+          <div className="w-52">
+            <AutocompleteInput
+              options={interpreterOptions}
+              value={interpreterFilter}
+              onChange={setInterpreterFilter}
+              placeholder={t("appointments.filter_interpreter")}
+            />
+          </div>
+          <div className="w-52">
+            <AutocompleteInput
+              options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
+              value={clinicFilter === "all" ? "" : clinicFilter}
+              onChange={(v) => setClinicFilter(v || "all")}
+              placeholder={t("appointments.clinic")}
+            />
+          </div>
+          <div className="w-52">
+            <AutocompleteInput
+              options={((agenciesData?.data ?? []) as Array<{ id: string; name: string }>).map((a) => ({ value: a.id, label: a.name }))}
+              value={agencyFilter === "all" ? "" : agencyFilter}
+              onChange={(v) => setAgencyFilter(v || "all")}
+              placeholder={t("appointments.agency")}
+            />
+          </div>
+          <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
+            <CalendarOff className="h-4 w-4" />
+            {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setAgencyFilter("all"); setActiveFilters(new Set()); }}
+            className={(interpreterFilter || clinicFilter !== "all" || agencyFilter !== "all" || activeFilters.size > 0)
+              ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
+              : "opacity-40 cursor-default"}
+          >
+            {t("common.clear")}
+          </Button>
           <button
             onClick={() => setFiltersExpanded((v) => !v)}
-            className="ml-auto flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
+            className="ml-auto flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
             title={filtersExpanded ? "Hide filters" : "Show filters"}
           >
-            {filtersExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {activeFilters.size > 0 && (
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none">
+                {activeFilters.size}
+              </span>
+            )}
+            Filters
+            {filtersExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
           </button>
         </div>
 
-        {/* Collapsible filters */}
+        {/* Collapsible: status / billing / confirm chip rows */}
         {filtersExpanded && (
           <div className="py-3 border-b space-y-3">
-            {/* Row 1: autocompletes + blocks toggle + clear */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="w-52">
-                <AutocompleteInput
-                  options={interpreterOptions}
-                  value={interpreterFilter}
-                  onChange={setInterpreterFilter}
-                  placeholder={t("appointments.filter_interpreter")}
-                />
-              </div>
-              <div className="w-52">
-                <AutocompleteInput
-                  options={((clinicsData?.data ?? []) as Array<{ id: string; name: string }>).map((c) => ({ value: c.id, label: c.name }))}
-                  value={clinicFilter === "all" ? "" : clinicFilter}
-                  onChange={(v) => setClinicFilter(v || "all")}
-                  placeholder={t("appointments.clinic")}
-                />
-              </div>
-              <div className="w-52">
-                <AutocompleteInput
-                  options={((agenciesData?.data ?? []) as Array<{ id: string; name: string }>).map((a) => ({ value: a.id, label: a.name }))}
-                  value={agencyFilter === "all" ? "" : agencyFilter}
-                  onChange={(v) => setAgencyFilter(v || "all")}
-                  placeholder={t("appointments.agency")}
-                />
-              </div>
-              <Button variant={showBlocks ? "default" : "outline"} onClick={() => setShowBlocks((v) => !v)} className="gap-2">
-                <CalendarOff className="h-4 w-4" />
-                {showBlocks ? t("calendar.hide_blocks") : t("calendar.show_blocks")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { setInterpreterFilter(""); setClinicFilter("all"); setAgencyFilter("all"); setActiveFilters(new Set()); }}
-                className={(interpreterFilter || clinicFilter !== "all" || agencyFilter !== "all" || activeFilters.size > 0)
-                  ? "border-green-600 text-green-700 bg-green-50 hover:bg-green-100"
-                  : "opacity-40 cursor-default"}
-              >
-                {t("common.clear")}
-              </Button>
-            </div>
-
-            {/* Row 2: status + billing filter chips */}
             <FilterChipGroup
               label="Status"
               options={[
