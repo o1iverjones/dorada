@@ -304,11 +304,11 @@ export function ClinicDetailPage() {
                     <p className="text-muted-foreground">{t("clinics.address")}</p>
                     <p className="font-medium">{clinic.address as string ?? "—"}</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-1">
-                      <p className="text-muted-foreground">{t("clinics.city")}</p>
-                      <p className="font-medium">{clinic.city as string ?? "—"}</p>
-                    </div>
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.city")}</p>
+                    <p className="font-medium">{clinic.city as string ?? "—"}</p>
+                  </div>
+                  <div className="flex gap-6">
                     <div>
                       <p className="text-muted-foreground">{t("clinics.state")}</p>
                       <p className="font-medium">{clinic.state as string ?? "—"}</p>
