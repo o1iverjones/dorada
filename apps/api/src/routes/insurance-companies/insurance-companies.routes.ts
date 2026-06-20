@@ -1,15 +1,20 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { CreateInsuranceCompanyBodySchema, UpdateInsuranceCompanyBodySchema, InsuranceCompanyListQuerySchema } from "@dorada/types";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
+import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
+import { noteImagePath } from "../../integrations/r2.js";
 import {
   listInsuranceCompanies,
   getInsuranceCompany,
   createInsuranceCompany,
   updateInsuranceCompany,
   getInsuranceCompanyActivity,
+  getInsuranceCompanyNotes,
+  addInsuranceCompanyNote,
 } from "./insurance-companies.service.js";
 
 export default async function insuranceCompanyRoutes(fastify: FastifyInstance) {
@@ -78,6 +83,36 @@ export default async function insuranceCompanyRoutes(fastify: FastifyInstance) {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
     return reply.send(await getInsuranceCompanyActivity(id, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.get("/:id/admin-notes", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getInsuranceCompanyNotes(id, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.post("/:id/admin-notes", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { content, image_url } = z.object({ content: z.string().max(800), image_url: z.string().url().nullish() }).parse(req.body);
+    const payload = req.user as JwtPayload;
+    const actor = payload.name
+      ? { id: payload.sub, name: payload.name }
+      : { id: payload.sub, name: (await fastify.prisma.user.findUnique({ where: { id: payload.sub }, select: { name: true } }))?.name ?? "Admin" };
+    return reply.status(201).send(await addInsuranceCompanyNote(id, content, payload.organization_id, actor, fastify.prisma, image_url ?? null));
+  });
+
+  fastify.post("/:id/note-image", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const data = await req.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
+    try {
+      const filename = imageFilename(data.filename, data.mimetype);
+      const url = await uploadImage(data, noteImagePath("insurance_company", id, filename));
+      return reply.send({ url });
+    } catch (err) {
+      if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
+      throw err;
+    }
   });
 
   fastify.delete("/:id", { preHandler }, async (req, reply) => {

@@ -122,3 +122,34 @@ export async function getInsuranceCompanyActivity(id: string, organizationId: st
     orderBy: { created_at: "desc" },
   });
 }
+
+export async function getInsuranceCompanyNotes(id: string, organizationId: string, prisma: PrismaClient) {
+  const company = await prisma.insuranceCompany.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(company, organizationId);
+  return prisma.insuranceCompanyNote.findMany({
+    where: { insurance_company_id: id },
+    orderBy: { created_at: "desc" },
+  });
+}
+
+export async function addInsuranceCompanyNote(
+  id: string,
+  content: string,
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+  imageUrl: string | null = null,
+) {
+  const company = await prisma.insuranceCompany.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(company, organizationId);
+  return prisma.insuranceCompanyNote.create({
+    data: {
+      insurance_company_id: id,
+      organization_id: organizationId,
+      content,
+      admin_id: actor.id,
+      admin_name: actor.name,
+      image_url: imageUrl,
+    },
+  });
+}

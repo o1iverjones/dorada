@@ -33,8 +33,9 @@ model Organization {
   activity_logs          ActivityLog[]
   appointment_notes    AppointmentNote[]
   clinic_notes         ClinicNote[]
-  agency_notes         AgencyNote[]
-  appointment_types    AppointmentType[]
+  agency_notes               AgencyNote[]
+  insurance_company_notes    InsuranceCompanyNote[]
+  appointment_types          AppointmentType[]
   languages            OrganizationLanguage[]
   locale_strings       LocaleString[]
   system_settings      SystemSettings?
@@ -384,10 +385,27 @@ model InsuranceCompany {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organization_id], references: [id])
+  organization Organization        @relation(fields: [organization_id], references: [id])
   claims       Claim[]
+  admin_notes  InsuranceCompanyNote[]
 
   @@map("insurance_companies")
+}
+
+model InsuranceCompanyNote {
+  id                   String   @id @default(uuid())
+  insurance_company_id String
+  organization_id      String
+  content              String   @db.VarChar(800)
+  image_url            String?
+  admin_id             String?
+  admin_name           String
+  created_at           DateTime @default(now())
+
+  insurance_company InsuranceCompany @relation(fields: [insurance_company_id], references: [id], onDelete: Cascade)
+  organization      Organization     @relation(fields: [organization_id], references: [id])
+
+  @@map("insurance_company_notes")
 }
 
 // ─── Appointments ─────────────────────────────────────────────────────────────

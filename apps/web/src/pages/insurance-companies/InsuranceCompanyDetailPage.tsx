@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useInsuranceCompany, useUpdateInsuranceCompany, useInsuranceCompanyActivity } from "../../hooks/useInsuranceCompanies.js";
+import { useInsuranceCompany, useUpdateInsuranceCompany, useInsuranceCompanyActivity, useInsuranceCompanyNotes, useAddInsuranceCompanyNote, useUploadInsuranceCompanyNoteImage } from "../../hooks/useInsuranceCompanies.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -15,8 +15,9 @@ import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { ClipboardList, AlertTriangle } from "lucide-react";
+import { ClipboardList, AlertTriangle, StickyNote } from "lucide-react";
 import { useAuthStore } from "../../store/auth.js";
+import { NoteInput } from "../../components/shared/NoteInput.js";
 
 export function InsuranceCompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,12 +26,16 @@ export function InsuranceCompanyDetailPage() {
   const { data, isLoading } = useInsuranceCompany(id!);
   const update = useUpdateInsuranceCompany(id!);
   const { data: activityLog } = useInsuranceCompanyActivity(id!);
+  const { data: adminNotes } = useInsuranceCompanyNotes(id!);
+  const addNote = useAddInsuranceCompanyNote(id!);
+  const uploadNoteImage = useUploadInsuranceCompanyNoteImage(id!);
 
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const canManage = hasPermission("manage_clinics");
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [noteText, setNoteText] = useState("");
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
 
@@ -107,66 +112,105 @@ export function InsuranceCompanyDetailPage() {
         }
       />
 
+      {/* Details card */}
+      <Card>
+        <CardHeader><CardTitle>{t("insurance_companies.details")}</CardTitle></CardHeader>
+        <CardContent>
+          {editing ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {textFields.map(({ key, label, type }) => (
+                <div key={key} className="space-y-1">
+                  <Label>{label}</Label>
+                  <Input
+                    type={type}
+                    value={form[key] ?? ""}
+                    onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+              <div className="space-y-1">
+                <Label>{t("insurance_companies.phone")}</Label>
+                <PhoneInput value={form.phone ?? ""} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("insurance_companies.fax")}</Label>
+                <PhoneInput value={form.fax ?? ""} onChange={(v) => setForm(s => ({ ...s, fax: v }))} />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.name")}</p>
+                <p className="font-medium">{company.name as string ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.phone")}</p>
+                <p className="font-medium"><PhoneLink phone={company.phone as string} /></p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.fax")}</p>
+                <p className="font-medium"><PhoneLink phone={company.fax as string} /></p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.email")}</p>
+                <p className="font-medium">{company.email as string ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.address")}</p>
+                <p className="font-medium">{company.address as string ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.city")}</p>
+                <p className="font-medium">{company.city as string ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.state")}</p>
+                <p className="font-medium">{company.state as string ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("insurance_companies.zip_code")}</p>
+                <p className="font-medium">{company.zip_code as string ?? "—"}</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Admin Notes + Activity Log */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Details card */}
         <Card>
-          <CardHeader><CardTitle>{t("insurance_companies.details")}</CardTitle></CardHeader>
-          <CardContent>
-            {editing ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {textFields.map(({ key, label, type }) => (
-                  <div key={key} className="space-y-1">
-                    <Label>{label}</Label>
-                    <Input
-                      type={type}
-                      value={form[key] ?? ""}
-                      onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))}
-                    />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4" /> {t("appointments.admin_notes")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <NoteInput
+              value={noteText}
+              onChange={setNoteText}
+              onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
+              isSaving={addNote.isPending}
+              onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
+              placeholder={t("appointments.admin_notes_placeholder")}
+              saveLabel={t("common.save")}
+            />
+            {((adminNotes as Array<Record<string, unknown>>) ?? []).length > 0 && (
+              <div className="space-y-3 border-t pt-3">
+                {(adminNotes as Array<Record<string, unknown>>).map((n) => (
+                  <div key={n.id as string} className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{n.admin_name as string}</span>
+                      <span>·</span>
+                      <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
+                    {n.image_url && (
+                      <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
+                        <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
+                      </a>
+                    )}
                   </div>
                 ))}
-                <div className="space-y-1">
-                  <Label>{t("insurance_companies.phone")}</Label>
-                  <PhoneInput value={form.phone ?? ""} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>{t("insurance_companies.fax")}</Label>
-                  <PhoneInput value={form.fax ?? ""} onChange={(v) => setForm(s => ({ ...s, fax: v }))} />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.name")}</p>
-                  <p className="font-medium">{company.name as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.phone")}</p>
-                  <p className="font-medium"><PhoneLink phone={company.phone as string} /></p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.fax")}</p>
-                  <p className="font-medium"><PhoneLink phone={company.fax as string} /></p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.email")}</p>
-                  <p className="font-medium">{company.email as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.address")}</p>
-                  <p className="font-medium">{company.address as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.city")}</p>
-                  <p className="font-medium">{company.city as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.state")}</p>
-                  <p className="font-medium">{company.state as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("insurance_companies.zip_code")}</p>
-                  <p className="font-medium">{company.zip_code as string ?? "—"}</p>
-                </div>
               </div>
             )}
           </CardContent>
