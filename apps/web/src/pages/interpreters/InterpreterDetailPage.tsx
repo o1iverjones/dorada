@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useInterpreter, useUpdateInterpreter, useDeactivateInterpreter, useInterpreterCities } from "../../hooks/useInterpreters.js";
+import { useInterpreter, useUpdateInterpreter, useDeactivateInterpreter, useReactivateInterpreter, useInterpreterCities, useInterpreterActivity, useInterpreterNotes, useAddInterpreterNote, useUploadInterpreterNoteImage } from "../../hooks/useInterpreters.js";
 import { useShowLanguage } from "../../hooks/useSettings.js";
+import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
@@ -14,25 +15,36 @@ import { PhoneInput } from "../../components/ui/PhoneInput.js";
 import { formatPhoneInput } from "../../lib/phone.js";
 import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
 import { InterpreterAvatar } from "../../components/shared/InterpreterAvatar.js";
+import { NoteInput } from "../../components/shared/NoteInput.js";
+import { formatInTz } from "../../lib/timezone.js";
 import { api } from "../../lib/api.js";
-import { X } from "lucide-react";
+import { X, AlertTriangle, StickyNote, ClipboardList } from "lucide-react";
 
 export function InterpreterDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const showLanguage = useShowLanguage();
+  const tz = useOrgTimezone();
   const { data, isLoading } = useInterpreter(id!);
   const update = useUpdateInterpreter(id!);
   const deactivate = useDeactivateInterpreter(id!);
+  const reactivate = useReactivateInterpreter(id!);
   const { data: allCities } = useInterpreterCities();
+  const { data: activityLog } = useInterpreterActivity(id!);
+  const { data: adminNotes } = useInterpreterNotes(id!);
+  const addNote = useAddInterpreterNote(id!);
+  const uploadNoteImage = useUploadInterpreterNoteImage(id!);
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, unknown>>({});
   const [photoUploading, setPhotoUploading] = useState(false);
   const [cityInput, setCityInput] = useState("");
+  const [noteText, setNoteText] = useState("");
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
 
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
@@ -112,15 +124,6 @@ export function InterpreterDetailPage() {
     }
   }
 
-  async function handleDeactivate() {
-    try {
-      await deactivate.mutateAsync(undefined);
-      toast({ title: t("interpreters.deactivated") });
-      navigate("/interpreters");
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -134,14 +137,7 @@ export function InterpreterDetailPage() {
                 <Button variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
               </>
             ) : (
-              <>
-                <Button variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
-                {interp.is_active && (
-                  <Button variant="destructive" onClick={handleDeactivate} disabled={deactivate.isPending}>
-                    {t("interpreters.deactivate")}
-                  </Button>
-                )}
-              </>
+              <Button variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
             )}
           </div>
         }
@@ -539,6 +535,166 @@ export function InterpreterDetailPage() {
           </Card>
         )}
       </div>
+
+      {/* Admin Notes + Activity Log */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4" /> {t("appointments.admin_notes")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <NoteInput
+              value={noteText}
+              onChange={setNoteText}
+              onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
+              isSaving={addNote.isPending}
+              onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
+              placeholder={t("appointments.admin_notes_placeholder")}
+              saveLabel={t("common.save")}
+            />
+            {((adminNotes as Array<Record<string, unknown>>) ?? []).length > 0 && (
+              <div className="space-y-3 border-t pt-3">
+                {(adminNotes as Array<Record<string, unknown>>).map((n) => (
+                  <div key={n.id as string} className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{n.admin_name as string}</span>
+                      <span>·</span>
+                      <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
+                    {n.image_url && (
+                      <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
+                        <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" /> {t("dashboard.activity_log")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!((activityLog as Array<Record<string, unknown>>) ?? []).length ? (
+              <p className="text-sm text-muted-foreground">{t("appointments.no_activity")}</p>
+            ) : (
+              <ol className="relative border-l border-border ml-2 space-y-4">
+                {(activityLog as Array<Record<string, unknown>>).map((entry) => (
+                  <li key={entry.id as string} className="ml-4">
+                    <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border bg-background border-border" />
+                    <p className="text-xs text-muted-foreground">
+                      {formatInTz(entry.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                      {" · "}
+                      <span className="font-medium text-foreground">{entry.admin_name as string}</span>
+                    </p>
+                    <p className="text-sm mt-0.5 capitalize">
+                      {String(entry.action).replace(/_/g, " ")}
+                      {entry.detail ? <span className="text-muted-foreground"> — {entry.detail as string}</span> : null}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Interpreter Status */}
+      <Card className={!(interp.is_active as boolean) ? "border-red-200 dark:border-red-900" : ""}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {!(interp.is_active as boolean) && <AlertTriangle className="h-4 w-4 text-red-500" />}
+            {t("interpreters.status")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {interp.is_active ? t("interpreters.status_active_description") : t("interpreters.status_inactive_description")}
+          </p>
+          {interp.is_active ? (
+            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 hover:bg-destructive/10 transition-colors">
+              <input type="checkbox" checked={false} onChange={() => setDeactivateDialogOpen(true)} className="h-4 w-4 accent-destructive" />
+              <span className="text-sm font-medium text-destructive">{t("interpreters.deactivate_label")}</span>
+            </label>
+          ) : (
+            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-green-300 bg-green-50 p-3 hover:bg-green-100 transition-colors dark:border-green-800 dark:bg-green-950/30 dark:hover:bg-green-950/50">
+              <input type="checkbox" checked={false} onChange={() => setReactivateDialogOpen(true)} className="h-4 w-4 accent-green-600" />
+              <span className="text-sm font-medium text-green-700 dark:text-green-400">{t("interpreters.reactivate_label")}</span>
+            </label>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Deactivate dialog */}
+      <Dialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> {t("interpreters.deactivate_confirm_title")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("interpreters.deactivate_confirm_body")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              variant="destructive"
+              disabled={deactivate.isPending}
+              onClick={async () => {
+                try {
+                  await deactivate.mutateAsync();
+                  setDeactivateDialogOpen(false);
+                  toast({ title: t("interpreters.deactivated") });
+                } catch (err: unknown) {
+                  const code = (err as { code?: string })?.code;
+                  if (code === "HAS_UPCOMING_APPOINTMENTS") {
+                    toast({ title: t("interpreters.deactivate_blocked"), variant: "destructive" });
+                  } else {
+                    toast({ title: t("common.error"), variant: "destructive" });
+                  }
+                  setDeactivateDialogOpen(false);
+                }
+              }}
+            >
+              {t("interpreters.deactivate_confirm_button")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivate dialog */}
+      <Dialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("interpreters.reactivate_confirm_title")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("interpreters.reactivate_confirm_body")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              disabled={reactivate.isPending}
+              onClick={async () => {
+                try {
+                  await reactivate.mutateAsync();
+                  setReactivateDialogOpen(false);
+                  toast({ title: t("interpreters.reactivated") });
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("interpreters.reactivate_confirm_button")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

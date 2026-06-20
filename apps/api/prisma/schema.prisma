@@ -36,6 +36,7 @@ model Organization {
   agency_notes               AgencyNote[]
   insurance_company_notes    InsuranceCompanyNote[]
   patient_notes              PatientNote[]
+  interpreter_notes          InterpreterNote[]
   appointment_types          AppointmentType[]
   languages            OrganizationLanguage[]
   locale_strings       LocaleString[]
@@ -194,9 +195,26 @@ model Interpreter {
   invoices            Invoice[]
   appointment_media   AppointmentMedia[]
   preferred_by_patients Patient[]             @relation("PreferredInterpreter")
+  admin_notes         InterpreterNote[]
 
   @@unique([organization_id, phone])
   @@map("interpreters")
+}
+
+model InterpreterNote {
+  id              String   @id @default(uuid())
+  interpreter_id  String
+  organization_id String
+  content         String   @db.VarChar(800)
+  image_url       String?
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  interpreter  Interpreter  @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("interpreter_notes")
 }
 
 model AvailabilityBlock {

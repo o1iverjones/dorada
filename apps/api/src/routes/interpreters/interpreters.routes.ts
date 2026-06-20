@@ -15,10 +15,14 @@ import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import {
   listInterpreters, getInterpreter, createInterpreter, updateInterpreter,
-  deactivateInterpreter, updateSelf, listAvailabilityBlocks, listAllAvailabilityBlocks,
+  deactivateInterpreter, reactivateInterpreter, updateSelf, listAvailabilityBlocks, listAllAvailabilityBlocks,
   createAvailabilityBlock, deleteAvailabilityBlock,
+  getInterpreterActivity, getInterpreterNotes, addInterpreterNote,
 } from "./interpreters.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
+import { z } from "zod";
+import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
+import { noteImagePath } from "../../integrations/r2.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = join(__dirname, "..", "..", "..", "uploads");
@@ -111,6 +115,51 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
     await deactivateInterpreter(id, payload.organization_id, fastify.prisma);
     await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "interpreter", entityId: id, entityName: existing?.name ?? null, action: "deactivated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
     return reply.status(204).send();
+  });
+
+  fastify.post("/:id/reactivate", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    const existing = await fastify.prisma.interpreter.findUnique({ where: { id }, select: { name: true } });
+    await reactivateInterpreter(id, payload.organization_id, fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "interpreter", entityId: id, entityName: existing?.name ?? null, action: "reactivated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+    return reply.send({});
+  });
+
+  fastify.get("/:id/activity", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getInterpreterActivity(id, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.get("/:id/admin-notes", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getInterpreterNotes(id, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.post("/:id/admin-notes", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { content, image_url } = z.object({ content: z.string().max(800), image_url: z.string().url().nullish() }).parse(req.body);
+    const payload = req.user as JwtPayload;
+    const actor = payload.name
+      ? { id: payload.sub, name: payload.name }
+      : { id: payload.sub, name: (await fastify.prisma.user.findUnique({ where: { id: payload.sub }, select: { name: true } }))?.name ?? "Admin" };
+    return reply.status(201).send(await addInterpreterNote(id, content, payload.organization_id, actor, fastify.prisma, image_url ?? null));
+  });
+
+  fastify.post("/:id/note-image", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const data = await req.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
+    try {
+      const filename = imageFilename(data.filename, data.mimetype);
+      const url = await uploadImage(data, noteImagePath("interpreter", id, filename));
+      return reply.send({ url });
+    } catch (err) {
+      if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
+      throw err;
+    }
   });
 
   fastify.post("/:id/photo", { preHandler: [authenticateAdmin, requirePermission("manage_interpreters")] }, async (req, reply) => {
