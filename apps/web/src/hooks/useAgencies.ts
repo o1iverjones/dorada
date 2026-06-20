@@ -36,6 +36,14 @@ export function useUpdateAgency(id: string) {
   });
 }
 
+export function useAgencyActivity(id: string) {
+  return useQuery({
+    queryKey: ["agencies", id, "activity"],
+    queryFn: () => api.get<unknown[]>(`/agencies/${id}/activity`),
+    enabled: !!id,
+  });
+}
+
 export function useAgencyNotes(id: string) {
   return useQuery({
     queryKey: ["agencies", id, "notes"],

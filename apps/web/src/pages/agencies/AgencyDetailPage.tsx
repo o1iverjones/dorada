@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAgency, useUpdateAgency, useAgencyNotes, useAddAgencyNote, useUploadAgencyNoteImage } from "../../hooks/useAgencies.js";
+import { useAgency, useUpdateAgency, useAgencyActivity, useAgencyNotes, useAddAgencyNote, useUploadAgencyNoteImage } from "../../hooks/useAgencies.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
@@ -16,7 +16,7 @@ import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
-import { StickyNote, AlertTriangle } from "lucide-react";
+import { StickyNote, AlertTriangle, ClipboardList } from "lucide-react";
 
 const CONTACT_OPTIONS = ["Text", "Phone", "Email", "Link", "Portal", "App"] as const;
 
@@ -75,6 +75,7 @@ export function AgencyDetailPage() {
   const tz = useOrgTimezone();
   const { data, isLoading } = useAgency(id!);
   const update = useUpdateAgency(id!);
+  const { data: activityLog } = useAgencyActivity(id!);
   const { data: adminNotes } = useAgencyNotes(id!);
   const addNote = useAddAgencyNote(id!);
   const uploadNoteImage = useUploadAgencyNoteImage(id!);
@@ -349,54 +350,86 @@ export function AgencyDetailPage() {
 
       </div>
 
-      {/* Admin Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <StickyNote className="h-4 w-4" /> {t("appointments.admin_notes")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <NoteInput
-            value={noteText}
-            onChange={setNoteText}
-            onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
-            isSaving={addNote.isPending}
-            onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
-            placeholder={t("appointments.admin_notes_placeholder")}
-            saveLabel={t("common.save")}
-          />
-          {/* Legacy imported note */}
-          {agency.notes && (
-            <div className="space-y-1 border-t pt-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">Imported</span>
-                <span>Nowsta</span>
-              </div>
-              <p className="text-sm whitespace-pre-wrap">{agency.notes}</p>
-            </div>
-          )}
-          {((adminNotes as Array<Record<string, unknown>>) ?? []).length > 0 && (
-            <div className="space-y-3 border-t pt-3">
-              {(adminNotes as Array<Record<string, unknown>>).map((n) => (
-                <div key={n.id as string} className="space-y-1">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">{n.admin_name as string}</span>
-                    <span>·</span>
-                    <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
-                  {n.image_url && (
-                    <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
-                      <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
-                    </a>
-                  )}
+      {/* Admin Notes + Activity Log */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4" /> {t("appointments.admin_notes")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <NoteInput
+              value={noteText}
+              onChange={setNoteText}
+              onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
+              isSaving={addNote.isPending}
+              onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
+              placeholder={t("appointments.admin_notes_placeholder")}
+              saveLabel={t("common.save")}
+            />
+            {/* Legacy imported note */}
+            {agency.notes && (
+              <div className="space-y-1 border-t pt-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">Imported</span>
+                  <span>Nowsta</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <p className="text-sm whitespace-pre-wrap">{agency.notes}</p>
+              </div>
+            )}
+            {((adminNotes as Array<Record<string, unknown>>) ?? []).length > 0 && (
+              <div className="space-y-3 border-t pt-3">
+                {(adminNotes as Array<Record<string, unknown>>).map((n) => (
+                  <div key={n.id as string} className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{n.admin_name as string}</span>
+                      <span>·</span>
+                      <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
+                    {n.image_url && (
+                      <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
+                        <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" /> {t("dashboard.activity_log")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!((activityLog as Array<Record<string, unknown>>) ?? []).length ? (
+              <p className="text-sm text-muted-foreground">{t("appointments.no_activity")}</p>
+            ) : (
+              <ol className="relative border-l border-border ml-2 space-y-4">
+                {(activityLog as Array<Record<string, unknown>>).map((entry) => (
+                  <li key={entry.id as string} className="ml-4">
+                    <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border bg-background border-border" />
+                    <p className="text-xs text-muted-foreground">
+                      {formatInTz(entry.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                      {" · "}
+                      <span className="font-medium text-foreground">{entry.admin_name as string}</span>
+                    </p>
+                    <p className="text-sm mt-0.5 capitalize">
+                      {String(entry.action).replace(/_/g, " ")}
+                      {entry.detail ? <span className="text-muted-foreground"> — {entry.detail as string}</span> : null}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Agency Status */}
       <div className="grid gap-6 lg:grid-cols-2">

@@ -4,7 +4,7 @@ import { AgencyListQuerySchema, CreateAgencyBodySchema, UpdateAgencyBodySchema }
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
-import { listAgencies, getAgency, createAgency, updateAgency, deactivateAgency, getAgencyNotes, addAgencyNote } from "./agencies.service.js";
+import { listAgencies, getAgency, createAgency, updateAgency, deactivateAgency, getAgencyActivity, getAgencyNotes, addAgencyNote } from "./agencies.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
 import { noteImagePath } from "../../integrations/r2.js";
@@ -39,6 +39,12 @@ export default async function agencyRoutes(fastify: FastifyInstance) {
     const agency = await updateAgency(id, body, payload.organization_id, fastify.prisma);
     await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "agency", entityId: id, entityName: agency.name, action: "updated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
     return reply.send(agency);
+  });
+
+  fastify.get("/:id/activity", { preHandler }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    return reply.send(await getAgencyActivity(id, payload.organization_id, fastify.prisma));
   });
 
   fastify.get("/:id/admin-notes", { preHandler }, async (req, reply) => {

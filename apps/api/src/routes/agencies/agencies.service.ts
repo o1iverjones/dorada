@@ -160,6 +160,15 @@ export async function updateAgency(id: string, body: UpdateAgencyBody, organizat
   });
 }
 
+export async function getAgencyActivity(id: string, organizationId: string, prisma: PrismaClient) {
+  const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(agency, organizationId);
+  return prisma.activityLog.findMany({
+    where: { entity_type: "agency", entity_id: id, organization_id: organizationId },
+    orderBy: { created_at: "desc" },
+  });
+}
+
 export async function getAgencyNotes(id: string, organizationId: string, prisma: PrismaClient) {
   const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true } });
   ensureTenant(agency, organizationId);
