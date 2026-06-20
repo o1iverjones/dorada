@@ -349,28 +349,6 @@ export function ClinicDetailPage() {
         {/* Summary Emails */}
         <SummaryEmailsCard clinic={clinic} update={update} />
 
-        {/* Excluded Interpreters */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>{t("clinics.excluded_interpreters")}</CardTitle>
-            <Button variant="outline" size="sm" onClick={openBlockDialog}>{t("common.edit")}</Button>
-          </CardHeader>
-          <CardContent>
-            {excludedInterpreters.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("clinics.no_excluded_interpreters")}</p>
-            ) : (
-              <ul className="space-y-1">
-                {excludedInterpreters.map((interp) => (
-                  <li key={interp.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
-                    <span>{interp.name}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Providers */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -560,9 +538,30 @@ export function ClinicDetailPage() {
         </Card>
       </div>
 
-      {/* Clinic Status */}
-      {canManageClinics && (
+      {/* Excluded Interpreters + Clinic Status */}
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{t("clinics.excluded_interpreters")}</CardTitle>
+            <Button variant="outline" size="sm" onClick={openBlockDialog}>{t("common.edit")}</Button>
+          </CardHeader>
+          <CardContent>
+            {excludedInterpreters.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("clinics.no_excluded_interpreters")}</p>
+            ) : (
+              <ul className="space-y-1">
+                {excludedInterpreters.map((interp) => (
+                  <li key={interp.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                    <span>{interp.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {canManageClinics && (
         <Card className={!isActive ? "border-red-200 dark:border-red-900" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -597,8 +596,8 @@ export function ClinicDetailPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
-      )}
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
