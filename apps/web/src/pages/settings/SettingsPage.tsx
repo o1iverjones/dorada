@@ -469,6 +469,10 @@ export function SettingsPage() {
     long_appointment_alert_mins: 45,
   });
 
+  const [orgName, setOrgName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+
   useEffect(() => {
     if (settings) {
       const s = settings as Record<string, unknown>;
@@ -484,6 +488,9 @@ export function SettingsPage() {
         long_appointment_alert_hours: Math.floor(alertMinutes / 60),
         long_appointment_alert_mins: alertMinutes % 60,
       });
+      setOrgName((s.organization_name as string) ?? "");
+      setContactEmail((s.contact_email as string) ?? "");
+      setContactPhone((s.contact_phone as string) ?? "");
     }
   }, [settings]);
 
@@ -572,6 +579,63 @@ export function SettingsPage() {
           </Button>
         }
       />
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.organization_identity")}</CardTitle>
+            <CardDescription>{t("settings.organization_identity_description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label htmlFor="org-name">{t("settings.organization_name")}</Label>
+                <Input
+                  id="org-name"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder="e.g. Saro Interpreting"
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="contact-email">{t("settings.contact_email")}</Label>
+                <Input
+                  id="contact-email"
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="admin@yourcompany.com"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="contact-phone">{t("settings.contact_phone")}</Label>
+                <Input
+                  id="contact-phone"
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="(831) 555-1234"
+                  maxLength={30}
+                />
+              </div>
+            </div>
+            <Button
+              onClick={() => update.mutate(
+                {
+                  organization_name: orgName.trim() || null,
+                  contact_email: contactEmail.trim() || null,
+                  contact_phone: contactPhone.trim() || null,
+                },
+                { onSuccess: () => toast({ title: t("common.saved") }) },
+              )}
+              disabled={update.isPending}
+            >
+              {t("common.save_changes")}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>{t("settings.pay_rates")}</CardTitle></CardHeader>
@@ -752,9 +816,50 @@ export function SettingsPage() {
               <Label>{t("settings.clinic_confirmation_time")}</Label>
               <Input
                 type="time"
+                step="300"
                 className="max-w-xs"
                 value={((settings as Record<string, unknown>)?.clinic_confirmation_time as string) ?? "08:00"}
                 onChange={(e) => update.mutate({ clinic_confirmation_time: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">{t("settings.clinic_confirmation_time_hint")}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.clinic_summary_emails")}</CardTitle>
+            <CardDescription>{t("settings.clinic_summary_emails_description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.clinic_summary_emails_enabled")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={((settings as Record<string, unknown>)?.clinic_summary_emails_enabled ?? false) as boolean}
+                onClick={() => update.mutate({ clinic_summary_emails_enabled: !((settings as Record<string, unknown>)?.clinic_summary_emails_enabled as boolean ?? false) })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  (settings as Record<string, unknown>)?.clinic_summary_emails_enabled ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  (settings as Record<string, unknown>)?.clinic_summary_emails_enabled ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.clinic_summary_emails_time")}</Label>
+              <Input
+                type="time"
+                step="300"
+                className="max-w-xs"
+                value={((settings as Record<string, unknown>)?.clinic_summary_emails_time as string) ?? "08:00"}
+                onChange={(e) => update.mutate({ clinic_summary_emails_time: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">{t("settings.clinic_confirmation_time_hint")}</p>
             </div>

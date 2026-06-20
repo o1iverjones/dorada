@@ -9,10 +9,9 @@ import { formatInTz } from "../../lib/timezone.js";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
 import { getSocket } from "../../lib/socket.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
-import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Badge } from "../../components/ui/badge.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
-import { Calendar, Clock, AlertTriangle, Bell, ClipboardList, Receipt, CheckCheck } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, Bell, ClipboardList, Receipt, CheckCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -75,10 +74,14 @@ export function DashboardPage() {
   const canManageInvoices = useAuthStore((s) => s.hasPermission("manage_invoices"));
   const { data: invoiceStats } = useInvoiceStats(canManageInvoices);
 
-  const { data: activityLog } = useQuery({
-    queryKey: ["activity-log"],
-    queryFn: () => api.get<unknown[]>("/appointments/activity?limit=50"),
+  const [activityPage, setActivityPage] = useState(0);
+  const PAGE_SIZE = 20;
+  const { data: activityData } = useQuery({
+    queryKey: ["activity-log", activityPage],
+    queryFn: () => api.get<{ data: unknown[]; has_more: boolean }>(`/appointments/activity?limit=${PAGE_SIZE}&offset=${activityPage * PAGE_SIZE}`),
   });
+  const activityLog = activityData?.data ?? [];
+  const activityHasMore = activityData?.has_more ?? false;
 
   const [logTooltip, setLogTooltip] = useState<{ entry: Record<string, unknown>; x: number; y: number } | null>(null);
   const logTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,9 +104,7 @@ export function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("nav.dashboard")} />
-
+    <div className="space-y-6 pt-6">
       {/* Greeting + Clock */}
       <div className="flex items-end justify-between gap-4">
         <div>
@@ -392,12 +393,15 @@ export function DashboardPage() {
 
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardList className="h-4 w-4" /> {t("dashboard.activity_log")}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ClipboardList className="h-4 w-4" /> {t("dashboard.activity_log")}
+              </CardTitle>
+              <PaginationControls page={activityPage} hasMore={activityHasMore} onChange={setActivityPage} />
+            </div>
           </CardHeader>
           <CardContent className="px-3">
-            {!(activityLog as Array<Record<string, unknown>> | undefined)?.length ? (
+            {!activityLog.length ? (
               <p className="text-sm text-muted-foreground">{t("appointments.no_activity")}</p>
             ) : (
               <ol className="divide-y">
@@ -419,7 +423,6 @@ export function DashboardPage() {
                     entry.detail as string | null,
                   ].filter(Boolean).join(" · ");
 
-                  // For note_added entries, show patient name as an appointment link on its own line.
                   const isNoteAdded = action === "note_added";
 
                   return (
@@ -457,12 +460,42 @@ export function DashboardPage() {
               </ol>
             )}
           </CardContent>
+          {activityLog.length > 0 && (
+            <div className="flex justify-end border-t px-3 py-2">
+              <PaginationControls page={activityPage} hasMore={activityHasMore} onChange={setActivityPage} />
+            </div>
+          )}
         </Card>
       </div>
 
       {logTooltip && (
         <ActivityLogTooltip entry={logTooltip.entry} x={logTooltip.x} y={logTooltip.y} />
       )}
+    </div>
+  );
+}
+
+function PaginationControls({ page, hasMore, onChange }: { page: number; hasMore: boolean; onChange: (p: number) => void }) {
+  if (page === 0 && !hasMore) return null;
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 0}
+        className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <span className="text-xs text-muted-foreground tabular-nums">{page + 1}</span>
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={!hasMore}
+        className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+        aria-label="Next page"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
     </div>
   );
 }

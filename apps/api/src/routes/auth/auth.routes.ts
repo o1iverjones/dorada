@@ -97,6 +97,13 @@ export default async function authRoutes(fastify: FastifyInstance) {
       await adminAlertQueue.add("stale-billing-check", {});
       return reply.send({ triggered: true });
     });
+
+    // POST /auth/dev/trigger-clinic-confirmations — bypasses time window and sends immediately
+    fastify.post("/dev/trigger-clinic-confirmations", async (_request, reply) => {
+      const { forceSendClinicConfirmations } = await import("../../workers/clinic-confirmation.worker.js");
+      await forceSendClinicConfirmations(fastify.prisma);
+      return reply.send({ triggered: true, note: "confirmation emails sent directly (time window bypassed)" });
+    });
     fastify.get("/dev/otp/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };
       const normalized = phone.replace(/\D/g, "");

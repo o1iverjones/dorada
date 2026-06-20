@@ -148,3 +148,33 @@ export async function createRole(
 
   return { id: role.id, name: role.name, is_system: role.is_system, permissions: role.permissions.map((p) => p.permission) };
 }
+
+export async function deleteUser(
+  id: string,
+  actorId: string,
+  organizationId: string,
+  actorPermissions: string[],
+  prisma: PrismaClient,
+) {
+  if (id === actorId) throw new ForbiddenError("CANNOT_DELETE_SELF", "You cannot delete your own account");
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: { role: { include: { permissions: true } } },
+  });
+  if (!user || user.organization_id !== organizationId) throw new NotFoundError("NOT_FOUND", "User not found");
+
+  const targetIsElevated = user.role.permissions.some((p) => p.permission === "manage_system_settings");
+  if (targetIsElevated && !actorPermissions.includes("manage_system_settings")) {
+    throw new ForbiddenError("FORBIDDEN", "Only Super Admins can delete Super Admin users");
+  }
+
+  await prisma.$transaction([
+    // Null out nullable FKs that have no cascade
+    prisma.message.updateMany({ where: { sender_user_id: id }, data: { sender_user_id: null } }),
+    prisma.invoice.updateMany({ where: { approved_by_id: id }, data: { approved_by_id: null } }),
+    prisma.user.delete({ where: { id } }),
+  ]);
+
+  return { id, name: user.name };
+}

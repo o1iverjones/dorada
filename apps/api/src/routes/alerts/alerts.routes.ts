@@ -42,24 +42,25 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
-  // PATCH /alerts/:id/read — mark one as read
+  // PATCH /alerts/:id/read — toggle is_read on one alert
   fastify.patch("/:id/read", { preHandler: authenticateAdmin }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
     const alert = await fastify.prisma.adminAlert.findFirst({
       where: { id, organization_id: payload.organization_id },
     });
-    if (alert && !alert.is_read) {
+    if (alert) {
+      const newState = !alert.is_read;
       await fastify.prisma.adminAlert.update({
         where: { id },
-        data: { is_read: true },
+        data: { is_read: newState },
       });
       await writeActivityLog(fastify.prisma, {
         organizationId: payload.organization_id,
         entityType: "appointment",
         entityId: alert.appointment_id ?? id,
         entityName: null,
-        action: "alert_marked_read",
+        action: newState ? "alert_marked_read" : "alert_marked_unread",
         detail: alert.message,
         poNumber: null,
         adminId: payload.sub,

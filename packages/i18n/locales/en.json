@@ -303,6 +303,7 @@
     "no_alerts": "No alerts — you're all caught up.",
     "mark_all_read": "Mark all read",
     "mark_read": "Mark read",
+    "mark_unread": "Mark unread",
     "view_appointment": "View appointment",
     "view_all": "View all",
     "view_all_alerts": "View all {{count}} alerts today →"
@@ -358,9 +359,12 @@
     "empty": "No admin users found.",
     "created": "User created.",
     "updated": "User updated.",
+    "deleted": "User deleted.",
     "edit": "Edit user",
     "new_password_optional": "New password (optional)",
-    "leave_blank_to_keep": "Leave blank to keep current password"
+    "leave_blank_to_keep": "Leave blank to keep current password",
+    "delete_confirm_title": "Delete user?",
+    "delete_confirm_body": "Are you sure you want to delete {{name}}? This action cannot be undone."
   },
   "appointments": {
     "title": "Appointments",
@@ -579,7 +583,9 @@
     "no_doctors": "No providers added yet.",
     "add_doctor": "Add provider",
     "doctor_name": "Provider name",
-    "doctor_name_placeholder": "e.g. Dr. Jane Smith"
+    "doctor_name_placeholder": "e.g. Dr. Jane Smith",
+    "confirmation_emails": "Appointment confirmation emails",
+    "confirmation_emails_description": "Send daily confirmation emails for upcoming appointments at this clinic."
   },
   "email_intake": {
     "logs_title": "Email intake log",
@@ -855,11 +861,23 @@
     "followUp.maxReminders": "Max reminders before marking no-response",
     "localization.title": "Localization",
     "localization.manage": "Manage strings",
+    "organization_identity": "Organization identity",
+    "organization_identity_description": "Used in outgoing email and SMS communications to identify your organization.",
+    "organization_name": "Organization name",
+    "contact_email": "Contact email",
+    "contact_phone": "Contact phone",
     "clinic_confirmation": "Clinic confirmation",
     "clinic_confirmation_description": "Send a daily email to each clinic listing tomorrow's appointments with a one-click confirmation button.",
     "clinic_confirmation_enabled": "Enable clinic confirmation emails",
     "clinic_confirmation_time": "Daily send time",
     "clinic_confirmation_time_hint": "Time is based on your organization's timezone.",
+    "clinic_summary_emails": "Clinic appointment summary emails",
+    "clinic_summary_emails_description": "Send a weekly summary email to each clinic listing their upcoming appointments.",
+    "clinic_summary_emails_enabled": "Enable clinic summary emails",
+    "clinic_summary_emails_time": "Daily send time",
+    "clinic_summary_emails_per_clinic": "Appointment summary emails",
+    "clinic_summary_emails_days_label": "Send on",
+    "clinic_summary_emails_days_hint": "Summary emails are sent at 8:00 AM in your organization's timezone on the selected days.",
     "interpreter_reminders": "Interpreter reminders",
     "reminders_description": "Push notifications sent to interpreters before accepted appointments.",
     "reminder_label": "Label",

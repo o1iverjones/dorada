@@ -34,6 +34,11 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
     long_appointment_alert_minutes: settings?.long_appointment_alert_minutes ?? 105,
     clinic_confirmation_enabled: settings?.clinic_confirmation_enabled ?? false,
     clinic_confirmation_time: settings?.clinic_confirmation_time ?? "08:00",
+    clinic_summary_emails_enabled: settings?.clinic_summary_emails_enabled ?? false,
+    clinic_summary_emails_time: settings?.clinic_summary_emails_time ?? "08:00",
+    organization_name: settings?.organization_name ?? null,
+    contact_email: settings?.contact_email ?? null,
+    contact_phone: settings?.contact_phone ?? null,
     languages,
     appointment_types: appointmentTypes,
   };
@@ -58,6 +63,11 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       ...(body.long_appointment_alert_minutes !== undefined ? { long_appointment_alert_minutes: body.long_appointment_alert_minutes } : {}),
       ...(body.clinic_confirmation_enabled !== undefined ? { clinic_confirmation_enabled: body.clinic_confirmation_enabled } : {}),
       ...(body.clinic_confirmation_time !== undefined ? { clinic_confirmation_time: body.clinic_confirmation_time } : {}),
+      ...(body.clinic_summary_emails_enabled !== undefined ? { clinic_summary_emails_enabled: body.clinic_summary_emails_enabled } : {}),
+      ...(body.clinic_summary_emails_time !== undefined ? { clinic_summary_emails_time: body.clinic_summary_emails_time } : {}),
+      ...(body.organization_name !== undefined ? { organization_name: body.organization_name || null } : {}),
+      ...(body.contact_email !== undefined ? { contact_email: body.contact_email || null } : {}),
+      ...(body.contact_phone !== undefined ? { contact_phone: body.contact_phone || null } : {}),
     },
     create: {
       organization_id: organizationId,
@@ -72,6 +82,11 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       long_appointment_alert_minutes: body.long_appointment_alert_minutes ?? 105,
       clinic_confirmation_enabled: body.clinic_confirmation_enabled ?? false,
       clinic_confirmation_time: body.clinic_confirmation_time ?? "08:00",
+      clinic_summary_emails_enabled: body.clinic_summary_emails_enabled ?? false,
+      clinic_summary_emails_time: body.clinic_summary_emails_time ?? "08:00",
+      organization_name: body.organization_name || null,
+      contact_email: body.contact_email || null,
+      contact_phone: body.contact_phone || null,
     },
   });
 

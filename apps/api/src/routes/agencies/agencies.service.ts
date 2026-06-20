@@ -120,6 +120,13 @@ export async function updateAgency(id: string, body: UpdateAgencyBody, organizat
   const agency = await prisma.agency.findUnique({ where: { id } });
   ensureTenant(agency, organizationId);
 
+  if (body.is_active === false) {
+    const upcoming = await prisma.appointment.count({
+      where: { agency_id: id, status: { in: ["accepted", "in_progress"] }, date_time: { gte: new Date() } },
+    });
+    if (upcoming > 0) throw new ConflictError("HAS_UPCOMING_APPOINTMENTS", "Agency has upcoming accepted appointments");
+  }
+
   return prisma.agency.update({
     where: { id },
     data: {
@@ -140,6 +147,7 @@ export async function updateAgency(id: string, body: UpdateAgencyBody, organizat
       ...(body.followup_contact !== undefined ? { followup_contact: body.followup_contact } : {}),
       ...(body.invoice_info !== undefined ? { invoice_info: body.invoice_info } : {}),
       ...(body.invoice_contact !== undefined ? { invoice_contact: body.invoice_contact } : {}),
+      ...(body.is_active !== undefined ? { is_active: body.is_active } : {}),
       ...(body.email_intake !== undefined ? {
         email_intake_enabled: !!body.email_intake,
         email_intake_sender_domains: body.email_intake?.sender_domains ?? [],
@@ -149,6 +157,39 @@ export async function updateAgency(id: string, body: UpdateAgencyBody, organizat
         email_intake_reply_from_email: body.email_intake?.reply_from_email ?? null,
       } : {}),
     },
+  });
+}
+
+export async function getAgencyActivity(id: string, organizationId: string, prisma: PrismaClient) {
+  const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(agency, organizationId);
+  return prisma.activityLog.findMany({
+    where: { entity_type: "agency", entity_id: id, organization_id: organizationId },
+    orderBy: { created_at: "desc" },
+  });
+}
+
+export async function getAgencyNotes(id: string, organizationId: string, prisma: PrismaClient) {
+  const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(agency, organizationId);
+  return prisma.agencyNote.findMany({
+    where: { agency_id: id },
+    orderBy: { created_at: "desc" },
+  });
+}
+
+export async function addAgencyNote(
+  id: string,
+  content: string,
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+  imageUrl: string | null = null,
+) {
+  const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true, name: true } });
+  ensureTenant(agency, organizationId);
+  return prisma.agencyNote.create({
+    data: { agency_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: imageUrl },
   });
 }
 

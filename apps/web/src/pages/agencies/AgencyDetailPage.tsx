@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAgency, useUpdateAgency } from "../../hooks/useAgencies.js";
+import { useAgency, useUpdateAgency, useAgencyActivity, useAgencyNotes, useAddAgencyNote, useUploadAgencyNoteImage } from "../../hooks/useAgencies.js";
+import { useOrgTimezone } from "../../hooks/useSettings.js";
+import { formatInTz } from "../../lib/timezone.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
+import { NoteInput } from "../../components/shared/NoteInput.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
@@ -11,7 +14,9 @@ import { PhoneInput } from "../../components/ui/PhoneInput.js";
 import { formatPhoneInput } from "../../lib/phone.js";
 import { PhoneLink } from "../../components/shared/PhoneLink.js";
 import { Label } from "../../components/ui/label.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog.js";
 import { toast } from "../../hooks/use-toast.js";
+import { StickyNote, AlertTriangle, ClipboardList } from "lucide-react";
 
 const CONTACT_OPTIONS = ["Text", "Phone", "Email", "Link", "Portal", "App"] as const;
 
@@ -40,6 +45,7 @@ function ContactSelect({ value, onChange }: { value: string; onChange: (v: strin
 interface AgencyData {
   id: string;
   name: string;
+  is_active: boolean;
   notes?: string | null;
   contact_method?: string | null;
   telephone?: string | null;
@@ -66,15 +72,24 @@ interface AgencyData {
 export function AgencyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
+  const tz = useOrgTimezone();
   const { data, isLoading } = useAgency(id!);
   const update = useUpdateAgency(id!);
+  const { data: activityLog } = useAgencyActivity(id!);
+  const { data: adminNotes } = useAgencyNotes(id!);
+  const addNote = useAddAgencyNote(id!);
+  const uploadNoteImage = useUploadAgencyNoteImage(id!);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, unknown>>({});
+  const [noteText, setNoteText] = useState("");
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
 
   if (isLoading) return <LoadingSpinner />;
   if (!data) return <p>{t("common.not_found")}</p>;
 
   const agency = data as AgencyData;
+  const isActive = agency.is_active !== false;
   const intake = agency.email_intake;
 
   function startEdit() {
@@ -93,7 +108,6 @@ export function AgencyDetailPage() {
       followup_contact: agency.followup_contact ?? "",
       invoice_info: agency.invoice_info ?? "",
       invoice_contact: agency.invoice_contact ?? "",
-      notes: agency.notes ?? "",
       // email_intake fields — sourced from the nested object
       reply_from_email: intake?.reply_from_email ?? "",
       reply_from_name: intake?.reply_from_name ?? "",
@@ -129,7 +143,6 @@ export function AgencyDetailPage() {
         followup_contact: (f.followup_contact as string)?.trim() || null,
         invoice_info: (f.invoice_info as string) || null,
         invoice_contact: (f.invoice_contact as string)?.trim() || null,
-        notes: (f.notes as string)?.trim() || null,
         // email_intake is a nested object in the API schema
         email_intake: hasEmailIntake ? {
           sender_domains: senderDomains,
@@ -152,7 +165,16 @@ export function AgencyDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={agency.name}
+        title={
+          <span className="flex items-center gap-3">
+            {agency.name}
+            {!isActive && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                <AlertTriangle className="h-3 w-3" /> {t("clinics.deactivated")}
+              </span>
+            )}
+          </span>
+        }
         actions={
           editing ? (
             <div className="flex gap-2">
@@ -328,25 +350,171 @@ export function AgencyDetailPage() {
 
       </div>
 
-      {/* Notes — full width */}
-      <Card>
-        <CardHeader><CardTitle>{t("agencies.notes")}</CardTitle></CardHeader>
-        <CardContent>
-          {editing ? (
-            <textarea
-              className="w-full rounded-md border p-2 text-sm"
-              rows={5}
-              placeholder={t("common.optional")}
-              value={form.notes as string}
-              onChange={(e) => set("notes", e.target.value)}
+      {/* Admin Notes + Activity Log */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4" /> {t("appointments.admin_notes")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <NoteInput
+              value={noteText}
+              onChange={setNoteText}
+              onSave={async (imgUrl) => { await addNote.mutateAsync({ content: noteText.trim(), image_url: imgUrl }); setNoteText(""); }}
+              isSaving={addNote.isPending}
+              onUploadImage={async (file) => { const res = await uploadNoteImage.mutateAsync(file); return res.url; }}
+              placeholder={t("appointments.admin_notes_placeholder")}
+              saveLabel={t("common.save")}
             />
-          ) : (
-            agency.notes
-              ? <p className="text-sm whitespace-pre-wrap">{agency.notes}</p>
-              : <p className="text-sm text-muted-foreground">{t("common.none")}</p>
-          )}
-        </CardContent>
-      </Card>
+            {/* Legacy imported note */}
+            {agency.notes && (
+              <div className="space-y-1 border-t pt-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">Imported</span>
+                  <span>Nowsta</span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{agency.notes}</p>
+              </div>
+            )}
+            {((adminNotes as Array<Record<string, unknown>>) ?? []).length > 0 && (
+              <div className="space-y-3 border-t pt-3">
+                {(adminNotes as Array<Record<string, unknown>>).map((n) => (
+                  <div key={n.id as string} className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{n.admin_name as string}</span>
+                      <span>·</span>
+                      <span>{formatInTz(n.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{n.content as string}</p>
+                    {n.image_url && (
+                      <a href={n.image_url as string} target="_blank" rel="noopener noreferrer">
+                        <img src={n.image_url as string} alt="note attachment" className="mt-1 max-h-48 w-auto rounded-md border object-cover hover:opacity-90 transition-opacity" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" /> {t("dashboard.activity_log")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!((activityLog as Array<Record<string, unknown>>) ?? []).length ? (
+              <p className="text-sm text-muted-foreground">{t("appointments.no_activity")}</p>
+            ) : (
+              <ol className="relative border-l border-border ml-2 space-y-4">
+                {(activityLog as Array<Record<string, unknown>>).map((entry) => (
+                  <li key={entry.id as string} className="ml-4">
+                    <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border bg-background border-border" />
+                    <p className="text-xs text-muted-foreground">
+                      {formatInTz(entry.created_at as string, { dateStyle: "medium", timeStyle: "short" }, tz)}
+                      {" · "}
+                      <span className="font-medium text-foreground">{entry.admin_name as string}</span>
+                    </p>
+                    <p className="text-sm mt-0.5 capitalize">
+                      {String(entry.action).replace(/_/g, " ")}
+                      {entry.detail ? <span className="text-muted-foreground"> — {entry.detail as string}</span> : null}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Agency Status */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className={!isActive ? "border-red-200 dark:border-red-900" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {!isActive && <AlertTriangle className="h-4 w-4 text-red-500" />}
+              {t("clinics.status")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {isActive ? t("clinics.status_active_description") : t("clinics.status_inactive_description")}
+            </p>
+            {isActive ? (
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 hover:bg-destructive/10 transition-colors">
+                <input type="checkbox" checked={false} onChange={() => setDeactivateDialogOpen(true)} className="h-4 w-4 accent-destructive" />
+                <span className="text-sm font-medium text-destructive">{t("clinics.deactivate_label")}</span>
+              </label>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-green-300 bg-green-50 p-3 hover:bg-green-100 transition-colors dark:border-green-800 dark:bg-green-950/30 dark:hover:bg-green-950/50">
+                <input type="checkbox" checked={false} onChange={() => setReactivateDialogOpen(true)} className="h-4 w-4 accent-green-600" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-400">{t("clinics.reactivate_label")}</span>
+              </label>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Deactivate Dialog */}
+      <Dialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> {t("clinics.deactivate_confirm_title")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("clinics.deactivate_confirm_body")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivateDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              variant="destructive"
+              disabled={update.isPending}
+              onClick={async () => {
+                try {
+                  await update.mutateAsync({ is_active: false });
+                  setDeactivateDialogOpen(false);
+                  toast({ title: t("clinics.deactivated_toast") });
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("clinics.deactivate_confirm_button")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivate Dialog */}
+      <Dialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("clinics.reactivate_confirm_title")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("clinics.reactivate_confirm_body")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              disabled={update.isPending}
+              onClick={async () => {
+                try {
+                  await update.mutateAsync({ is_active: true });
+                  setReactivateDialogOpen(false);
+                  toast({ title: t("clinics.reactivated") });
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              {t("clinics.reactivate_confirm_button")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

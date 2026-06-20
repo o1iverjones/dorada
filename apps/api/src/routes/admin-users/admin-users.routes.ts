@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
-import { listUsers, createUser, updateUser, listRoles, createRole } from "./admin-users.service.js";
+import { listUsers, createUser, updateUser, deleteUser, listRoles, createRole } from "./admin-users.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { sendEmail, welcomeAdminEmail } from "../../lib/email.js";
 import { config } from "../../config.js";
@@ -67,6 +67,14 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
     const user = await updateUser(id, body, payload.organization_id, payload.permissions ?? [], fastify.prisma);
     await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: id, entityName: user.name, action: "updated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
     return reply.send(user);
+  });
+
+  fastify.delete("/admin-users/:id", { preHandler: manage }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    const deleted = await deleteUser(id, payload.sub, payload.organization_id, payload.permissions ?? [], fastify.prisma);
+    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "admin_user", entityId: id, entityName: deleted.name, action: "deleted", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+    return reply.send({ ok: true });
   });
 
   fastify.get("/roles", { preHandler: [authenticateAdmin] }, async (req, reply) => {

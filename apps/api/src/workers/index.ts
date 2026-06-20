@@ -7,6 +7,7 @@ import { createReportGenerationWorker } from "./report-generation.worker.js";
 import { createEmailIntakeWorker } from "./email-intake.worker.js";
 import { createAdminAlertWorker, scheduleAdminAlertPolling } from "./admin-alert.worker.js";
 import { createClinicConfirmationWorker, scheduleClinicConfirmationPolling } from "./clinic-confirmation.worker.js";
+import { createClinicSummaryEmailWorker, scheduleClinicSummaryEmailPolling } from "./clinic-summary-email.worker.js";
 
 const prisma = new PrismaClient();
 
@@ -16,6 +17,7 @@ const reportWorker = createReportGenerationWorker(prisma);
 const emailIntakeWorker = createEmailIntakeWorker(prisma);
 const adminAlertWorker = createAdminAlertWorker(prisma);
 const clinicConfirmationWorker = createClinicConfirmationWorker(prisma);
+const clinicSummaryEmailWorker = createClinicSummaryEmailWorker(prisma);
 
 const emailIntakeQueue = new Queue("email-intake", { connection: redisConnection });
 
@@ -43,8 +45,9 @@ async function scheduleEmailPolling() {
 scheduleEmailPolling().catch(console.error);
 scheduleClinicConfirmationPolling().catch(console.error);
 scheduleAdminAlertPolling().catch(console.error);
+scheduleClinicSummaryEmailPolling().catch(console.error);
 
-const workers = [reminderWorker, followUpWorker, reportWorker, emailIntakeWorker, adminAlertWorker, clinicConfirmationWorker];
+const workers = [reminderWorker, followUpWorker, reportWorker, emailIntakeWorker, adminAlertWorker, clinicConfirmationWorker, clinicSummaryEmailWorker];
 
 function shutdown() {
   console.log("Shutting down workers…");

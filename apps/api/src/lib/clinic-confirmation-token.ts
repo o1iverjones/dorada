@@ -4,8 +4,14 @@ function sign(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-export function createClinicConfirmationToken(orgId: string, clinicId: string, date: string, secret: string): string {
-  const payload = `${orgId}:${clinicId}:${date}`;
+export function createClinicConfirmationToken(
+  orgId: string,
+  clinicId: string,
+  startDate: string,
+  endDate: string,
+  secret: string,
+): string {
+  const payload = `${orgId}:${clinicId}:${startDate}:${endDate}`;
   const encoded = Buffer.from(payload).toString("base64url");
   return `${encoded}.${sign(payload, secret)}`;
 }
@@ -13,7 +19,7 @@ export function createClinicConfirmationToken(orgId: string, clinicId: string, d
 export function verifyClinicConfirmationToken(
   token: string,
   secret: string,
-): { orgId: string; clinicId: string; date: string } | null {
+): { orgId: string; clinicId: string; startDate: string; endDate: string } | null {
   const dot = token.lastIndexOf(".");
   if (dot === -1) return null;
 
@@ -28,11 +34,17 @@ export function verifyClinicConfirmationToken(
   }
 
   const expected = sign(payload, secret);
-  // Constant-time comparison to prevent timing attacks
   if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
 
   const parts = payload.split(":");
-  if (parts.length !== 3) return null;
-  const [orgId, clinicId, date] = parts;
-  return { orgId, clinicId, date };
+  // Support old 3-part tokens (single date) as well as new 4-part (date range)
+  if (parts.length === 3) {
+    const [orgId, clinicId, date] = parts;
+    return { orgId, clinicId, startDate: date, endDate: date };
+  }
+  if (parts.length === 4) {
+    const [orgId, clinicId, startDate, endDate] = parts;
+    return { orgId, clinicId, startDate, endDate };
+  }
+  return null;
 }

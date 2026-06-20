@@ -23,6 +23,88 @@ import { toast } from "../../hooks/use-toast.js";
 import { ClipboardList, StickyNote, MapPin, ParkingCircle, ExternalLink, Bell, Pencil, Trash2, Plus, AlertTriangle, Stethoscope, X } from "lucide-react";
 import { useAuthStore } from "../../store/auth.js";
 
+const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function ConfirmationEmailsCard({ clinic, update }: { clinic: Record<string, unknown>; update: ReturnType<typeof useUpdateClinic> }) {
+  const { t } = useTranslation();
+  const enabled = (clinic.confirmation_emails_enabled as boolean) ?? false;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("clinics.confirmation_emails")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">{t("clinics.confirmation_emails_description")}</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            onClick={() => update.mutate({ confirmation_emails_enabled: !enabled })}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${enabled ? "bg-primary" : "bg-input"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SummaryEmailsCard({ clinic, update }: { clinic: Record<string, unknown>; update: ReturnType<typeof useUpdateClinic> }) {
+  const { t } = useTranslation();
+  const enabled = (clinic.summary_emails_enabled as boolean) ?? false;
+  const days = (clinic.summary_email_days as number[]) ?? [];
+
+  function toggleDay(dow: number) {
+    const next = days.includes(dow) ? days.filter((d) => d !== dow) : [...days, dow].sort((a, b) => a - b);
+    update.mutate({ summary_email_days: next });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("settings.clinic_summary_emails_per_clinic")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{t("clinics.primary_contact_email")}: {(clinic.primary_contact as Record<string, unknown> | null)?.email as string ?? "—"}</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            onClick={() => update.mutate({ summary_emails_enabled: !enabled })}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enabled ? "bg-primary" : "bg-input"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t("settings.clinic_summary_emails_days_label")}</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {DOW_LABELS.map((label, dow) => (
+              <button
+                key={dow}
+                type="button"
+                onClick={() => toggleDay(dow)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                  days.includes(dow)
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">{t("settings.clinic_summary_emails_days_hint")}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ClinicDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -215,38 +297,42 @@ export function ClinicDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.name")}</p>
-                  <p className="font-medium">{clinic.name as string ?? "—"}</p>
+              <div className="grid gap-6 text-sm sm:grid-cols-2">
+                {/* Left: address */}
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.address")}</p>
+                    <p className="font-medium">{clinic.address as string ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.city")}</p>
+                    <p className="font-medium">{clinic.city as string ?? "—"}</p>
+                  </div>
+                  <div className="flex gap-6">
+                    <div>
+                      <p className="text-muted-foreground">{t("clinics.state")}</p>
+                      <p className="font-medium">{clinic.state as string ?? "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t("clinics.zip_code")}</p>
+                      <p className="font-medium">{clinic.zip_code as string ?? "—"}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.address")}</p>
-                  <p className="font-medium">{clinic.address as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.city")}</p>
-                  <p className="font-medium">{clinic.city as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.state")}</p>
-                  <p className="font-medium">{clinic.state as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.zip_code")}</p>
-                  <p className="font-medium">{clinic.zip_code as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.phone")}</p>
-                  <p className="font-medium"><PhoneLink phone={clinic.phone as string} /></p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.primary_contact_name")}</p>
-                  <p className="font-medium">{contact?.name ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.primary_contact_email")}</p>
-                  <p className="font-medium">{contact?.email ?? "—"}</p>
+                {/* Right: contact */}
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.primary_contact_name")}</p>
+                    <p className="font-medium">{contact?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.phone")}</p>
+                    <p className="font-medium"><PhoneLink phone={clinic.phone as string} /></p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.primary_contact_email")}</p>
+                    <p className="font-medium">{contact?.email ?? "—"}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -260,143 +346,129 @@ export function ClinicDetailPage() {
         />
       </div>
 
-      {/* Excluded Interpreters */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t("clinics.excluded_interpreters")}</CardTitle>
-          <Button variant="outline" size="sm" onClick={openBlockDialog}>{t("common.edit")}</Button>
-        </CardHeader>
-        <CardContent>
-          {excludedInterpreters.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("clinics.no_excluded_interpreters")}</p>
-          ) : (
-            <ul className="space-y-1">
-              {excludedInterpreters.map((interp) => (
-                <li key={interp.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
-                  <span>{interp.name}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Confirmation Emails */}
+        <ConfirmationEmailsCard clinic={clinic} update={update} />
 
-      {/* Doctors */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Stethoscope className="h-4 w-4" /> {t("clinics.doctors")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {doctors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("clinics.no_doctors")}</p>
-          ) : (
-            <ul className="space-y-1">
-              {doctors.map((doc) => (
-                <li key={doc.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="font-medium">{doc.name}</span>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await removeDoctor.mutateAsync(doc.id);
-                      } catch {
-                        toast({ title: t("common.error"), variant: "destructive" });
-                      }
-                    }}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
-                    title={t("common.remove")}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <form
-            className="flex gap-2 pt-1"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const name = newDoctorName.trim();
-              if (!name) return;
-              try {
-                await addDoctor.mutateAsync(name);
-                setNewDoctorName("");
-              } catch {
-                toast({ title: t("common.error"), variant: "destructive" });
-              }
-            }}
-          >
-            <Input
-              value={newDoctorName}
-              onChange={(e) => setNewDoctorName(e.target.value)}
-              placeholder={t("clinics.doctor_name_placeholder")}
-              className="flex-1"
-            />
-            <Button type="submit" size="sm" disabled={!newDoctorName.trim() || addDoctor.isPending}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> {t("clinics.add_doctor")}
+        {/* Summary Emails */}
+        <SummaryEmailsCard clinic={clinic} update={update} />
+
+        {/* Providers */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4" /> {t("clinics.doctors")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {doctors.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("clinics.no_doctors")}</p>
+            ) : (
+              <ul className="space-y-1">
+                {doctors.map((doc) => (
+                  <li key={doc.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium">{doc.name}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await removeDoctor.mutateAsync(doc.id);
+                        } catch {
+                          toast({ title: t("common.error"), variant: "destructive" });
+                        }
+                      }}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      title={t("common.remove")}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form
+              className="flex gap-2 pt-1"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const name = newDoctorName.trim();
+                if (!name) return;
+                try {
+                  await addDoctor.mutateAsync(name);
+                  setNewDoctorName("");
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              <Input
+                value={newDoctorName}
+                onChange={(e) => setNewDoctorName(e.target.value)}
+                placeholder={t("clinics.doctor_name_placeholder")}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" disabled={!newDoctorName.trim() || addDoctor.isPending}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> {t("clinics.add_doctor")}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Interpreter Notes */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-4 w-4" /> {t("clinics.interpreter_notes")}
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={openNewInterpreterNote}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> {t("common.add")}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Interpreter Notes */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-4 w-4" /> {t("clinics.interpreter_notes")}
-          </CardTitle>
-          <Button variant="outline" size="sm" onClick={openNewInterpreterNote}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" /> {t("common.add")}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {!(interpreterNotes as Array<Record<string, unknown>> | undefined)?.length ? (
-            <p className="text-sm text-muted-foreground">{t("clinics.no_interpreter_notes")}</p>
-          ) : (
-            <div className="space-y-3">
-              {(interpreterNotes as Array<Record<string, unknown>>).map((note) => (
-                <div
-                  key={note.id as string}
-                  className={`flex items-start gap-3 rounded-lg border p-3 ${!note.is_active ? "opacity-50" : ""}`}
-                >
-                  <InterpreterNoteBadge type={note.type as string} />
-                  <p className="flex-1 text-sm whitespace-pre-wrap">{note.content as string}</p>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => openEditInterpreterNote({ id: note.id as string, content: note.content as string, type: note.type as string })}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => toggleInterpreterNoteActive(note.id as string, !(note.is_active as boolean))}
-                      title={note.is_active ? t("common.deactivate") : t("common.activate")}
-                    >
-                      <span className={`block h-2 w-2 rounded-full ${note.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => removeInterpreterNote(note.id as string)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+          </CardHeader>
+          <CardContent>
+            {!(interpreterNotes as Array<Record<string, unknown>> | undefined)?.length ? (
+              <p className="text-sm text-muted-foreground">{t("clinics.no_interpreter_notes")}</p>
+            ) : (
+              <div className="space-y-3">
+                {(interpreterNotes as Array<Record<string, unknown>>).map((note) => (
+                  <div
+                    key={note.id as string}
+                    className={`flex items-start gap-3 rounded-lg border p-3 ${!note.is_active ? "opacity-50" : ""}`}
+                  >
+                    <InterpreterNoteBadge type={note.type as string} />
+                    <p className="flex-1 text-sm whitespace-pre-wrap">{note.content as string}</p>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openEditInterpreterNote({ id: note.id as string, content: note.content as string, type: note.type as string })}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        onClick={() => toggleInterpreterNoteActive(note.id as string, !(note.is_active as boolean))}
+                        title={note.is_active ? t("common.deactivate") : t("common.activate")}
+                      >
+                        <span className={`block h-2 w-2 rounded-full ${note.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => removeInterpreterNote(note.id as string)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Admin Notes */}
@@ -470,8 +542,30 @@ export function ClinicDetailPage() {
         </Card>
       </div>
 
-      {/* Clinic Status */}
-      {canManageClinics && (
+      {/* Excluded Interpreters + Clinic Status */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{t("clinics.excluded_interpreters")}</CardTitle>
+            <Button variant="outline" size="sm" onClick={openBlockDialog}>{t("common.edit")}</Button>
+          </CardHeader>
+          <CardContent>
+            {excludedInterpreters.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("clinics.no_excluded_interpreters")}</p>
+            ) : (
+              <ul className="space-y-1">
+                {excludedInterpreters.map((interp) => (
+                  <li key={interp.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                    <span>{interp.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {canManageClinics && (
         <Card className={!isActive ? "border-red-200 dark:border-red-900" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -506,7 +600,8 @@ export function ClinicDetailPage() {
             )}
           </CardContent>
         </Card>
-      )}
+        )}
+      </div>
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>

@@ -303,6 +303,7 @@
     "no_alerts": "Sin alertas — todo al día.",
     "mark_all_read": "Marcar todo como leído",
     "mark_read": "Marcar como leído",
+    "mark_unread": "Marcar como no leído",
     "view_appointment": "Ver cita",
     "view_all": "Ver todo",
     "view_all_alerts": "Ver las {{count}} alertas de hoy →"
@@ -358,9 +359,12 @@
     "empty": "No se encontraron usuarios administradores.",
     "created": "Usuario creado.",
     "updated": "Usuario actualizado.",
+    "deleted": "Usuario eliminado.",
     "edit": "Editar usuario",
     "new_password_optional": "Nueva contraseña (opcional)",
-    "leave_blank_to_keep": "Dejar en blanco para mantener la contraseña actual"
+    "leave_blank_to_keep": "Dejar en blanco para mantener la contraseña actual",
+    "delete_confirm_title": "¿Eliminar usuario?",
+    "delete_confirm_body": "¿Estás seguro de que deseas eliminar a {{name}}? Esta acción no se puede deshacer."
   },
   "appointments": {
     "title": "Citas",
@@ -579,7 +583,9 @@
     "no_doctors": "Aún no se han agregado proveedores.",
     "add_doctor": "Agregar proveedor",
     "doctor_name": "Nombre del proveedor",
-    "doctor_name_placeholder": "Ej. Dr. Juan Pérez"
+    "doctor_name_placeholder": "Ej. Dr. Juan Pérez",
+    "confirmation_emails": "Correos de confirmación de citas",
+    "confirmation_emails_description": "Enviar correos de confirmación diarios para las próximas citas de esta clínica."
   },
   "email_intake": {
     "logs_title": "Registro de correos entrantes",
@@ -855,11 +861,23 @@
     "followUp.maxReminders": "Máximo de recordatorios antes de marcar sin respuesta",
     "localization.title": "Localización",
     "localization.manage": "Administrar cadenas de texto",
+    "organization_identity": "Identidad de la organización",
+    "organization_identity_description": "Se usa en las comunicaciones salientes por correo y SMS para identificar tu organización.",
+    "organization_name": "Nombre de la organización",
+    "contact_email": "Correo de contacto",
+    "contact_phone": "Teléfono de contacto",
     "clinic_confirmation": "Confirmación de clínica",
     "clinic_confirmation_description": "Envía un correo diario a cada clínica con las citas del día siguiente y un botón de confirmación.",
     "clinic_confirmation_enabled": "Activar correos de confirmación de clínica",
     "clinic_confirmation_time": "Hora de envío diario",
     "clinic_confirmation_time_hint": "La hora se basa en la zona horaria de tu organización.",
+    "clinic_summary_emails": "Correos de resumen de citas de clínica",
+    "clinic_summary_emails_description": "Envía un correo de resumen semanal a cada clínica con sus próximas citas.",
+    "clinic_summary_emails_enabled": "Activar correos de resumen de clínica",
+    "clinic_summary_emails_time": "Hora de envío diario",
+    "clinic_summary_emails_per_clinic": "Correos de resumen de citas",
+    "clinic_summary_emails_days_label": "Enviar los",
+    "clinic_summary_emails_days_hint": "Los correos se envían a las 8:00 AM en la zona horaria de tu organización los días seleccionados.",
     "interpreter_reminders": "Recordatorios para intérpretes",
     "reminders_description": "Notificaciones push enviadas a los intérpretes antes de citas confirmadas.",
     "reminder_label": "Etiqueta",
