@@ -409,6 +409,14 @@ export function PatientDetailPage() {
               placeholder={t("appointments.admin_notes_placeholder")}
               saveLabel={t("common.save")}
             />
+            {p.notes && (
+              <div className="space-y-1 border-t pt-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">Imported</span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{p.notes as string}</p>
+              </div>
+            )}
             {((adminNotes as Array<Record<string, unknown>>) ?? []).length > 0 && (
               <div className="space-y-3 border-t pt-3">
                 {(adminNotes as Array<Record<string, unknown>>).map((n) => (
