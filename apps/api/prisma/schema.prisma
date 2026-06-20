@@ -788,6 +788,8 @@ model SystemSettings {
   clinic_summary_emails_enabled       Boolean  @default(false)
   clinic_summary_emails_time          String   @default("08:00")
   organization_name                   String?
+  contact_email                       String?
+  contact_phone                       String?
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])

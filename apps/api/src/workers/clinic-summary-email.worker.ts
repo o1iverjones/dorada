@@ -2,6 +2,7 @@ import { Worker, Queue } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
 import { redisConnection } from "../config.js";
 import { sendEmail } from "../lib/email.js";
+import { dateBoundsInTz } from "../lib/date-bounds.js";
 
 const QUEUE_NAME = "clinic-summary-email";
 
@@ -123,18 +124,6 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
     const email = buildSummaryEmail(clinic.name, weekLabel, appointments, tz);
     await sendEmail({ to: clinic.primary_contact_email!, ...email });
   }
-}
-
-function dateBoundsInTz(dateStr: string, tz: string): [Date, Date] {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(noonUtc);
-  const localH = parseInt(parts.find((p) => p.type === "hour")?.value ?? "12", 10);
-  const localM = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
-  const offsetMinutes = 12 * 60 - (localH * 60 + localM);
-  const startUtc = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) + offsetMinutes * 60 * 1000);
-  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
-  return [startUtc, endUtc];
 }
 
 function buildWeekLabel(fromStr: string, toStr: string, tz: string): string {

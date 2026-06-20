@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import { redisConnection, config } from "../config.js";
 import { sendEmail } from "../lib/email.js";
 import { createClinicConfirmationToken } from "../lib/clinic-confirmation-token.js";
+import { dateBoundsInTz } from "../lib/date-bounds.js";
 
 const QUEUE_NAME = "clinic-confirmation";
 
@@ -130,21 +131,6 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
       data: { clinic_confirmation_last_sent_date: todayStr },
     });
   }
-}
-
-/** Returns [startUtc, endUtc] spanning midnight-to-midnight for dateStr in the given timezone. */
-function dateBoundsInTz(dateStr: string, tz: string): [Date, Date] {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  // Use noon UTC as a reference to find the UTC offset at that date (avoids DST edge cases at midnight)
-  const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(noonUtc);
-  const localH = parseInt(parts.find((p) => p.type === "hour")?.value ?? "12", 10);
-  const localM = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
-  // UTC offset in minutes (positive = timezone is behind UTC, e.g. PST = +480)
-  const offsetMinutes = 12 * 60 - (localH * 60 + localM);
-  const startUtc = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) + offsetMinutes * 60 * 1000);
-  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
-  return [startUtc, endUtc];
 }
 
 function buildConfirmationEmail(
