@@ -120,7 +120,7 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
     const apiBase = (config.API_URL ?? config.APP_URL.replace(/app\./, "api.")).replace(/\/$/, "");
     const confirmUrl = `${apiBase}/api/v1/clinic-confirmation/confirm?token=${encodeURIComponent(token)}`;
 
-    const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl, tz);
+    const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl, tz, settings.organization_name ?? null);
     await sendEmail({ to: clinic.primary_contact_email, ...email });
     emailsSent++;
   }
@@ -140,6 +140,7 @@ function buildConfirmationEmail(
   appts: Array<{ date_time: Date; patient: { name: string } | null; language: string; interpreter_type_required: string; interpreter: { name: string } | null }>,
   confirmUrl: string,
   tz: string,
+  orgName: string | null,
 ): { subject: string; html: string; text: string } {
   const subject = `Appointment confirmation for ${dateLabel} — ${clinicName}`;
 
@@ -179,7 +180,7 @@ function buildConfirmationEmail(
         <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
           <tr>
             <td style="background-color:#18181b;padding:28px 40px;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Dorada</h1>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">${orgName ?? "Dorada"}</h1>
             </td>
           </tr>
           <tr>
@@ -217,7 +218,7 @@ function buildConfirmationEmail(
           </tr>
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #e4e4e7;">
-              <p style="margin:0;color:#a1a1aa;font-size:13px;">This email was sent by Dorada on behalf of your interpretation services provider.</p>
+              <p style="margin:0;color:#a1a1aa;font-size:13px;">This email was sent by ${orgName ?? "Dorada"} on behalf of your interpretation services provider.</p>
             </td>
           </tr>
         </table>

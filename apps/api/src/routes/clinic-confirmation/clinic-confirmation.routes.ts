@@ -9,7 +9,7 @@ function page(opts: {
   body: string;
   contactEmail: string | null;
   contactPhone: string | null;
-  status?: number;
+  orgName: string | null;
 }) {
   const contactLine = opts.contactEmail || opts.contactPhone
     ? `<p style="margin:16px 0 0;color:#52525b;font-size:14px;">If you have any questions, please contact us at${
@@ -19,28 +19,34 @@ function page(opts: {
       }.</p>`
     : "";
 
+  const displayName = opts.orgName ?? "Dorada";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${opts.heading} — Dorada</title>
+  <title>${opts.heading} — ${displayName}</title>
   <style>
     body { margin: 0; padding: 0; background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 48px 40px; max-width: 480px; width: 90%; text-align: center; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; max-width: 480px; width: 90%; text-align: center; }
+    .header { background: #18181b; padding: 24px 40px; }
+    .header h2 { margin: 0; color: #fff; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .body { padding: 40px; }
     .icon { font-size: 48px; margin-bottom: 16px; }
     h1 { margin: 0 0 12px; font-size: 22px; font-weight: 700; color: #18181b; }
     p { margin: 0; color: #52525b; font-size: 15px; line-height: 1.6; }
-    .brand { margin-top: 32px; color: #a1a1aa; font-size: 13px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="icon">${opts.icon}</div>
-    <h1>${opts.heading}</h1>
-    <p>${opts.body}</p>
-    ${contactLine}
-    <p class="brand">Dorada</p>
+    <div class="header"><h2>${displayName}</h2></div>
+    <div class="body">
+      <div class="icon">${opts.icon}</div>
+      <h1>${opts.heading}</h1>
+      <p>${opts.body}</p>
+      ${contactLine}
+    </div>
   </div>
 </body>
 </html>`;
@@ -57,6 +63,7 @@ export default async function clinicConfirmationRoutes(fastify: FastifyInstance)
         body: "Invalid or missing confirmation link.",
         contactEmail: null,
         contactPhone: null,
+        orgName: null,
       }));
     }
 
@@ -68,18 +75,20 @@ export default async function clinicConfirmationRoutes(fastify: FastifyInstance)
         body: "This confirmation link is invalid or has been tampered with.",
         contactEmail: null,
         contactPhone: null,
+        orgName: null,
       }));
     }
 
     const { orgId, clinicId, date } = parsed;
 
-    // Load contact info from org settings
+    // Load org settings (contact info, name, timezone)
     const settings = await fastify.prisma.systemSettings.findUnique({
       where: { organization_id: orgId },
-      select: { contact_email: true, contact_phone: true, timezone: true },
+      select: { contact_email: true, contact_phone: true, timezone: true, organization_name: true },
     });
     const contactEmail = settings?.contact_email ?? null;
     const contactPhone = settings?.contact_phone ?? null;
+    const orgName = settings?.organization_name ?? null;
     const tz = settings?.timezone ?? "America/Los_Angeles";
 
     // Use timezone-aware bounds so we catch all appointments on this date
@@ -103,6 +112,7 @@ export default async function clinicConfirmationRoutes(fastify: FastifyInstance)
         body: "We already have your confirmation on file for these appointments. No further action is needed.",
         contactEmail,
         contactPhone,
+        orgName,
       }));
     }
 
@@ -124,6 +134,7 @@ export default async function clinicConfirmationRoutes(fastify: FastifyInstance)
       body: `All ${result.count} appointment${result.count === 1 ? "" : "s"} have been confirmed.`,
       contactEmail,
       contactPhone,
+      orgName,
     }));
   });
 }
