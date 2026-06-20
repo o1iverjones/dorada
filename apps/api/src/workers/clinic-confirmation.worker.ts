@@ -89,6 +89,12 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
   // Find all appointments tomorrow, grouped by clinic
   const [tomorrowStart, tomorrowEnd] = dateBoundsInTz(tomorrowStr, tz);
 
+  const orgLanguages = await prisma.organizationLanguage.findMany({
+    where: { organization_id: organizationId },
+    select: { code: true, name: true },
+  });
+  const languageNames = new Map(orgLanguages.map((l) => [l.code, l.name]));
+
   const appointments = await prisma.appointment.findMany({
     where: {
       organization_id: organizationId,
@@ -120,7 +126,7 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
     const apiBase = (config.API_URL ?? config.APP_URL.replace(/app\./, "api.")).replace(/\/$/, "");
     const confirmUrl = `${apiBase}/api/v1/clinic-confirmation/confirm?token=${encodeURIComponent(token)}`;
 
-    const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl, tz, settings.organization_name ?? null);
+    const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl, tz, settings.organization_name ?? null, languageNames);
     await sendEmail({ to: clinic.primary_contact_email, ...email });
     emailsSent++;
   }
@@ -141,14 +147,14 @@ function buildConfirmationEmail(
   confirmUrl: string,
   tz: string,
   orgName: string | null,
+  languageNames: Map<string, string>,
 ): { subject: string; html: string; text: string } {
   const subject = `Appointment confirmation for ${dateLabel} — ${clinicName}`;
 
   const rows = appts.map((a) => {
     const time = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
     const patient = a.patient?.name ?? "—";
-    const language = a.language;
-    const interpreterType = a.interpreter_type_required ?? "—";
+    const language = languageNames.get(a.language) ?? a.language;
     const provider = a.referring_physician ?? "—";
     const interpreter = a.interpreter?.name ?? "TBD";
     return `
@@ -156,15 +162,15 @@ function buildConfirmationEmail(
         <td style="padding:10px 12px;font-size:14px;color:#18181b;">${time}</td>
         <td style="padding:10px 12px;font-size:14px;color:#18181b;">${patient}</td>
         <td style="padding:10px 12px;font-size:14px;color:#52525b;">${language}</td>
-        <td style="padding:10px 12px;font-size:14px;color:#52525b;">${interpreterType}</td>
-        <td style="padding:10px 12px;font-size:14px;color:#52525b;">${provider}</td>
+        <td style="padding:10px 12px;font-size:14px;color:#52525b;min-width:160px;">${provider}</td>
         <td style="padding:10px 12px;font-size:14px;color:#52525b;">${interpreter}</td>
       </tr>`;
   }).join("");
 
   const textRows = appts.map((a) => {
     const time = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
-    return `  ${time} | ${a.patient?.name ?? "—"} | ${a.language} | ${a.interpreter_type_required} | ${a.referring_physician ?? "—"} | ${a.interpreter?.name ?? "TBD"}`;
+    const language = languageNames.get(a.language) ?? a.language;
+    return `  ${time} | ${a.patient?.name ?? "—"} | ${language} | ${a.referring_physician ?? "—"} | ${a.interpreter?.name ?? "TBD"}`;
   }).join("\n");
 
   const html = `
@@ -198,8 +204,7 @@ function buildConfirmationEmail(
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Time</th>
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Patient</th>
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Language</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Type</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Provider</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;min-width:160px;">Provider</th>
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Interpreter</th>
                   </tr>
                 </thead>
