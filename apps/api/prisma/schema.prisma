@@ -35,6 +35,7 @@ model Organization {
   clinic_notes         ClinicNote[]
   agency_notes               AgencyNote[]
   insurance_company_notes    InsuranceCompanyNote[]
+  patient_notes              PatientNote[]
   appointment_types          AppointmentType[]
   languages            OrganizationLanguage[]
   locale_strings       LocaleString[]
@@ -342,6 +343,7 @@ model Patient {
   appointments          Appointment[]
   preferred_interpreter Interpreter?  @relation("PreferredInterpreter", fields: [preferred_interpreter_id], references: [id], onDelete: SetNull)
   claims                Claim[]
+  admin_notes           PatientNote[]
 
   @@map("patients")
 }
@@ -406,6 +408,22 @@ model InsuranceCompanyNote {
   organization      Organization     @relation(fields: [organization_id], references: [id])
 
   @@map("insurance_company_notes")
+}
+
+model PatientNote {
+  id              String   @id @default(uuid())
+  patient_id      String
+  organization_id String
+  content         String   @db.VarChar(800)
+  image_url       String?
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  patient      Patient      @relation(fields: [patient_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("patient_notes")
 }
 
 // ─── Appointments ─────────────────────────────────────────────────────────────

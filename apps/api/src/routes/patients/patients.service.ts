@@ -162,3 +162,43 @@ export async function deleteClaim(
 
   await prisma.claim.delete({ where: { id: claimId } });
 }
+
+export async function getPatientActivity(id: string, organizationId: string, prisma: PrismaClient) {
+  const patient = await prisma.patient.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(patient, organizationId);
+  return prisma.activityLog.findMany({
+    where: { entity_type: "patient", entity_id: id, organization_id: organizationId },
+    orderBy: { created_at: "desc" },
+  });
+}
+
+export async function getPatientNotes(id: string, organizationId: string, prisma: PrismaClient) {
+  const patient = await prisma.patient.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(patient, organizationId);
+  return prisma.patientNote.findMany({
+    where: { patient_id: id },
+    orderBy: { created_at: "desc" },
+  });
+}
+
+export async function addPatientNote(
+  id: string,
+  content: string,
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+  imageUrl: string | null = null,
+) {
+  const patient = await prisma.patient.findUnique({ where: { id }, select: { organization_id: true } });
+  ensureTenant(patient, organizationId);
+  return prisma.patientNote.create({
+    data: {
+      patient_id: id,
+      organization_id: organizationId,
+      content,
+      admin_id: actor.id,
+      admin_name: actor.name,
+      image_url: imageUrl,
+    },
+  });
+}
