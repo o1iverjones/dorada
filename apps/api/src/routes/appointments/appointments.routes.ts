@@ -267,17 +267,24 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
 
   // GET /appointments/activity — org-wide log (all entity types)
   fastify.get("/activity", { preHandler: [authenticateAdmin] }, async (req, reply) => {
-    const { limit } = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).parse(req.query);
+    const { limit, offset } = z.object({
+      limit: z.coerce.number().int().min(1).max(100).default(20),
+      offset: z.coerce.number().int().min(0).default(0),
+    }).parse(req.query);
     const payload = req.user as JwtPayload;
     const entries = await fastify.prisma.activityLog.findMany({
       where: { organization_id: payload.organization_id },
       orderBy: { created_at: "desc" },
-      take: limit,
+      take: limit + 1,
+      skip: offset,
     });
+
+    const hasMore = entries.length > limit;
+    const page = hasMore ? entries.slice(0, limit) : entries;
 
     // Back-fill entity_name for appointment entries that were logged before
     // entity_name tracking was added (entity_name may be null for older rows).
-    const missingIds = entries
+    const missingIds = page
       .filter((e) => e.entity_type === "appointment" && !e.entity_name)
       .map((e) => e.entity_id);
 
@@ -290,13 +297,13 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
       nameMap = Object.fromEntries(appts.map((a) => [a.id, a.patient?.name ?? ""]));
     }
 
-    const enriched = entries.map((e) =>
+    const enriched = page.map((e) =>
       e.entity_type === "appointment" && !e.entity_name && nameMap[e.entity_id]
         ? { ...e, entity_name: nameMap[e.entity_id] }
         : e,
     );
 
-    return reply.send(enriched);
+    return reply.send({ data: enriched, has_more: hasMore });
   });
 
   // GET /appointments/:id/activity
