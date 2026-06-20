@@ -53,28 +53,26 @@ function SummaryEmailsCard({ clinic, update }: { clinic: Record<string, unknown>
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
           </button>
         </div>
-        {enabled && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("settings.clinic_summary_emails_days_label")}</p>
-            <div className="flex gap-1.5 flex-wrap">
-              {DOW_LABELS.map((label, dow) => (
-                <button
-                  key={dow}
-                  type="button"
-                  onClick={() => toggleDay(dow)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                    days.includes(dow)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border hover:bg-muted"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">{t("settings.clinic_summary_emails_days_hint")}</p>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t("settings.clinic_summary_emails_days_label")}</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {DOW_LABELS.map((label, dow) => (
+              <button
+                key={dow}
+                type="button"
+                onClick={() => toggleDay(dow)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                  days.includes(dow)
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        )}
+          <p className="text-xs text-muted-foreground">{t("settings.clinic_summary_emails_days_hint")}</p>
+        </div>
       </CardContent>
     </Card>
   );
