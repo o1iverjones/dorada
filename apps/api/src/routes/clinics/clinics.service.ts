@@ -35,7 +35,7 @@ function formatClinic(c: {
   primary_contact_name: string | null; primary_contact_phone: string | null; primary_contact_email: string | null;
   billing_model: string; billing_hourly_rate: unknown; billing_flat_rate: unknown;
   billing_invoice_cycle: string; is_active: boolean;
-  summary_emails_enabled: boolean; summary_email_days: number[];
+  confirmation_emails_enabled: boolean; summary_emails_enabled: boolean; summary_email_days: number[];
   created_at: Date; updated_at: Date;
 }) {
   return {
@@ -52,6 +52,7 @@ function formatClinic(c: {
       invoice_cycle: c.billing_invoice_cycle,
     },
     is_active: c.is_active,
+    confirmation_emails_enabled: c.confirmation_emails_enabled,
     summary_emails_enabled: c.summary_emails_enabled,
     summary_email_days: c.summary_email_days,
     created_at: c.created_at.toISOString(),
@@ -117,6 +118,7 @@ export async function createClinic(body: CreateClinicBody, organizationId: strin
       billing_hourly_rate: body.billing.hourly_rate ?? null,
       billing_flat_rate: body.billing.flat_rate ?? null,
       billing_invoice_cycle: body.billing.invoice_cycle,
+      confirmation_emails_enabled: body.confirmation_emails_enabled ?? false,
       summary_emails_enabled: body.summary_emails_enabled ?? false,
       summary_email_days: body.summary_email_days ?? [],
     },
@@ -160,6 +162,7 @@ export async function updateClinic(id: string, body: UpdateClinicBody, organizat
         : {}),
       ...(body.billing ? { billing_model: body.billing.model, billing_hourly_rate: body.billing.hourly_rate ?? null, billing_flat_rate: body.billing.flat_rate ?? null, billing_invoice_cycle: body.billing.invoice_cycle } : {}),
       ...(body.is_active !== undefined ? { is_active: body.is_active } : {}),
+      ...(body.confirmation_emails_enabled !== undefined ? { confirmation_emails_enabled: body.confirmation_emails_enabled } : {}),
       ...(body.summary_emails_enabled !== undefined ? { summary_emails_enabled: body.summary_emails_enabled } : {}),
       ...(body.summary_email_days !== undefined ? { summary_email_days: body.summary_email_days } : {}),
     },

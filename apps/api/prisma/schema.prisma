@@ -233,6 +233,7 @@ model Clinic {
   billing_flat_rate     Decimal? @db.Decimal(10, 2)
   billing_invoice_cycle String   @default("monthly")
   is_active                    Boolean  @default(true)
+  confirmation_emails_enabled  Boolean  @default(false)
   summary_emails_enabled       Boolean  @default(false)
   summary_email_days           Int[]    @default([])
   summary_email_last_sent_date String?

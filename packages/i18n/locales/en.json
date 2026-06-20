@@ -583,7 +583,9 @@
     "no_doctors": "No providers added yet.",
     "add_doctor": "Add provider",
     "doctor_name": "Provider name",
-    "doctor_name_placeholder": "e.g. Dr. Jane Smith"
+    "doctor_name_placeholder": "e.g. Dr. Jane Smith",
+    "confirmation_emails": "Appointment confirmation emails",
+    "confirmation_emails_description": "Send daily confirmation emails for upcoming appointments at this clinic."
   },
   "email_intake": {
     "logs_title": "Email intake log",

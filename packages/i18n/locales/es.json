@@ -583,7 +583,9 @@
     "no_doctors": "Aún no se han agregado proveedores.",
     "add_doctor": "Agregar proveedor",
     "doctor_name": "Nombre del proveedor",
-    "doctor_name_placeholder": "Ej. Dr. Juan Pérez"
+    "doctor_name_placeholder": "Ej. Dr. Juan Pérez",
+    "confirmation_emails": "Correos de confirmación de citas",
+    "confirmation_emails_description": "Enviar correos de confirmación diarios para las próximas citas de esta clínica."
   },
   "email_intake": {
     "logs_title": "Registro de correos entrantes",

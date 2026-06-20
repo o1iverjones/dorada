@@ -26,6 +26,7 @@ export const ClinicSchema = z.object({
   primary_contact: ContactSchema.nullable(),
   billing: ClinicBillingSchema,
   is_active: z.boolean(),
+  confirmation_emails_enabled: z.boolean().optional(),
   summary_emails_enabled: z.boolean().optional(),
   summary_email_days: z.array(z.number().int().min(0).max(6)).optional(),
   interpreters_not_allowed: z.array(z.object({ id: UuidSchema, name: z.string() })).optional(),
@@ -43,12 +44,14 @@ export const CreateClinicBodySchema = z.object({
   phone: z.string().max(20).optional(),
   primary_contact: ContactSchema.optional(),
   billing: ClinicBillingSchema,
+  confirmation_emails_enabled: z.boolean().optional(),
   summary_emails_enabled: z.boolean().optional(),
   summary_email_days: z.array(z.number().int().min(0).max(6)).optional(),
 });
 
 export const UpdateClinicBodySchema = CreateClinicBodySchema.partial().extend({
   is_active: z.boolean().optional(),
+  confirmation_emails_enabled: z.boolean().optional(),
   summary_emails_enabled: z.boolean().optional(),
   summary_email_days: z.array(z.number().int().min(0).max(6)).optional(),
 });

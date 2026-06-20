@@ -25,6 +25,33 @@ import { useAuthStore } from "../../store/auth.js";
 
 const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+function ConfirmationEmailsCard({ clinic, update }: { clinic: Record<string, unknown>; update: ReturnType<typeof useUpdateClinic> }) {
+  const { t } = useTranslation();
+  const enabled = (clinic.confirmation_emails_enabled as boolean) ?? false;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("clinics.confirmation_emails")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">{t("clinics.confirmation_emails_description")}</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            onClick={() => update.mutate({ confirmation_emails_enabled: !enabled })}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${enabled ? "bg-primary" : "bg-input"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function SummaryEmailsCard({ clinic, update }: { clinic: Record<string, unknown>; update: ReturnType<typeof useUpdateClinic> }) {
   const { t } = useTranslation();
   const enabled = (clinic.summary_emails_enabled as boolean) ?? false;
@@ -316,6 +343,9 @@ export function ClinicDetailPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Confirmation Emails */}
+        <ConfirmationEmailsCard clinic={clinic} update={update} />
+
         {/* Summary Emails */}
         <SummaryEmailsCard clinic={clinic} update={update} />
 
@@ -532,6 +562,7 @@ export function ClinicDetailPage() {
 
       {/* Clinic Status */}
       {canManageClinics && (
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className={!isActive ? "border-red-200 dark:border-red-900" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -566,6 +597,7 @@ export function ClinicDetailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       )}
 
       {/* Deactivate Confirmation Dialog */}
