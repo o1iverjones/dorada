@@ -100,7 +100,7 @@ export function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       {/* Greeting + Clock */}
       <div className="flex items-end justify-between gap-4">
         <div>
