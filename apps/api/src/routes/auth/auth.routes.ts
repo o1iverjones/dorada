@@ -98,14 +98,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return reply.send({ triggered: true });
     });
 
-    // POST /auth/dev/trigger-clinic-confirmations — resets last_sent_date and immediately runs the check
+    // POST /auth/dev/trigger-clinic-confirmations — bypasses time window and sends immediately
     fastify.post("/dev/trigger-clinic-confirmations", async (_request, reply) => {
-      await fastify.prisma.systemSettings.updateMany({
-        data: { clinic_confirmation_last_sent_date: null },
-      });
-      const { clinicConfirmationQueue } = await import("../../workers/clinic-confirmation.worker.js");
-      await clinicConfirmationQueue.add("poll-now", {});
-      return reply.send({ triggered: true, note: "last_sent_date reset for all orgs" });
+      const { forceSendClinicConfirmations } = await import("../../workers/clinic-confirmation.worker.js");
+      await forceSendClinicConfirmations(fastify.prisma);
+      return reply.send({ triggered: true, note: "confirmation emails sent directly (time window bypassed)" });
     });
     fastify.get("/dev/otp/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };

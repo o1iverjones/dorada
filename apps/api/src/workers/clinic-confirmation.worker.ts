@@ -36,6 +36,17 @@ async function sendPendingConfirmations(prisma: PrismaClient) {
   }
 }
 
+/** Force-sends confirmation emails for all orgs, bypassing the time window and dedup guard. For dev/testing only. */
+export async function forceSendClinicConfirmations(prisma: PrismaClient) {
+  const orgs = await prisma.organization.findMany({
+    where: { is_active: true },
+    select: { id: true },
+  });
+  for (const org of orgs) {
+    await sendForOrg(org.id, prisma);
+  }
+}
+
 async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
   if (!settings?.clinic_confirmation_enabled) return;
@@ -57,6 +68,16 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   // Today's date in org timezone as "YYYY-MM-DD"
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
   if (settings.clinic_confirmation_last_sent_date === todayStr) return; // already sent today
+
+  await sendForOrg(organizationId, prisma);
+}
+
+async function sendForOrg(organizationId: string, prisma: PrismaClient) {
+  const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
+  if (!settings?.clinic_confirmation_enabled) return;
+
+  const tz = settings.timezone ?? "America/Los_Angeles";
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
   // Tomorrow's date in org timezone
   const tomorrowDate = new Date();
@@ -102,8 +123,7 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
     emailsSent++;
   }
 
-  // Only stamp the sent date if we actually sent something, so changing the send time
-  // later in the day still works if there was nothing to send at the earlier time.
+  // Only stamp the sent date if we actually sent something
   if (emailsSent > 0) {
     await prisma.systemSettings.update({
       where: { organization_id: organizationId },
