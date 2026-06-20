@@ -115,7 +115,7 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
       status: { notIn: ["cancelled"] },
     },
     include: {
-      clinic: { select: { id: true, name: true, primary_contact_email: true } },
+      clinic: { select: { id: true, name: true, primary_contact_email: true, confirmation_emails_enabled: true } },
       patient: { select: { name: true } },
       interpreter: { select: { name: true } },
     },
@@ -133,6 +133,7 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
   let emailsSent = 0;
   for (const [clinicId, appts] of byClinic) {
     const clinic = appts[0].clinic;
+    if (!clinic?.confirmation_emails_enabled) continue;
     if (!clinic?.primary_contact_email) continue;
 
     const token = createClinicConfirmationToken(organizationId, clinicId, startDateStr, endDateStr, config.JWT_SECRET);
