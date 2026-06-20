@@ -13,6 +13,7 @@ const ConfigSchema = z.object({
 
   CORS_ORIGIN: z.string().optional(),
   APP_URL: z.string().default("https://app.dorada.app"),
+  API_URL: z.string().optional(),
 
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default("15m"),

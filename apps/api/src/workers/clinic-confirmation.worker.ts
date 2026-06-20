@@ -117,7 +117,8 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
     if (!clinic?.primary_contact_email) continue;
 
     const token = createClinicConfirmationToken(organizationId, clinicId, tomorrowStr, config.JWT_SECRET);
-    const confirmUrl = `${config.APP_URL.replace(/app\./, "api.").replace(/\/$/, "")}/api/v1/clinic-confirmation/confirm?token=${encodeURIComponent(token)}`;
+    const apiBase = (config.API_URL ?? config.APP_URL.replace(/app\./, "api.")).replace(/\/$/, "");
+    const confirmUrl = `${apiBase}/api/v1/clinic-confirmation/confirm?token=${encodeURIComponent(token)}`;
 
     const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl, tz);
     await sendEmail({ to: clinic.primary_contact_email, ...email });
