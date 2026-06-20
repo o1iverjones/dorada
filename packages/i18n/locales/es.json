@@ -859,6 +859,8 @@
     "followUp.maxReminders": "Máximo de recordatorios antes de marcar sin respuesta",
     "localization.title": "Localización",
     "localization.manage": "Administrar cadenas de texto",
+    "organization_name": "Nombre de la organización",
+    "organization_name_description": "Se usa en las comunicaciones salientes por correo y texto. Déjalo en blanco para no incluir ningún nombre.",
     "clinic_confirmation": "Confirmación de clínica",
     "clinic_confirmation_description": "Envía un correo diario a cada clínica con las citas del día siguiente y un botón de confirmación.",
     "clinic_confirmation_enabled": "Activar correos de confirmación de clínica",

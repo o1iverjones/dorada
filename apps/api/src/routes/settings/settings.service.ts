@@ -36,6 +36,7 @@ export async function getSettings(organizationId: string, prisma: PrismaClient) 
     clinic_confirmation_time: settings?.clinic_confirmation_time ?? "08:00",
     clinic_summary_emails_enabled: settings?.clinic_summary_emails_enabled ?? false,
     clinic_summary_emails_time: settings?.clinic_summary_emails_time ?? "08:00",
+    organization_name: settings?.organization_name ?? null,
     languages,
     appointment_types: appointmentTypes,
   };
@@ -62,6 +63,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       ...(body.clinic_confirmation_time !== undefined ? { clinic_confirmation_time: body.clinic_confirmation_time } : {}),
       ...(body.clinic_summary_emails_enabled !== undefined ? { clinic_summary_emails_enabled: body.clinic_summary_emails_enabled } : {}),
       ...(body.clinic_summary_emails_time !== undefined ? { clinic_summary_emails_time: body.clinic_summary_emails_time } : {}),
+      ...(body.organization_name !== undefined ? { organization_name: body.organization_name || null } : {}),
     },
     create: {
       organization_id: organizationId,
@@ -78,6 +80,7 @@ export async function updateSettings(body: UpdateSystemSettingsBody, organizatio
       clinic_confirmation_time: body.clinic_confirmation_time ?? "08:00",
       clinic_summary_emails_enabled: body.clinic_summary_emails_enabled ?? false,
       clinic_summary_emails_time: body.clinic_summary_emails_time ?? "08:00",
+      organization_name: body.organization_name || null,
     },
   });
 

@@ -859,6 +859,8 @@
     "followUp.maxReminders": "Max reminders before marking no-response",
     "localization.title": "Localization",
     "localization.manage": "Manage strings",
+    "organization_name": "Name of Organization",
+    "organization_name_description": "Used in outgoing email and text communications. Leave blank to use no name.",
     "clinic_confirmation": "Clinic confirmation",
     "clinic_confirmation_description": "Send a daily email to each clinic listing tomorrow's appointments with a one-click confirmation button.",
     "clinic_confirmation_enabled": "Enable clinic confirmation emails",

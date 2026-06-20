@@ -469,6 +469,8 @@ export function SettingsPage() {
     long_appointment_alert_mins: 45,
   });
 
+  const [orgName, setOrgName] = useState("");
+
   useEffect(() => {
     if (settings) {
       const s = settings as Record<string, unknown>;
@@ -484,6 +486,7 @@ export function SettingsPage() {
         long_appointment_alert_hours: Math.floor(alertMinutes / 60),
         long_appointment_alert_mins: alertMinutes % 60,
       });
+      setOrgName((s.organization_name as string) ?? "");
     }
   }, [settings]);
 
@@ -572,6 +575,36 @@ export function SettingsPage() {
           </Button>
         }
       />
+
+      {hasPermission("manage_system_settings") && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.organization_name")}</CardTitle>
+            <CardDescription>{t("settings.organization_name_description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-3 items-end">
+            <div className="space-y-1 flex-1 max-w-sm">
+              <Label htmlFor="org-name">{t("settings.organization_name")}</Label>
+              <Input
+                id="org-name"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder="e.g. Prana Precision Health"
+                maxLength={100}
+              />
+            </div>
+            <Button
+              onClick={() => update.mutate(
+                { organization_name: orgName.trim() || null },
+                { onSuccess: () => toast({ title: t("common.saved") }) },
+              )}
+              disabled={update.isPending}
+            >
+              {t("common.save_changes")}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>{t("settings.pay_rates")}</CardTitle></CardHeader>
