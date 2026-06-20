@@ -315,146 +315,148 @@ export function ClinicDetailPage() {
         />
       </div>
 
-      {/* Summary Emails */}
-      <SummaryEmailsCard clinic={clinic} update={update} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Summary Emails */}
+        <SummaryEmailsCard clinic={clinic} update={update} />
 
-      {/* Excluded Interpreters */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t("clinics.excluded_interpreters")}</CardTitle>
-          <Button variant="outline" size="sm" onClick={openBlockDialog}>{t("common.edit")}</Button>
-        </CardHeader>
-        <CardContent>
-          {excludedInterpreters.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("clinics.no_excluded_interpreters")}</p>
-          ) : (
-            <ul className="space-y-1">
-              {excludedInterpreters.map((interp) => (
-                <li key={interp.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
-                  <span>{interp.name}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+        {/* Excluded Interpreters */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{t("clinics.excluded_interpreters")}</CardTitle>
+            <Button variant="outline" size="sm" onClick={openBlockDialog}>{t("common.edit")}</Button>
+          </CardHeader>
+          <CardContent>
+            {excludedInterpreters.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("clinics.no_excluded_interpreters")}</p>
+            ) : (
+              <ul className="space-y-1">
+                {excludedInterpreters.map((interp) => (
+                  <li key={interp.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                    <span>{interp.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Doctors */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Stethoscope className="h-4 w-4" /> {t("clinics.doctors")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {doctors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("clinics.no_doctors")}</p>
-          ) : (
-            <ul className="space-y-1">
-              {doctors.map((doc) => (
-                <li key={doc.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="font-medium">{doc.name}</span>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await removeDoctor.mutateAsync(doc.id);
-                      } catch {
-                        toast({ title: t("common.error"), variant: "destructive" });
-                      }
-                    }}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
-                    title={t("common.remove")}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <form
-            className="flex gap-2 pt-1"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const name = newDoctorName.trim();
-              if (!name) return;
-              try {
-                await addDoctor.mutateAsync(name);
-                setNewDoctorName("");
-              } catch {
-                toast({ title: t("common.error"), variant: "destructive" });
-              }
-            }}
-          >
-            <Input
-              value={newDoctorName}
-              onChange={(e) => setNewDoctorName(e.target.value)}
-              placeholder={t("clinics.doctor_name_placeholder")}
-              className="flex-1"
-            />
-            <Button type="submit" size="sm" disabled={!newDoctorName.trim() || addDoctor.isPending}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> {t("clinics.add_doctor")}
+        {/* Providers */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4" /> {t("clinics.doctors")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {doctors.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("clinics.no_doctors")}</p>
+            ) : (
+              <ul className="space-y-1">
+                {doctors.map((doc) => (
+                  <li key={doc.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium">{doc.name}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await removeDoctor.mutateAsync(doc.id);
+                        } catch {
+                          toast({ title: t("common.error"), variant: "destructive" });
+                        }
+                      }}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      title={t("common.remove")}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form
+              className="flex gap-2 pt-1"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const name = newDoctorName.trim();
+                if (!name) return;
+                try {
+                  await addDoctor.mutateAsync(name);
+                  setNewDoctorName("");
+                } catch {
+                  toast({ title: t("common.error"), variant: "destructive" });
+                }
+              }}
+            >
+              <Input
+                value={newDoctorName}
+                onChange={(e) => setNewDoctorName(e.target.value)}
+                placeholder={t("clinics.doctor_name_placeholder")}
+                className="flex-1"
+              />
+              <Button type="submit" size="sm" disabled={!newDoctorName.trim() || addDoctor.isPending}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> {t("clinics.add_doctor")}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Interpreter Notes */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-4 w-4" /> {t("clinics.interpreter_notes")}
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={openNewInterpreterNote}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> {t("common.add")}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Interpreter Notes */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-4 w-4" /> {t("clinics.interpreter_notes")}
-          </CardTitle>
-          <Button variant="outline" size="sm" onClick={openNewInterpreterNote}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" /> {t("common.add")}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {!(interpreterNotes as Array<Record<string, unknown>> | undefined)?.length ? (
-            <p className="text-sm text-muted-foreground">{t("clinics.no_interpreter_notes")}</p>
-          ) : (
-            <div className="space-y-3">
-              {(interpreterNotes as Array<Record<string, unknown>>).map((note) => (
-                <div
-                  key={note.id as string}
-                  className={`flex items-start gap-3 rounded-lg border p-3 ${!note.is_active ? "opacity-50" : ""}`}
-                >
-                  <InterpreterNoteBadge type={note.type as string} />
-                  <p className="flex-1 text-sm whitespace-pre-wrap">{note.content as string}</p>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => openEditInterpreterNote({ id: note.id as string, content: note.content as string, type: note.type as string })}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => toggleInterpreterNoteActive(note.id as string, !(note.is_active as boolean))}
-                      title={note.is_active ? t("common.deactivate") : t("common.activate")}
-                    >
-                      <span className={`block h-2 w-2 rounded-full ${note.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => removeInterpreterNote(note.id as string)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+          </CardHeader>
+          <CardContent>
+            {!(interpreterNotes as Array<Record<string, unknown>> | undefined)?.length ? (
+              <p className="text-sm text-muted-foreground">{t("clinics.no_interpreter_notes")}</p>
+            ) : (
+              <div className="space-y-3">
+                {(interpreterNotes as Array<Record<string, unknown>>).map((note) => (
+                  <div
+                    key={note.id as string}
+                    className={`flex items-start gap-3 rounded-lg border p-3 ${!note.is_active ? "opacity-50" : ""}`}
+                  >
+                    <InterpreterNoteBadge type={note.type as string} />
+                    <p className="flex-1 text-sm whitespace-pre-wrap">{note.content as string}</p>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openEditInterpreterNote({ id: note.id as string, content: note.content as string, type: note.type as string })}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        onClick={() => toggleInterpreterNoteActive(note.id as string, !(note.is_active as boolean))}
+                        title={note.is_active ? t("common.deactivate") : t("common.activate")}
+                      >
+                        <span className={`block h-2 w-2 rounded-full ${note.is_active ? "bg-green-500" : "bg-muted-foreground"}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => removeInterpreterNote(note.id as string)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Admin Notes */}
