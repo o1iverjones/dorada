@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/auth.js";
 import { useUnreadMessageCount } from "../../hooks/useMessages.js";
@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils.js";
 import {
   LayoutDashboard, Calendar, ClipboardList, Users, Building2,
   ShieldCheck, UserSquare2, BarChart3, MessageSquare, Mail,
-  Settings, User, Receipt, Landmark, Menu, X, Bell,
+  Settings, Receipt, Landmark, Menu, X, Bell,
   type LucideIcon,
 } from "lucide-react";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
@@ -33,7 +33,13 @@ interface NavItem {
 
 export function Sidebar() {
   const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  const navigate = useNavigate();
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
   const unreadCount = useUnreadMessageCount();
   const canManageInvoices = hasPermission("manage_invoices");
   const { data: invoiceStats } = useInvoiceStats(canManageInvoices);
@@ -123,20 +129,23 @@ export function Sidebar() {
 
       {/* Account */}
       <div className="border-t border-white/10 p-3">
-        <NavLink
-          to="/account"
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-              isActive
-                ? "bg-sidebar-active-bg text-sidebar-active-fg"
-                : "text-sidebar-muted-fg hover:bg-sidebar-hover-bg hover:text-white",
-            )
-          }
+        <button
+          onClick={() => navigate("/account")}
+          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-sidebar-muted-fg transition-colors hover:bg-sidebar-hover-bg hover:text-white"
         >
-          <User className="h-4 w-4" />
-          <span className="truncate">{t("nav.account")}</span>
-        </NavLink>
+          {user?.profile_picture_url ? (
+            <img
+              src={user.profile_picture_url}
+              alt={user.name}
+              className="h-7 w-7 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-semibold text-white">
+              {initials}
+            </span>
+          )}
+          <span className="truncate">{user?.name}</span>
+        </button>
       </div>
     </>
   );

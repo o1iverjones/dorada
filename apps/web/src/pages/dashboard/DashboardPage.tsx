@@ -9,7 +9,6 @@ import { formatInTz } from "../../lib/timezone.js";
 import { useInvoiceStats } from "../../hooks/useInvoices.js";
 import { getSocket } from "../../lib/socket.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
-import { PageHeader } from "../../components/shared/PageHeader.js";
 import { Badge } from "../../components/ui/badge.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
 import { Calendar, Clock, AlertTriangle, Bell, ClipboardList, Receipt, CheckCheck } from "lucide-react";
@@ -102,8 +101,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("nav.dashboard")} />
-
       {/* Greeting + Clock */}
       <div className="flex items-end justify-between gap-4">
         <div>

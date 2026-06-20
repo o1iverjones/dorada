@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useOutlet } from "react-router-dom";
+import { useOutlet, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket } from "../../lib/socket.js";
 import { Sidebar } from "./Sidebar.js";
@@ -56,12 +56,15 @@ export function AppLayout() {
   // qc is stable — intentionally omitted from deps
   }, []);
 
+  const location = useLocation();
+  const isDashboard = location.pathname === "/dashboard";
+
   return (
     <PageHeaderProvider>
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
-          <TopBar />
+          {!isDashboard && <TopBar />}
           <main className="flex-1 overflow-y-auto px-6 pb-6 pt-0">
             {outlet}
           </main>
