@@ -39,11 +39,15 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   if (!settings?.clinic_summary_emails_enabled) return;
 
   const tz = settings.timezone ?? "America/Los_Angeles";
+  const sendTime = settings.clinic_summary_emails_time ?? "08:00";
 
-  // Only run during the 8am hour in org timezone
+  // Only fire within the 5-minute window after the configured send time
   const nowStr = new Date().toLocaleString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
-  const currentHour = parseInt(nowStr.split(":")[0], 10);
-  if (currentHour !== 8) return;
+  const [nowHH, nowMM] = nowStr.split(":").map(Number);
+  const [sendHH, sendMM] = sendTime.split(":").map(Number);
+  const nowMinutes = nowHH * 60 + nowMM;
+  const sendMinutes = sendHH * 60 + sendMM;
+  if (nowMinutes < sendMinutes || nowMinutes >= sendMinutes + 60) return;
 
   // Today's date string in org timezone
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });

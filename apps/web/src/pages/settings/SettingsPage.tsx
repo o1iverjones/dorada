@@ -752,6 +752,7 @@ export function SettingsPage() {
               <Label>{t("settings.clinic_confirmation_time")}</Label>
               <Input
                 type="time"
+                step="300"
                 className="max-w-xs"
                 value={((settings as Record<string, unknown>)?.clinic_confirmation_time as string) ?? "08:00"}
                 onChange={(e) => update.mutate({ clinic_confirmation_time: e.target.value })}
@@ -786,6 +787,17 @@ export function SettingsPage() {
                   (settings as Record<string, unknown>)?.clinic_summary_emails_enabled ? "translate-x-6" : "translate-x-1"
                 }`} />
               </button>
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.clinic_summary_emails_time")}</Label>
+              <Input
+                type="time"
+                step="300"
+                className="max-w-xs"
+                value={((settings as Record<string, unknown>)?.clinic_summary_emails_time as string) ?? "08:00"}
+                onChange={(e) => update.mutate({ clinic_summary_emails_time: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">{t("settings.clinic_confirmation_time_hint")}</p>
             </div>
           </CardContent>
         </Card>

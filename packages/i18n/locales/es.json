@@ -867,6 +867,7 @@
     "clinic_summary_emails": "Correos de resumen de citas de clínica",
     "clinic_summary_emails_description": "Envía un correo de resumen semanal a cada clínica con sus próximas citas.",
     "clinic_summary_emails_enabled": "Activar correos de resumen de clínica",
+    "clinic_summary_emails_time": "Hora de envío diario",
     "clinic_summary_emails_per_clinic": "Correos de resumen de citas",
     "clinic_summary_emails_days_label": "Enviar los",
     "clinic_summary_emails_days_hint": "Los correos se envían a las 8:00 AM en la zona horaria de tu organización los días seleccionados.",

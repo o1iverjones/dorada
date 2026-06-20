@@ -786,6 +786,7 @@ model SystemSettings {
   clinic_confirmation_time            String   @default("08:00")
   clinic_confirmation_last_sent_date  String?
   clinic_summary_emails_enabled       Boolean  @default(false)
+  clinic_summary_emails_time          String   @default("08:00")
   updated_at                          DateTime @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])

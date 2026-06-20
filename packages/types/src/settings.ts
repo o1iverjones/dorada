@@ -33,6 +33,7 @@ export const SystemSettingsSchema = z.object({
   clinic_confirmation_enabled: z.boolean(),
   clinic_confirmation_time: z.string(),
   clinic_summary_emails_enabled: z.boolean(),
+  clinic_summary_emails_time: z.string(),
 });
 
 export const UpdateSystemSettingsBodySchema = z.object({
@@ -52,6 +53,7 @@ export const UpdateSystemSettingsBodySchema = z.object({
   clinic_confirmation_enabled: z.boolean().optional(),
   clinic_confirmation_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   clinic_summary_emails_enabled: z.boolean().optional(),
+  clinic_summary_emails_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 });
 
 export const CreateAppointmentTypeBodySchema = z.object({
