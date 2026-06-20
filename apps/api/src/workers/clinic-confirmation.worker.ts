@@ -137,7 +137,7 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
 function buildConfirmationEmail(
   clinicName: string,
   dateLabel: string,
-  appts: Array<{ date_time: Date; patient: { name: string } | null; language: string; interpreter_type_required: string; interpreter: { name: string } | null }>,
+  appts: Array<{ date_time: Date; patient: { name: string } | null; language: string; interpreter_type_required: string; referring_physician: string | null; interpreter: { name: string } | null }>,
   confirmUrl: string,
   tz: string,
   orgName: string | null,
@@ -149,6 +149,7 @@ function buildConfirmationEmail(
     const patient = a.patient?.name ?? "—";
     const language = a.language;
     const interpreterType = a.interpreter_type_required ?? "—";
+    const provider = a.referring_physician ?? "—";
     const interpreter = a.interpreter?.name ?? "TBD";
     return `
       <tr style="border-bottom:1px solid #e4e4e7;">
@@ -156,13 +157,14 @@ function buildConfirmationEmail(
         <td style="padding:10px 12px;font-size:14px;color:#18181b;">${patient}</td>
         <td style="padding:10px 12px;font-size:14px;color:#52525b;">${language}</td>
         <td style="padding:10px 12px;font-size:14px;color:#52525b;">${interpreterType}</td>
+        <td style="padding:10px 12px;font-size:14px;color:#52525b;">${provider}</td>
         <td style="padding:10px 12px;font-size:14px;color:#52525b;">${interpreter}</td>
       </tr>`;
   }).join("");
 
   const textRows = appts.map((a) => {
     const time = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
-    return `  ${time} | ${a.patient?.name ?? "—"} | ${a.language} | ${a.interpreter_type_required} | ${a.interpreter?.name ?? "TBD"}`;
+    return `  ${time} | ${a.patient?.name ?? "—"} | ${a.language} | ${a.interpreter_type_required} | ${a.referring_physician ?? "—"} | ${a.interpreter?.name ?? "TBD"}`;
   }).join("\n");
 
   const html = `
@@ -197,6 +199,7 @@ function buildConfirmationEmail(
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Patient</th>
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Language</th>
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Type</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Provider</th>
                     <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.4px;">Interpreter</th>
                   </tr>
                 </thead>
