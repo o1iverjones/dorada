@@ -60,7 +60,9 @@ export const CreateAgencyBodySchema = z.object({
   email_intake: EmailIntakeConfigSchema.optional(),
 });
 
-export const UpdateAgencyBodySchema = CreateAgencyBodySchema.partial();
+export const UpdateAgencyBodySchema = CreateAgencyBodySchema.partial().extend({
+  is_active: z.boolean().optional(),
+});
 
 export const AgencyListQuerySchema = z.object({
   search: z.string().optional(),

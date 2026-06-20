@@ -33,6 +33,7 @@ model Organization {
   activity_logs          ActivityLog[]
   appointment_notes    AppointmentNote[]
   clinic_notes         ClinicNote[]
+  agency_notes         AgencyNote[]
   appointment_types    AppointmentType[]
   languages            OrganizationLanguage[]
   locale_strings       LocaleString[]
@@ -316,6 +317,7 @@ model Agency {
   appointments Appointment[]
   email_logs   EmailIntakeLog[]
   claims       Claim[]
+  admin_notes  AgencyNote[]
 
   @@map("agencies")
 }
@@ -550,6 +552,22 @@ model ClinicNote {
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@map("clinic_notes")
+}
+
+model AgencyNote {
+  id              String   @id @default(uuid())
+  agency_id       String
+  organization_id String
+  content         String   @db.VarChar(800)
+  image_url       String?
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  agency       Agency       @relation(fields: [agency_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("agency_notes")
 }
 
 model ClinicInterpreterNote {

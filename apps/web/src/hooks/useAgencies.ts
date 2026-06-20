@@ -35,3 +35,30 @@ export function useUpdateAgency(id: string) {
     },
   });
 }
+
+export function useAgencyNotes(id: string) {
+  return useQuery({
+    queryKey: ["agencies", id, "notes"],
+    queryFn: () => api.get<unknown[]>(`/agencies/${id}/admin-notes`),
+    enabled: !!id,
+  });
+}
+
+export function useAddAgencyNote(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ content, image_url }: { content: string; image_url?: string | null }) =>
+      api.post(`/agencies/${id}/admin-notes`, { content, image_url }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agencies", id, "notes"] }),
+  });
+}
+
+export function useUploadAgencyNoteImage(id: string) {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return api.uploadFile<{ url: string }>(`/agencies/${id}/note-image`, fd);
+    },
+  });
+}

@@ -62,7 +62,7 @@ export function reportPath(reportJobId: string, format: "pdf" | "csv"): string {
   return `dorada/reports/${reportJobId}/report.${format}`;
 }
 
-export function noteImagePath(entityType: "appointment" | "clinic", entityId: string, filename: string): string {
+export function noteImagePath(entityType: "appointment" | "clinic" | "agency", entityId: string, filename: string): string {
   return `dorada/notes/${entityType}/${entityId}/${filename}`;
 }
 
