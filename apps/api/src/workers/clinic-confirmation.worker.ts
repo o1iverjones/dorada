@@ -118,7 +118,7 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
     const token = createClinicConfirmationToken(organizationId, clinicId, tomorrowStr, config.JWT_SECRET);
     const confirmUrl = `${config.APP_URL.replace(/app\./, "api.").replace(/\/$/, "")}/api/v1/clinic-confirmation/confirm?token=${encodeURIComponent(token)}`;
 
-    const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl);
+    const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl, tz);
     await sendEmail({ to: clinic.primary_contact_email, ...email });
     emailsSent++;
   }
@@ -152,11 +152,12 @@ function buildConfirmationEmail(
   dateLabel: string,
   appts: Array<{ date_time: Date; patient: { name: string } | null; language: string; interpreter_type_required: string; interpreter: { name: string } | null }>,
   confirmUrl: string,
+  tz: string,
 ): { subject: string; html: string; text: string } {
   const subject = `Appointment confirmation for ${dateLabel} — ${clinicName}`;
 
   const rows = appts.map((a) => {
-    const time = a.date_time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    const time = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
     const patient = a.patient?.name ?? "—";
     const language = a.language;
     const interpreterType = a.interpreter_type_required ?? "—";
@@ -172,7 +173,7 @@ function buildConfirmationEmail(
   }).join("");
 
   const textRows = appts.map((a) => {
-    const time = a.date_time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    const time = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
     return `  ${time} | ${a.patient?.name ?? "—"} | ${a.language} | ${a.interpreter_type_required} | ${a.interpreter?.name ?? "TBD"}`;
   }).join("\n");
 
