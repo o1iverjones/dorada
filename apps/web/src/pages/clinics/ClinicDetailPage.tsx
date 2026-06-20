@@ -297,38 +297,42 @@ export function ClinicDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.name")}</p>
-                  <p className="font-medium">{clinic.name as string ?? "—"}</p>
+              <div className="grid gap-6 text-sm sm:grid-cols-2">
+                {/* Left: address */}
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.address")}</p>
+                    <p className="font-medium">{clinic.address as string ?? "—"}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-1">
+                      <p className="text-muted-foreground">{t("clinics.city")}</p>
+                      <p className="font-medium">{clinic.city as string ?? "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t("clinics.state")}</p>
+                      <p className="font-medium">{clinic.state as string ?? "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{t("clinics.zip_code")}</p>
+                      <p className="font-medium">{clinic.zip_code as string ?? "—"}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.address")}</p>
-                  <p className="font-medium">{clinic.address as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.city")}</p>
-                  <p className="font-medium">{clinic.city as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.state")}</p>
-                  <p className="font-medium">{clinic.state as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.zip_code")}</p>
-                  <p className="font-medium">{clinic.zip_code as string ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.phone")}</p>
-                  <p className="font-medium"><PhoneLink phone={clinic.phone as string} /></p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.primary_contact_name")}</p>
-                  <p className="font-medium">{contact?.name ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">{t("clinics.primary_contact_email")}</p>
-                  <p className="font-medium">{contact?.email ?? "—"}</p>
+                {/* Right: contact */}
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.primary_contact_name")}</p>
+                    <p className="font-medium">{contact?.name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.phone")}</p>
+                    <p className="font-medium"><PhoneLink phone={clinic.phone as string} /></p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">{t("clinics.primary_contact_email")}</p>
+                    <p className="font-medium">{contact?.email ?? "—"}</p>
+                  </div>
                 </div>
               </div>
             )}
