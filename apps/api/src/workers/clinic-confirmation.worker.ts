@@ -43,9 +43,10 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   const tz = settings.timezone ?? "America/Los_Angeles";
   const sendTime = settings.clinic_confirmation_time ?? "08:00"; // "HH:MM"
 
-  // Current time in org timezone as "HH:MM"
-  const nowInTz = new Date().toLocaleString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
-  const [nowHH, nowMM] = nowInTz.split(":").map(Number);
+  // Current time in org timezone
+  const nowParts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+  const nowHH = parseInt(nowParts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const nowMM = parseInt(nowParts.find((p) => p.type === "minute")?.value ?? "0", 10);
   const [sendHH, sendMM] = sendTime.split(":").map(Number);
 
   // Only fire within the 5-minute window after the configured send time
@@ -57,12 +58,6 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
   if (settings.clinic_confirmation_last_sent_date === todayStr) return; // already sent today
 
-  // Mark sent before sending to prevent double-send on concurrent workers
-  await prisma.systemSettings.update({
-    where: { organization_id: organizationId },
-    data: { clinic_confirmation_last_sent_date: todayStr },
-  });
-
   // Tomorrow's date in org timezone
   const tomorrowDate = new Date();
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
@@ -70,7 +65,7 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   const tomorrowLabel = tomorrowDate.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   // Find all appointments tomorrow, grouped by clinic
-  const [tomorrowStart, tomorrowEnd] = dateBoundsUtc(tomorrowStr);
+  const [tomorrowStart, tomorrowEnd] = dateBoundsInTz(tomorrowStr, tz);
 
   const appointments = await prisma.appointment.findMany({
     where: {
@@ -94,6 +89,7 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
     byClinic.get(clinicId)!.push(appt);
   }
 
+  let emailsSent = 0;
   for (const [clinicId, appts] of byClinic) {
     const clinic = appts[0].clinic;
     if (!clinic?.primary_contact_email) continue;
@@ -103,11 +99,32 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
 
     const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl);
     await sendEmail({ to: clinic.primary_contact_email, ...email });
+    emailsSent++;
+  }
+
+  // Only stamp the sent date if we actually sent something, so changing the send time
+  // later in the day still works if there was nothing to send at the earlier time.
+  if (emailsSent > 0) {
+    await prisma.systemSettings.update({
+      where: { organization_id: organizationId },
+      data: { clinic_confirmation_last_sent_date: todayStr },
+    });
   }
 }
 
-function dateBoundsUtc(dateStr: string): [Date, Date] {
-  return [new Date(`${dateStr}T00:00:00.000Z`), new Date(`${dateStr}T23:59:59.999Z`)];
+/** Returns [startUtc, endUtc] spanning midnight-to-midnight for dateStr in the given timezone. */
+function dateBoundsInTz(dateStr: string, tz: string): [Date, Date] {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  // Use noon UTC as a reference to find the UTC offset at that date (avoids DST edge cases at midnight)
+  const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(noonUtc);
+  const localH = parseInt(parts.find((p) => p.type === "hour")?.value ?? "12", 10);
+  const localM = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+  // UTC offset in minutes (positive = timezone is behind UTC, e.g. PST = +480)
+  const offsetMinutes = 12 * 60 - (localH * 60 + localM);
+  const startUtc = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) + offsetMinutes * 60 * 1000);
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+  return [startUtc, endUtc];
 }
 
 function buildConfirmationEmail(

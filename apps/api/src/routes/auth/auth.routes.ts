@@ -97,6 +97,16 @@ export default async function authRoutes(fastify: FastifyInstance) {
       await adminAlertQueue.add("stale-billing-check", {});
       return reply.send({ triggered: true });
     });
+
+    // POST /auth/dev/trigger-clinic-confirmations — resets last_sent_date and immediately runs the check
+    fastify.post("/dev/trigger-clinic-confirmations", async (_request, reply) => {
+      await fastify.prisma.systemSettings.updateMany({
+        data: { clinic_confirmation_last_sent_date: null },
+      });
+      const { clinicConfirmationQueue } = await import("../../workers/clinic-confirmation.worker.js");
+      await clinicConfirmationQueue.add("poll-now", {});
+      return reply.send({ triggered: true, note: "last_sent_date reset for all orgs" });
+    });
     fastify.get("/dev/otp/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };
       const normalized = phone.replace(/\D/g, "");

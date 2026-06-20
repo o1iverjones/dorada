@@ -41,9 +41,10 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   const tz = settings.timezone ?? "America/Los_Angeles";
   const sendTime = settings.clinic_summary_emails_time ?? "08:00";
 
-  // Only fire within the 5-minute window after the configured send time
-  const nowStr = new Date().toLocaleString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
-  const [nowHH, nowMM] = nowStr.split(":").map(Number);
+  // Only fire within the 60-minute window after the configured send time
+  const nowParts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+  const nowHH = parseInt(nowParts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const nowMM = parseInt(nowParts.find((p) => p.type === "minute")?.value ?? "0", 10);
   const [sendHH, sendMM] = sendTime.split(":").map(Number);
   const nowMinutes = nowHH * 60 + nowMM;
   const sendMinutes = sendHH * 60 + sendMM;
@@ -92,8 +93,8 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   weekLater.setDate(weekLater.getDate() + 6);
   const weekLaterStr = weekLater.toLocaleDateString("en-CA", { timeZone: tz });
 
-  const [windowStart] = dateBoundsUtc(tomorrowStr);
-  const [, windowEnd] = dateBoundsUtc(weekLaterStr);
+  const [windowStart] = dateBoundsInTz(tomorrowStr, tz);
+  const [, windowEnd] = dateBoundsInTz(weekLaterStr, tz);
 
   for (const clinic of eligibleClinics) {
     const appointments = await prisma.appointment.findMany({
@@ -124,8 +125,16 @@ async function maybeSendForOrg(organizationId: string, prisma: PrismaClient) {
   }
 }
 
-function dateBoundsUtc(dateStr: string): [Date, Date] {
-  return [new Date(`${dateStr}T00:00:00.000Z`), new Date(`${dateStr}T23:59:59.999Z`)];
+function dateBoundsInTz(dateStr: string, tz: string): [Date, Date] {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(noonUtc);
+  const localH = parseInt(parts.find((p) => p.type === "hour")?.value ?? "12", 10);
+  const localM = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+  const offsetMinutes = 12 * 60 - (localH * 60 + localM);
+  const startUtc = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) + offsetMinutes * 60 * 1000);
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+  return [startUtc, endUtc];
 }
 
 function buildWeekLabel(fromStr: string, toStr: string, tz: string): string {
