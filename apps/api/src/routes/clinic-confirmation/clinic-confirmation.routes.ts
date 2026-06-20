@@ -79,7 +79,7 @@ export default async function clinicConfirmationRoutes(fastify: FastifyInstance)
       }));
     }
 
-    const { orgId, clinicId, date } = parsed;
+    const { orgId, clinicId, startDate, endDate } = parsed;
 
     // Load org settings (contact info, name, timezone)
     const settings = await fastify.prisma.systemSettings.findUnique({
@@ -91,15 +91,15 @@ export default async function clinicConfirmationRoutes(fastify: FastifyInstance)
     const orgName = settings?.organization_name ?? null;
     const tz = settings?.timezone ?? "America/Los_Angeles";
 
-    // Use timezone-aware bounds so we catch all appointments on this date
-    const [dayStart, dayEnd] = dateBoundsInTz(date, tz);
+    const [queryStart] = dateBoundsInTz(startDate, tz);
+    const [, queryEnd] = dateBoundsInTz(endDate, tz);
 
     // Check if already confirmed
     const alreadyConfirmed = await fastify.prisma.appointment.count({
       where: {
         organization_id: orgId,
         clinic_id: clinicId,
-        date_time: { gte: dayStart, lte: dayEnd },
+        date_time: { gte: queryStart, lte: queryEnd },
         status: { notIn: ["cancelled"] },
         clinic_confirmed: true,
       },
@@ -120,13 +120,13 @@ export default async function clinicConfirmationRoutes(fastify: FastifyInstance)
       where: {
         organization_id: orgId,
         clinic_id: clinicId,
-        date_time: { gte: dayStart, lte: dayEnd },
+        date_time: { gte: queryStart, lte: queryEnd },
         status: { notIn: ["cancelled"] },
       },
       data: { clinic_confirmed: true },
     });
 
-    fastify.log.info({ orgId, clinicId, date, updated: result.count }, "Clinic confirmed appointments");
+    fastify.log.info({ orgId, clinicId, startDate, endDate, updated: result.count }, "Clinic confirmed appointments");
 
     return reply.type("text/html").send(page({
       icon: "✅",

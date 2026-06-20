@@ -80,14 +80,27 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
   const tz = settings.timezone ?? "America/Los_Angeles";
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
-  // Tomorrow's date in org timezone
-  const tomorrowDate = new Date();
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrowStr = tomorrowDate.toLocaleDateString("en-CA", { timeZone: tz });
-  const tomorrowLabel = tomorrowDate.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  // Determine the date window — Friday expands to cover Sat/Sun/Mon
+  const todayDow = new Date().toLocaleDateString("en-US", { timeZone: tz, weekday: "long" });
+  const isFriday = todayDow === "Friday";
 
-  // Find all appointments tomorrow, grouped by clinic
-  const [tomorrowStart, tomorrowEnd] = dateBoundsInTz(tomorrowStr, tz);
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() + 1); // always tomorrow (Saturday on Friday)
+
+  const endDate = new Date(startDate);
+  if (isFriday) endDate.setDate(endDate.getDate() + 2); // Saturday + 2 = Monday
+
+  const startDateStr = startDate.toLocaleDateString("en-CA", { timeZone: tz });
+  const endDateStr = endDate.toLocaleDateString("en-CA", { timeZone: tz });
+
+  const fmtFull = (d: Date) => d.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const fmtShort = (d: Date) => d.toLocaleDateString("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric" });
+  const dateRangeLabel = isFriday
+    ? `${fmtFull(startDate)} – ${fmtFull(endDate)}`
+    : fmtFull(startDate);
+
+  const [queryStart] = dateBoundsInTz(startDateStr, tz);
+  const [, queryEnd] = dateBoundsInTz(endDateStr, tz);
 
   const orgLanguages = await prisma.organizationLanguage.findMany({
     where: { organization_id: organizationId },
@@ -98,7 +111,7 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
   const appointments = await prisma.appointment.findMany({
     where: {
       organization_id: organizationId,
-      date_time: { gte: tomorrowStart, lte: tomorrowEnd },
+      date_time: { gte: queryStart, lte: queryEnd },
       status: { notIn: ["cancelled"] },
     },
     include: {
@@ -122,11 +135,11 @@ async function sendForOrg(organizationId: string, prisma: PrismaClient) {
     const clinic = appts[0].clinic;
     if (!clinic?.primary_contact_email) continue;
 
-    const token = createClinicConfirmationToken(organizationId, clinicId, tomorrowStr, config.JWT_SECRET);
+    const token = createClinicConfirmationToken(organizationId, clinicId, startDateStr, endDateStr, config.JWT_SECRET);
     const apiBase = (config.API_URL ?? config.APP_URL.replace(/app\./, "api.")).replace(/\/$/, "");
     const confirmUrl = `${apiBase}/api/v1/clinic-confirmation/confirm?token=${encodeURIComponent(token)}`;
 
-    const email = buildConfirmationEmail(clinic.name, tomorrowLabel, appts, confirmUrl, tz, settings.organization_name ?? null, languageNames);
+    const email = buildConfirmationEmail(clinic.name, dateRangeLabel, appts, confirmUrl, tz, settings.organization_name ?? null, languageNames, isFriday, fmtShort);
     await sendEmail({ to: clinic.primary_contact_email, ...email });
     emailsSent++;
   }
@@ -148,18 +161,21 @@ function buildConfirmationEmail(
   tz: string,
   orgName: string | null,
   languageNames: Map<string, string>,
+  multiDay: boolean,
+  fmtShort: (d: Date) => string,
 ): { subject: string; html: string; text: string } {
   const subject = `Appointment confirmation for ${dateLabel} — ${clinicName}`;
 
   const rows = appts.map((a) => {
-    const time = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
+    const timeStr = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
+    const timeCell = multiDay ? `${fmtShort(a.date_time)}, ${timeStr}` : timeStr;
     const patient = a.patient?.name ?? "—";
     const language = languageNames.get(a.language) ?? a.language;
     const provider = a.referring_physician ?? "—";
     const interpreter = a.interpreter?.name ?? "TBD";
     return `
       <tr style="border-bottom:1px solid #e4e4e7;">
-        <td style="padding:10px 12px;font-size:14px;color:#18181b;">${time}</td>
+        <td style="padding:10px 12px;font-size:14px;color:#18181b;white-space:nowrap;">${timeCell}</td>
         <td style="padding:10px 12px;font-size:14px;color:#18181b;">${patient}</td>
         <td style="padding:10px 12px;font-size:14px;color:#52525b;">${language}</td>
         <td style="padding:10px 12px;font-size:14px;color:#52525b;min-width:160px;">${provider}</td>
@@ -168,9 +184,10 @@ function buildConfirmationEmail(
   }).join("");
 
   const textRows = appts.map((a) => {
-    const time = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
+    const timeStr = a.date_time.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
+    const timeCell = multiDay ? `${fmtShort(a.date_time)}, ${timeStr}` : timeStr;
     const language = languageNames.get(a.language) ?? a.language;
-    return `  ${time} | ${a.patient?.name ?? "—"} | ${language} | ${a.referring_physician ?? "—"} | ${a.interpreter?.name ?? "TBD"}`;
+    return `  ${timeCell} | ${a.patient?.name ?? "—"} | ${language} | ${a.referring_physician ?? "—"} | ${a.interpreter?.name ?? "TBD"}`;
   }).join("\n");
 
   const html = `
@@ -196,7 +213,9 @@ function buildConfirmationEmail(
               <h2 style="margin:0 0 6px;color:#18181b;font-size:18px;font-weight:600;">Appointment Confirmation</h2>
               <p style="margin:0 0 20px;color:#52525b;font-size:14px;">${clinicName} &mdash; ${dateLabel}</p>
               <p style="margin:0 0 20px;color:#52525b;font-size:15px;line-height:1.6;">
-                Please review the following appointments scheduled for tomorrow at your clinic:
+                ${multiDay
+                  ? "Please review the following appointments scheduled at your clinic for this weekend and Monday:"
+                  : "Please review the following appointments scheduled for tomorrow at your clinic:"}
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;margin-bottom:28px;">
                 <thead>
