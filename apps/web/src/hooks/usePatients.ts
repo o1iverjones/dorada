@@ -36,41 +36,6 @@ export function useUpdatePatient(id: string) {
   });
 }
 
-export function usePatientActivity(id: string) {
-  return useQuery({
-    queryKey: ["patients", id, "activity"],
-    queryFn: () => api.get<unknown[]>(`/patients/${id}/activity`),
-    enabled: !!id,
-  });
-}
-
-export function usePatientNotes(id: string) {
-  return useQuery({
-    queryKey: ["patients", id, "notes"],
-    queryFn: () => api.get<unknown[]>(`/patients/${id}/admin-notes`),
-    enabled: !!id,
-  });
-}
-
-export function useAddPatientNote(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ content, image_url }: { content: string; image_url?: string | null }) =>
-      api.post(`/patients/${id}/admin-notes`, { content, image_url }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["patients", id, "notes"] }),
-  });
-}
-
-export function useUploadPatientNoteImage(id: string) {
-  return useMutation({
-    mutationFn: (file: File) => {
-      const fd = new FormData();
-      fd.append("file", file);
-      return api.uploadFile<{ url: string }>(`/patients/${id}/note-image`, fd);
-    },
-  });
-}
-
 // ─── Claims ───────────────────────────────────────────────────────────────────
 
 export function useCreateClaim(patientId: string) {

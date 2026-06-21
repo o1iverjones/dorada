@@ -830,6 +830,26 @@
     "system": "System role",
     "created": "Role created."
   },
+  "status": {
+    "title": "Status",
+    "active_description": "Active — appears in lists and assignment searches.",
+    "inactive_description": "Deactivated — hidden from lists and assignment searches. Existing records are preserved.",
+    "deactivate_label": "Deactivate {{entity}}",
+    "reactivate_label": "Reactivate {{entity}}",
+    "deactivate_confirm_title": "Deactivate {{entity}}?",
+    "deactivate_confirm_body": "{{entity}} will be hidden from active lists and assignment searches. Existing records are preserved and can be restored by reactivating.",
+    "deactivate_confirm_button": "Deactivate",
+    "deactivate_blocked": "Cannot deactivate — there are upcoming accepted appointments.",
+    "reactivate_confirm_title": "Reactivate {{entity}}?",
+    "reactivate_confirm_body": "{{entity}} will become active and appear in lists and searches again.",
+    "reactivate_confirm_button": "Reactivate",
+    "deactivated_toast": "{{entity}} deactivated.",
+    "reactivated_toast": "{{entity}} reactivated.",
+    "entity_clinic": "Clinic",
+    "entity_agency": "Agency",
+    "entity_insurance_company": "Insurance company",
+    "entity_interpreter": "Interpreter"
+  },
   "settings": {
     "title": "System settings",
     "super_admin_options": "Super Admin options",

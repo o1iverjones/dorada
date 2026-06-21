@@ -36,45 +36,6 @@ export function useUpdateClinic(id: string) {
   });
 }
 
-export function useClinicActivity(id: string) {
-  return useQuery({
-    queryKey: ["clinics", id, "activity"],
-    queryFn: () => api.get<unknown[]>(`/clinics/${id}/activity`),
-    enabled: !!id,
-  });
-}
-
-export function useClinicNotes(id: string) {
-  return useQuery({
-    queryKey: ["clinics", id, "notes"],
-    queryFn: () => api.get<unknown[]>(`/clinics/${id}/admin-notes`),
-    enabled: !!id,
-  });
-}
-
-export function useAddClinicNote(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ content, image_url }: { content: string; image_url?: string | null }) =>
-      api.post(`/clinics/${id}/admin-notes`, { content, image_url }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["clinics", id, "notes"] });
-      qc.invalidateQueries({ queryKey: ["clinics", id, "activity"] });
-      qc.invalidateQueries({ queryKey: ["activity-log"] });
-    },
-  });
-}
-
-export function useUploadClinicNoteImage(id: string) {
-  return useMutation({
-    mutationFn: (file: File) => {
-      const fd = new FormData();
-      fd.append("file", file);
-      return api.uploadFile<{ url: string }>(`/clinics/${id}/note-image`, fd);
-    },
-  });
-}
-
 export function useSetClinicInterpreterBlocks(id: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -830,6 +830,26 @@
     "system": "Rol del sistema",
     "created": "Rol creado."
   },
+  "status": {
+    "title": "Estado",
+    "active_description": "Activo — aparece en listas y búsquedas de asignación.",
+    "inactive_description": "Desactivado — oculto de listas y búsquedas de asignación. Los registros existentes se conservan.",
+    "deactivate_label": "Desactivar {{entity}}",
+    "reactivate_label": "Reactivar {{entity}}",
+    "deactivate_confirm_title": "¿Desactivar {{entity}}?",
+    "deactivate_confirm_body": "{{entity}} se ocultará de las listas activas y las búsquedas de asignación. Los registros existentes se conservan y pueden restaurarse al reactivar.",
+    "deactivate_confirm_button": "Desactivar",
+    "deactivate_blocked": "No se puede desactivar — hay citas aceptadas próximas.",
+    "reactivate_confirm_title": "¿Reactivar {{entity}}?",
+    "reactivate_confirm_body": "{{entity}} se activará y volverá a aparecer en listas y búsquedas.",
+    "reactivate_confirm_button": "Reactivar",
+    "deactivated_toast": "{{entity}} desactivado.",
+    "reactivated_toast": "{{entity}} reactivado.",
+    "entity_clinic": "Clínica",
+    "entity_agency": "Agencia",
+    "entity_insurance_company": "Aseguradora",
+    "entity_interpreter": "Intérprete"
+  },
   "settings": {
     "title": "Configuración del sistema",
     "super_admin_options": "Opciones de Super Admin",
