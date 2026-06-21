@@ -100,8 +100,56 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
     const { id } = req.params as { id: string };
     const body = UpdateInterpreterBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
+    const before = await fastify.prisma.interpreter.findUnique({ where: { id } });
     const interpreter = await updateInterpreter(id, body, payload.organization_id, fastify.prisma);
-    await writeActivityLog(fastify.prisma, { organizationId: payload.organization_id, entityType: "interpreter", entityId: id, entityName: interpreter.name, action: "updated", adminId: payload.sub, adminName: payload.name ?? "Admin" });
+
+    // Build a human-readable summary of which sections changed (matches the
+    // clinic/agency convention: action "updated" + detail = changed labels).
+    const norm = (v: unknown) => (v == null || v === "" ? null : v);
+    const num = (v: unknown) => (v == null ? null : Number(v));
+    const changed = new Set<string>();
+    if (body.name !== undefined && body.name !== before?.name) changed.add("Name");
+    if (body.phone !== undefined && body.phone !== before?.phone) changed.add("Phone");
+    if (body.email !== undefined && norm(body.email) !== norm(before?.email)) changed.add("Email");
+    if (body.type !== undefined && body.type !== before?.type) changed.add("Type");
+    if (
+      (body.pay_rate !== undefined && num(body.pay_rate) !== num(before?.pay_rate)) ||
+      (body.pay_rate_certified !== undefined && num(body.pay_rate_certified) !== num(before?.pay_rate_certified)) ||
+      (body.payment_method !== undefined && norm(body.payment_method) !== norm(before?.payment_method))
+    ) changed.add("Compensation");
+    if (
+      (body.address_line1 !== undefined && norm(body.address_line1) !== norm(before?.address_line1)) ||
+      (body.address_line2 !== undefined && norm(body.address_line2) !== norm(before?.address_line2)) ||
+      (body.city !== undefined && norm(body.city) !== norm(before?.city)) ||
+      (body.state !== undefined && norm(body.state) !== norm(before?.state)) ||
+      (body.zip_code !== undefined && norm(body.zip_code) !== norm(before?.zip_code))
+    ) changed.add("Address");
+    if (
+      body.emergency_contact !== undefined &&
+      (norm(body.emergency_contact?.name) !== norm(before?.emergency_contact_name) ||
+        norm(body.emergency_contact?.phone) !== norm(before?.emergency_contact_phone))
+    ) changed.add("Emergency contact");
+    if (
+      (body.certificate_number !== undefined && norm(body.certificate_number) !== norm(before?.certificate_number)) ||
+      (body.certificate_date !== undefined &&
+        norm(body.certificate_date) !== norm(before?.certificate_date ? before.certificate_date.toISOString().slice(0, 10) : null))
+    ) changed.add("Certification");
+    if (
+      body.preferred_cities !== undefined &&
+      JSON.stringify([...body.preferred_cities].sort()) !== JSON.stringify([...(before?.preferred_cities ?? [])].sort())
+    ) changed.add("Coverage area");
+    if (body.notes !== undefined && norm(body.notes) !== norm(before?.notes)) changed.add("Notes");
+
+    await writeActivityLog(fastify.prisma, {
+      organizationId: payload.organization_id,
+      entityType: "interpreter",
+      entityId: id,
+      entityName: interpreter.name,
+      action: "updated",
+      detail: changed.size ? [...changed].join(", ") : null,
+      adminId: payload.sub,
+      adminName: payload.name ?? "Admin",
+    });
     return reply.send(interpreter);
   });
 
