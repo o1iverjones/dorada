@@ -129,7 +129,7 @@ export function DashboardPage() {
           icon={<Clock className="h-5 w-5 text-yellow-500" />}
           label={t("dashboard.pending_offers")}
           value={pendingOffers?.data.length ?? 0}
-          href={`/appointments?status=pending_offer&date_from=${todayStr}`}
+          href="/appointments?status=pending_offer"
         />
         <StatCard
           icon={<AlertTriangle className="h-5 w-5 text-orange-500" />}
