@@ -556,9 +556,9 @@ function StatCard({ icon, label, value, href, permission, highlight }: { icon: R
   const hasPermission = useAuthStore((s) => s.hasPermission);
   if (permission && !hasPermission(permission)) return null;
   const inner = (
-    <Card className={`transition-shadow hover:shadow-md ${highlight ? "border-red-300 bg-red-50" : ""}`}>
-      <CardContent className="flex items-center gap-4 p-6">
-        <div className={`rounded-full p-2 ${highlight ? "bg-red-100" : "bg-muted"}`}>{icon}</div>
+    <Card className={`h-full transition-shadow hover:shadow-md ${highlight ? "border-red-300 bg-red-50" : ""}`}>
+      <CardContent className="flex h-full items-center gap-4 p-6">
+        <div className={`shrink-0 rounded-full p-2 ${highlight ? "bg-red-100" : "bg-muted"}`}>{icon}</div>
         <div>
           <p className={`text-2xl font-bold ${highlight ? "text-red-600" : ""}`}>{value}</p>
           <p className="text-sm text-muted-foreground">{label}</p>
@@ -568,7 +568,7 @@ function StatCard({ icon, label, value, href, permission, highlight }: { icon: R
   );
   // Alerts card scrolls to the panel rather than navigating
   if (href.startsWith("#")) {
-    return <a href={href} onClick={(e) => { e.preventDefault(); document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth" }); }}>{inner}</a>;
+    return <a href={href} className="block h-full" onClick={(e) => { e.preventDefault(); document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth" }); }}>{inner}</a>;
   }
-  return <Link to={href}>{inner}</Link>;
+  return <Link to={href} className="block h-full">{inner}</Link>;
 }
