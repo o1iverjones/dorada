@@ -394,14 +394,17 @@ export async function unassignInterpreter(id: string, organizationId: string, ac
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
 
   if (!appt!.interpreter_id) throw new ConflictError("NO_INTERPRETER", "Appointment has no interpreter assigned");
-  if (!["accepted", "pending_offer", "unassigned"].includes(appt!.status)) {
-    throw new ValidationError("INVALID_STATUS_TRANSITION", "Cannot unassign interpreter from an appointment that is in progress or completed");
-  }
+
+  // Allow unassigning regardless of status (e.g. to swap the interpreter on a
+  // completed/cancelled appointment for billing/records). Terminal statuses are
+  // preserved; everything else reverts to "unassigned".
+  const PRESERVE_STATUS = ["completed", "cancelled"];
+  const newStatus = PRESERVE_STATUS.includes(appt!.status) ? appt!.status : "unassigned";
 
   await prisma.$transaction([
     prisma.appointment.update({
       where: { id },
-      data: { interpreter_id: null, status: "unassigned" },
+      data: { interpreter_id: null, status: newStatus },
     }),
     prisma.appointmentOffer.updateMany({
       where: { appointment_id: id },
