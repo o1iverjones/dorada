@@ -79,6 +79,7 @@ export function NewInterpreterPage() {
       const payload = {
         ...rest,
         emergency_contact: emergency_contact_name ? { name: emergency_contact_name, phone: emergency_contact_phone } : undefined,
+        email: rest.email || undefined,
         address_line1: rest.address_line1 || undefined,
         address_line2: rest.address_line2 || undefined,
         city: rest.city || undefined,
