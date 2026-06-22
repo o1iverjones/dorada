@@ -712,7 +712,9 @@ export function AppointmentDetailPage() {
         </Card>
       )}
 
-      {(a.status === "unassigned" || a.status === "pending_offer" || a.status === "declined" || !(a.interpreter as Record<string, unknown>)?.id) && a.status !== "cancelled" && (
+      {/* Show whenever no interpreter is assigned — any status, including completed/cancelled,
+          so an interpreter can be assigned to an old appointment for billing / records. */}
+      {!(a.interpreter as Record<string, unknown>)?.id && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
