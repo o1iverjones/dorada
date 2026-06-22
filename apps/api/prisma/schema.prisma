@@ -466,6 +466,8 @@ model Appointment {
   id                         String    @id @default(uuid())
   organization_id            String
   status                     String    @default("pending_offer")
+  // Clinic / patient confirmation — unrelated to billing
+  clinic_confirmed           Boolean   @default(false)
   date_time                  DateTime
   duration_minutes           Int
   type_id                    String
@@ -501,7 +503,6 @@ model Appointment {
   billing_retro              Boolean   @default(false)
   billing_payment_status     String    @default("not_paid")
   billing_approval_status    String    @default("pending_approval")
-  clinic_confirmed           Boolean   @default(false)
   created_at                 DateTime  @default(now())
   updated_at                 DateTime  @updatedAt
 

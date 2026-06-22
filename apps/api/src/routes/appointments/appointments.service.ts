@@ -437,7 +437,23 @@ export async function patchBilling(
 
   const updated = await prisma.appointment.update({ where: { id }, data: body });
 
-  // Build a human-readable description of every field that changed
+  // Clinic/patient confirmation is not billing data — log it as its own
+  // activity action rather than lumping it in with "billing updated".
+  if (body.clinic_confirmed !== undefined && body.clinic_confirmed !== appt!.clinic_confirmed) {
+    await logActivity(
+      id,
+      organizationId,
+      "clinic_confirm_changed",
+      actor.name,
+      actor.id,
+      body.clinic_confirmed ? "Confirmed" : "Not confirmed",
+      prisma,
+      appt!.patient?.name ?? null,
+      appt!.po_number,
+    );
+  }
+
+  // Build a human-readable description of every billing field that changed
   const BOOL_LABELS: Record<string, string> = {
     billing_billed:               "Billed",
     billing_invoiced:             "Invoiced",
@@ -445,7 +461,6 @@ export async function patchBilling(
     billing_payment_under_claim:  "Payment Under Claim",
     billing_pending_auth:         "Pending Auth",
     billing_retro:                "Retro",
-    clinic_confirmed:             "Clinic/Patient Confirmed",
   };
   const STATUS_LABELS: Record<string, string> = {
     billing_payment_status:  "Payment",

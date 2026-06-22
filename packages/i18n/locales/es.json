@@ -384,6 +384,7 @@
     "activity_cancelled": "Cita cancelada",
     "activity_offer_sent": "Oferta enviada",
     "activity_note_added": "Nota añadida",
+    "activity_clinic_confirm_changed": "Confirmación de clínica modificada",
     "activity_clock_times_edited": "Horarios de registro editados",
     "activity_interpreter_unassigned": "Intérprete desasignado",
     "activity_manually_accepted": "Intérprete aceptado manualmente",
