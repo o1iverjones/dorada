@@ -437,7 +437,23 @@ export async function patchBilling(
 
   const updated = await prisma.appointment.update({ where: { id }, data: body });
 
-  // Build a human-readable description of every field that changed
+  // Clinic/patient confirmation is not billing data — log it as its own
+  // activity action rather than lumping it in with "billing updated".
+  if (body.clinic_confirmed !== undefined && body.clinic_confirmed !== appt!.clinic_confirmed) {
+    await logActivity(
+      id,
+      organizationId,
+      "clinic_confirm_changed",
+      actor.name,
+      actor.id,
+      body.clinic_confirmed ? "Confirmed" : "Not confirmed",
+      prisma,
+      appt!.patient?.name ?? null,
+      appt!.po_number,
+    );
+  }
+
+  // Build a human-readable description of every billing field that changed
   const BOOL_LABELS: Record<string, string> = {
     billing_billed:               "Billed",
     billing_invoiced:             "Invoiced",
@@ -445,7 +461,6 @@ export async function patchBilling(
     billing_payment_under_claim:  "Payment Under Claim",
     billing_pending_auth:         "Pending Auth",
     billing_retro:                "Retro",
-    clinic_confirmed:             "Clinic/Patient Confirmed",
   };
   const STATUS_LABELS: Record<string, string> = {
     billing_payment_status:  "Payment",
@@ -660,9 +675,6 @@ export async function manualConfirmInterpreter(
   if (!appointment || appointment.organization_id !== organizationId) {
     throw new NotFoundError("APPOINTMENT_NOT_FOUND", "Appointment not found");
   }
-  if (!["pending_offer", "unassigned"].includes(appointment.status)) {
-    throw new ConflictError("INVALID_STATUS", "Appointment is not in pending_offer status");
-  }
   if (appointment.interpreter_id) {
     throw new ConflictError("ALREADY_CONFIRMED", "Appointment already has an interpreter assigned");
   }
@@ -672,10 +684,16 @@ export async function manualConfirmInterpreter(
     throw new NotFoundError("INTERPRETER_NOT_FOUND", "Interpreter not found");
   }
 
+  // An interpreter can be assigned to an appointment in any status (e.g. assigning
+  // to a completed or cancelled appointment for billing / record-keeping). Preserve
+  // terminal / in-progress statuses; only fresh offers advance to "accepted".
+  const PRESERVE_STATUS = ["completed", "cancelled", "in_progress"];
+  const newStatus = PRESERVE_STATUS.includes(appointment.status) ? appointment.status : "accepted";
+
   await prisma.$transaction([
     prisma.appointment.update({
       where: { id: appointmentId },
-      data: { interpreter_id: interpreterId, status: "accepted" },
+      data: { interpreter_id: interpreterId, status: newStatus },
     }),
     prisma.appointmentOffer.updateMany({
       where: { appointment_id: appointmentId, status: "pending" },
@@ -683,7 +701,7 @@ export async function manualConfirmInterpreter(
     }),
   ]);
 
-  return { appointment: { id: appointmentId, status: "accepted" } };
+  return { appointment: { id: appointmentId, status: newStatus } };
 }
 
 export async function declineOffer(

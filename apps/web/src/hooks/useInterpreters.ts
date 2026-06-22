@@ -44,10 +44,3 @@ export function useInterpreterCities() {
   });
 }
 
-export function useDeactivateInterpreter(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.post(`/interpreters/${id}/deactivate`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["interpreters"] }),
-  });
-}

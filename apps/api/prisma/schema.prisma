@@ -36,6 +36,7 @@ model Organization {
   agency_notes               AgencyNote[]
   insurance_company_notes    InsuranceCompanyNote[]
   patient_notes              PatientNote[]
+  interpreter_notes          InterpreterNote[]
   appointment_types          AppointmentType[]
   languages            OrganizationLanguage[]
   locale_strings       LocaleString[]
@@ -194,9 +195,26 @@ model Interpreter {
   invoices            Invoice[]
   appointment_media   AppointmentMedia[]
   preferred_by_patients Patient[]             @relation("PreferredInterpreter")
+  admin_notes         InterpreterNote[]
 
   @@unique([organization_id, phone])
   @@map("interpreters")
+}
+
+model InterpreterNote {
+  id              String   @id @default(uuid())
+  interpreter_id  String
+  organization_id String
+  content         String   @db.VarChar(800)
+  image_url       String?
+  admin_id        String?
+  admin_name      String
+  created_at      DateTime @default(now())
+
+  interpreter  Interpreter  @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("interpreter_notes")
 }
 
 model AvailabilityBlock {
@@ -448,6 +466,8 @@ model Appointment {
   id                         String    @id @default(uuid())
   organization_id            String
   status                     String    @default("pending_offer")
+  // Clinic / patient confirmation — unrelated to billing
+  clinic_confirmed           Boolean   @default(false)
   date_time                  DateTime
   duration_minutes           Int
   type_id                    String
@@ -483,7 +503,6 @@ model Appointment {
   billing_retro              Boolean   @default(false)
   billing_payment_status     String    @default("not_paid")
   billing_approval_status    String    @default("pending_approval")
-  clinic_confirmed           Boolean   @default(false)
   created_at                 DateTime  @default(now())
   updated_at                 DateTime  @updatedAt
 

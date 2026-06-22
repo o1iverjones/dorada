@@ -169,51 +169,6 @@ export async function updateClinic(id: string, body: UpdateClinicBody, organizat
   });
 }
 
-export async function getClinicActivity(id: string, organizationId: string, prisma: PrismaClient) {
-  const clinic = await prisma.clinic.findUnique({ where: { id }, select: { organization_id: true } });
-  ensureTenant(clinic, organizationId);
-  return prisma.activityLog.findMany({
-    where: { entity_type: "clinic", entity_id: id, organization_id: organizationId },
-    orderBy: { created_at: "desc" },
-  });
-}
-
-export async function getClinicNotes(id: string, organizationId: string, prisma: PrismaClient) {
-  const clinic = await prisma.clinic.findUnique({ where: { id }, select: { organization_id: true } });
-  ensureTenant(clinic, organizationId);
-  return prisma.clinicNote.findMany({
-    where: { clinic_id: id },
-    orderBy: { created_at: "desc" },
-  });
-}
-
-export async function addClinicNote(
-  id: string,
-  content: string,
-  organizationId: string,
-  actor: { id: string; name: string },
-  prisma: PrismaClient,
-  imageUrl: string | null = null,
-) {
-  const clinic = await prisma.clinic.findUnique({ where: { id }, select: { organization_id: true, name: true } });
-  ensureTenant(clinic, organizationId);
-  const note = await prisma.clinicNote.create({
-    data: { clinic_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: imageUrl },
-  });
-  await prisma.activityLog.create({
-    data: {
-      organization_id: organizationId,
-      entity_type: "clinic",
-      entity_id: id,
-      entity_name: clinic!.name,
-      action: "note_added",
-      admin_id: actor.id,
-      admin_name: actor.name,
-    },
-  });
-  return note;
-}
-
 export async function setInterpreterBlocks(id: string, interpreterIds: string[], organizationId: string, prisma: PrismaClient) {
   const clinic = await prisma.clinic.findUnique({ where: { id } });
   ensureTenant(clinic, organizationId);

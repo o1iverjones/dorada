@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useInterpreter, useUpdateInterpreter, useDeactivateInterpreter, useInterpreterCities } from "../../hooks/useInterpreters.js";
+import { useInterpreter, useUpdateInterpreter, useInterpreterCities } from "../../hooks/useInterpreters.js";
 import { useShowLanguage } from "../../hooks/useSettings.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { LoadingSpinner } from "../../components/shared/LoadingSpinner.js";
+import { AdminNotesCard } from "../../components/shared/AdminNotesCard.js";
+import { ActivityLogCard } from "../../components/shared/ActivityLogCard.js";
+import { DeactivateCard } from "../../components/shared/DeactivateCard.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card.js";
 import { Badge } from "../../components/ui/badge.js";
 import { Button } from "../../components/ui/button.js";
@@ -22,11 +25,9 @@ import { X } from "lucide-react";
 export function InterpreterDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const showLanguage = useShowLanguage();
   const { data, isLoading } = useInterpreter(id!);
   const update = useUpdateInterpreter(id!);
-  const deactivate = useDeactivateInterpreter(id!);
   const { data: allCities } = useInterpreterCities();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -112,15 +113,6 @@ export function InterpreterDetailPage() {
     }
   }
 
-  async function handleDeactivate() {
-    try {
-      await deactivate.mutateAsync(undefined);
-      toast({ title: t("interpreters.deactivated") });
-      navigate("/interpreters");
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -134,14 +126,7 @@ export function InterpreterDetailPage() {
                 <Button variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
               </>
             ) : (
-              <>
-                <Button variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
-                {interp.is_active && (
-                  <Button variant="destructive" onClick={handleDeactivate} disabled={deactivate.isPending}>
-                    {t("interpreters.deactivate")}
-                  </Button>
-                )}
-              </>
+              <Button variant="outline" onClick={startEdit}>{t("common.edit")}</Button>
             )}
           </div>
         }
@@ -539,6 +524,15 @@ export function InterpreterDetailPage() {
           </Card>
         )}
       </div>
+
+      {/* Admin Notes + Activity Log */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <AdminNotesCard entity="interpreter" id={id!} />
+        <ActivityLogCard entity="interpreter" id={id!} />
+      </div>
+
+      {/* Status */}
+      <DeactivateCard entity="interpreter" id={id!} isActive={interp.is_active as boolean} />
     </div>
   );
 }

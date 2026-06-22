@@ -300,3 +300,9 @@ export async function deleteAvailabilityBlock(
   }
   await prisma.availabilityBlock.delete({ where: { id: blockId } });
 }
+
+export async function reactivateInterpreter(id: string, organizationId: string, prisma: PrismaClient) {
+  const interpreter = await prisma.interpreter.findUnique({ where: { id } });
+  ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
+  await prisma.interpreter.update({ where: { id }, data: { is_active: true } });
+}

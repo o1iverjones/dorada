@@ -160,39 +160,6 @@ export async function updateAgency(id: string, body: UpdateAgencyBody, organizat
   });
 }
 
-export async function getAgencyActivity(id: string, organizationId: string, prisma: PrismaClient) {
-  const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true } });
-  ensureTenant(agency, organizationId);
-  return prisma.activityLog.findMany({
-    where: { entity_type: "agency", entity_id: id, organization_id: organizationId },
-    orderBy: { created_at: "desc" },
-  });
-}
-
-export async function getAgencyNotes(id: string, organizationId: string, prisma: PrismaClient) {
-  const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true } });
-  ensureTenant(agency, organizationId);
-  return prisma.agencyNote.findMany({
-    where: { agency_id: id },
-    orderBy: { created_at: "desc" },
-  });
-}
-
-export async function addAgencyNote(
-  id: string,
-  content: string,
-  organizationId: string,
-  actor: { id: string; name: string },
-  prisma: PrismaClient,
-  imageUrl: string | null = null,
-) {
-  const agency = await prisma.agency.findUnique({ where: { id }, select: { organization_id: true, name: true } });
-  ensureTenant(agency, organizationId);
-  return prisma.agencyNote.create({
-    data: { agency_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: imageUrl },
-  });
-}
-
 export async function deactivateAgency(id: string, organizationId: string, prisma: PrismaClient) {
   const agency = await prisma.agency.findUnique({ where: { id } });
   ensureTenant(agency, organizationId);
