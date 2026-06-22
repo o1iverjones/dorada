@@ -747,7 +747,9 @@ export function AppointmentDetailPage() {
         </Card>
       )}
 
-      {(a.status === "accepted" || a.status === "in_progress" || a.status === "completed") && <Card>
+      {/* Time tracking is available for every appointment (any status, incl.
+          completed/cancelled) so all appointments can be billed / reported. */}
+      <Card>
         <CardHeader>
           <CardTitle>{t("appointments.time_tracking")}</CardTitle>
         </CardHeader>
@@ -906,7 +908,7 @@ export function AppointmentDetailPage() {
             </>
           )}
         </CardContent>
-      </Card>}
+      </Card>
 
       {((mediaData as Array<Record<string, unknown>>) ?? []).length > 0 && (
         <Card>
