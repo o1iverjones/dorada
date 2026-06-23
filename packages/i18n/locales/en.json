@@ -643,6 +643,8 @@
   "agencies": {
     "title": "Agencies",
     "new": "New agency",
+    "show_inactive": "Show deactivated",
+    "deactivated": "Deactivated",
     "name": "Agency name",
     "details": "Agency details",
     "notes": "Notes",
