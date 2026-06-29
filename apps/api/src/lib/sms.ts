@@ -23,6 +23,7 @@ export async function sendSms(to: string, body: string): Promise<void> {
     return;
   }
 
+  console.log(`[SMS] sendSms called to=${to}`);
   const region = config.SINCH_REGION.toUpperCase();
   const url = `https://${region}.conversation.api.sinch.com/v1/projects/${config.SINCH_PROJECT_ID}/messages:send`;
   const credentials = Buffer.from(`${config.SINCH_KEY_ID}:${config.SINCH_KEY_SECRET}`).toString("base64");
