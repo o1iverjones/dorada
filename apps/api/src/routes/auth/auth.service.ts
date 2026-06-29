@@ -43,12 +43,17 @@ export async function requestOtp(
     throw new TooManyRequestsError("OTP_RATE_LIMITED", "Too many OTP requests");
   }
 
-  // Match on the last 10 digits to handle stored phones with or without
-  // country code (e.g. "8312277291" vs "18312277291" vs "831-227-7291")
+  // Normalize stored phone in DB before matching — handles any formatting
+  // (e.g. "(831) 238-8020", "831-238-8020", "+18312388020", bare digits)
   const last10 = normalized.slice(-10);
-  const interpreter = await prisma.interpreter.findFirst({
-    where: { phone: { endsWith: last10 }, is_active: true },
-  });
+  const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
+    SELECT id, name, phone, organization_id, is_active
+    FROM "Interpreter"
+    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
+      AND is_active = true
+    LIMIT 1
+  `;
+  const interpreter = rows[0] ?? null;
   if (!interpreter) return; // silent — prevents enumeration
 
   // Canonical key: digits-only of the interpreter's stored phone
@@ -75,9 +80,14 @@ export async function verifyOtp(
   if (locked) throw new TooManyRequestsError("ACCOUNT_LOCKED", "Account locked. Try again later.");
 
   const last10 = normalized.slice(-10);
-  const interpreter = await prisma.interpreter.findFirst({
-    where: { phone: { endsWith: last10 }, is_active: true },
-  });
+  const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
+    SELECT id, name, phone, organization_id, is_active
+    FROM "Interpreter"
+    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
+      AND is_active = true
+    LIMIT 1
+  `;
+  const interpreter = rows[0] ?? null;
   if (!interpreter) throw new UnauthorizedError("INVALID_CREDENTIALS", "Invalid OTP");
 
   const canonicalPhone = interpreter.phone.replace(/\D/g, "");
