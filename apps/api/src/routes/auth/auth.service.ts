@@ -48,7 +48,7 @@ export async function requestOtp(
   const last10 = normalized.slice(-10);
   const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
     SELECT id, name, phone, organization_id, is_active
-    FROM "Interpreter"
+    FROM "interpreters"
     WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
       AND is_active = true
     LIMIT 1
@@ -82,7 +82,7 @@ export async function verifyOtp(
   const last10 = normalized.slice(-10);
   const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
     SELECT id, name, phone, organization_id, is_active
-    FROM "Interpreter"
+    FROM "interpreters"
     WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
       AND is_active = true
     LIMIT 1
