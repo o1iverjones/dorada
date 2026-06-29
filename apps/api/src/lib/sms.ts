@@ -50,9 +50,11 @@ export async function sendSms(to: string, body: string): Promise<void> {
       }),
     });
 
+    const responseText = await resp.text().catch(() => "");
     if (!resp.ok) {
-      const detail = await resp.text().catch(() => "");
-      logger.error({ status: resp.status, detail, to }, "Sinch SMS send failed");
+      logger.error({ status: resp.status, detail: responseText, to }, "Sinch SMS send failed");
+    } else {
+      logger.info({ status: resp.status, response: responseText, to }, "Sinch SMS sent");
     }
   } catch (err) {
     logger.error({ err, to }, "Sinch SMS send error");
