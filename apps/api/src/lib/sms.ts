@@ -1,44 +1,60 @@
 import { config } from "../config.js";
 import { logger } from "./logger.js";
 
-// Lazily initialised so the server boots even when Twilio credentials aren't set.
-let _client: { messages: { create: (opts: { to: string; from: string; body: string }) => Promise<unknown> } } | null = null;
-
-async function getClient() {
-  if (_client) return _client;
-
-  if (!config.TWILIO_ACCOUNT_SID || !config.TWILIO_AUTH_TOKEN || !config.TWILIO_FROM_NUMBER) {
-    logger.warn("Twilio credentials not configured — SMS sending is disabled");
-    return null;
-  }
-
-  const { default: twilio } = await import("twilio");
-  _client = twilio(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN);
-  return _client;
+function sinchConfigured() {
+  return !!(
+    config.SINCH_PROJECT_ID &&
+    config.SINCH_KEY_ID &&
+    config.SINCH_KEY_SECRET &&
+    config.SINCH_APP_ID &&
+    config.SINCH_FROM_NUMBER
+  );
 }
 
 /**
- * Send an SMS via Twilio.
- * Silently no-ops if Twilio credentials are not configured (dev / staging without creds).
+ * Send an SMS via Sinch Conversation API.
+ * Silently no-ops if Sinch credentials are not configured (dev without creds).
  */
 export async function sendSms(to: string, body: string): Promise<void> {
-  const client = await getClient();
-  if (!client) {
-    // Log the message in dev so OTPs are still accessible without Twilio
+  if (!sinchConfigured()) {
     if (config.NODE_ENV !== "production") {
       logger.warn(`[DEV SMS] to=${to}: ${body}`);
     }
     return;
   }
 
+  const region = config.SINCH_REGION.toUpperCase();
+  const url = `https://${region}.conversation.api.sinch.com/v1/projects/${config.SINCH_PROJECT_ID}/messages:send`;
+  const credentials = Buffer.from(`${config.SINCH_KEY_ID}:${config.SINCH_KEY_SECRET}`).toString("base64");
+
   try {
-    await client.messages.create({
-      to,
-      from: config.TWILIO_FROM_NUMBER!,
-      body,
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${credentials}`,
+      },
+      body: JSON.stringify({
+        app_id: config.SINCH_APP_ID,
+        recipient: {
+          identified_by: {
+            channel_identities: [{ channel: "SMS", identity: to }],
+          },
+        },
+        message: {
+          text_message: { text: body },
+        },
+        channel_properties: {
+          SMS_SENDER: config.SINCH_FROM_NUMBER,
+        },
+      }),
     });
+
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => "");
+      logger.error({ status: resp.status, detail, to }, "Sinch SMS send failed");
+    }
   } catch (err) {
-    // Log but don't throw — a failed SMS shouldn't crash the request
-    logger.error({ err, to }, "Twilio SMS send failed");
+    logger.error({ err, to }, "Sinch SMS send error");
   }
 }
