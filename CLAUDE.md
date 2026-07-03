@@ -13,7 +13,7 @@ This file records decisions, conventions, and infrastructure facts that Claude s
 | **Cache / Queue** | Redis 7 (Railway plugin) | BullMQ + Socket.io adapter |
 | **File storage** | **Cloudflare R2** | S3-compatible; integration at `apps/api/src/integrations/r2.ts`. Env vars: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` |
 | **Transactional email** | **Resend** | `lib/email.ts` is the central helper — do NOT use SendGrid (removed) |
-| **SMS** | Twilio | Interpreter login OTP + follow-up prompts |
+| **SMS** | **Sinch Conversation API** | Interpreter login OTP + follow-up prompts. `apps/api/src/lib/sms.ts` (`sendSms()`, native `fetch`). Switched from Twilio (removed) 2026-07. Env vars: `SINCH_PROJECT_ID`, `SINCH_KEY_ID`, `SINCH_KEY_SECRET`, `SINCH_APP_ID`, `SINCH_FROM_NUMBER`, `SINCH_REGION` (default `US`). Do NOT re-introduce Twilio. |
 | **Push notifications** | **Expo Push Notifications** | Uses `expo-notifications` SDK + Expo's push proxy. No Firebase project needed — Expo manages FCM/APNs routing. Do NOT use Firebase FCM directly. |
 | **AI / extraction** | Anthropic Claude API | Email intake parsing |
 | **Domain registrar** | **Porkbun** | Domain: `dorada.app` |
