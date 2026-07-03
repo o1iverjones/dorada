@@ -1,4 +1,4 @@
-import { randomInt } from "crypto";
+import { randomInt, randomUUID } from "crypto";
 import bcrypt from 'bcryptjs';
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
@@ -14,6 +14,7 @@ import {
 } from "../../lib/errors.js";
 import { config } from "../../config.js";
 import { sendSms } from "../../lib/sms.js";
+import { sendEmail, passwordResetEmail } from "../../lib/email.js";
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
@@ -371,9 +372,12 @@ export async function requestPasswordReset(
   });
   if (!user) return; // silent
 
-  const token = crypto.randomUUID();
+  const token = randomUUID();
   await redis.set(`pwd_reset:${token}`, user.id, "EX", 3600);
-  // TODO: send via SendGrid
+
+  const resetUrl = `${config.APP_URL}/reset-password?token=${token}`;
+  await sendEmail(passwordResetEmail(user.name, user.email, resetUrl));
+
   if (config.NODE_ENV === "development") {
     console.warn(`[DEV] Password reset token for ${email}: ${token}`);
   }
