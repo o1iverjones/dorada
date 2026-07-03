@@ -1060,8 +1060,10 @@ export function AppointmentDetailPage() {
                   toast({ title: t("appointments.interpreter_unassigned") });
                   setConfirmUnassign(false);
                   setEditing(false);
-                } catch {
-                  toast({ title: t("common.error"), variant: "destructive" });
+                } catch (err) {
+                  console.error("unassign failed", err);
+                  const msg = err instanceof Error ? err.message : t("common.error");
+                  toast({ title: t("common.error"), description: msg, variant: "destructive" });
                 }
               }}
             >

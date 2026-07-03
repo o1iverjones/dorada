@@ -396,9 +396,10 @@ export async function unassignInterpreter(id: string, organizationId: string, ac
   if (!appt!.interpreter_id) throw new ConflictError("NO_INTERPRETER", "Appointment has no interpreter assigned");
 
   // Allow unassigning regardless of status (e.g. to swap the interpreter on a
-  // completed/cancelled appointment for billing/records). Terminal statuses are
-  // preserved; everything else reverts to "unassigned".
-  const PRESERVE_STATUS = ["completed", "cancelled"];
+  // completed/cancelled appointment for billing/records). Terminal dispositions
+  // (completed + all admin-resolvable statuses like cancelled, late_cancellation,
+  // no_show, etc.) are preserved; everything else reverts to "unassigned".
+  const PRESERVE_STATUS = ["completed", ...ADMIN_RESOLVABLE_STATUSES];
   const newStatus = PRESERVE_STATUS.includes(appt!.status) ? appt!.status : "unassigned";
 
   await prisma.$transaction([
