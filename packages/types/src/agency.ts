@@ -68,6 +68,7 @@ export const AgencyListQuerySchema = z.object({
   search: z.string().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(25),
+  include_inactive: z.coerce.boolean().optional(),
 });
 
 export type EmailIntakeConfig = z.infer<typeof EmailIntakeConfigSchema>;

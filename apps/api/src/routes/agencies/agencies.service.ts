@@ -60,7 +60,7 @@ export async function listAgencies(query: AgencyListQuery, organizationId: strin
   const items = await prisma.agency.findMany({
     where: {
       organization_id: organizationId,
-      is_active: true,
+      ...(query.include_inactive ? {} : { is_active: true }),
       ...(query.search ? { name: { contains: query.search, mode: "insensitive" as const } } : {}),
       ...(query.cursor ? { id: { gt: query.cursor } } : {}),
     },

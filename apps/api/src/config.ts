@@ -21,9 +21,12 @@ const ConfigSchema = z.object({
   ADMIN_REFRESH_TTL_HOURS: z.coerce.number().default(720), // 30 days
   MFA_TOKEN_TTL: z.string().default("5m"),
 
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_FROM_NUMBER: z.string().optional(),
+  SINCH_PROJECT_ID: z.string().optional(),
+  SINCH_KEY_ID: z.string().optional(),
+  SINCH_KEY_SECRET: z.string().optional(),
+  SINCH_APP_ID: z.string().optional(),
+  SINCH_FROM_NUMBER: z.string().optional(),
+  SINCH_REGION: z.string().default("US"),
 
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default("noreply@dorada.app"),

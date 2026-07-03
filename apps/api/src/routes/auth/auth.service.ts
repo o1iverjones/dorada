@@ -1,4 +1,4 @@
-import { randomInt } from "crypto";
+import { randomInt, randomUUID } from "crypto";
 import bcrypt from 'bcryptjs';
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
@@ -14,6 +14,7 @@ import {
 } from "../../lib/errors.js";
 import { config } from "../../config.js";
 import { sendSms } from "../../lib/sms.js";
+import { sendEmail, passwordResetEmail } from "../../lib/email.js";
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
@@ -43,12 +44,17 @@ export async function requestOtp(
     throw new TooManyRequestsError("OTP_RATE_LIMITED", "Too many OTP requests");
   }
 
-  // Match on the last 10 digits to handle stored phones with or without
-  // country code (e.g. "8312277291" vs "18312277291" vs "831-227-7291")
+  // Normalize stored phone in DB before matching — handles any formatting
+  // (e.g. "(831) 238-8020", "831-238-8020", "+18312388020", bare digits)
   const last10 = normalized.slice(-10);
-  const interpreter = await prisma.interpreter.findFirst({
-    where: { phone: { endsWith: last10 }, is_active: true },
-  });
+  const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
+    SELECT id, name, phone, organization_id, is_active
+    FROM "interpreters"
+    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
+      AND is_active = true
+    LIMIT 1
+  `;
+  const interpreter = rows[0] ?? null;
   if (!interpreter) return; // silent — prevents enumeration
 
   // Canonical key: digits-only of the interpreter's stored phone
@@ -75,9 +81,14 @@ export async function verifyOtp(
   if (locked) throw new TooManyRequestsError("ACCOUNT_LOCKED", "Account locked. Try again later.");
 
   const last10 = normalized.slice(-10);
-  const interpreter = await prisma.interpreter.findFirst({
-    where: { phone: { endsWith: last10 }, is_active: true },
-  });
+  const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
+    SELECT id, name, phone, organization_id, is_active
+    FROM "interpreters"
+    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
+      AND is_active = true
+    LIMIT 1
+  `;
+  const interpreter = rows[0] ?? null;
   if (!interpreter) throw new UnauthorizedError("INVALID_CREDENTIALS", "Invalid OTP");
 
   const canonicalPhone = interpreter.phone.replace(/\D/g, "");
@@ -361,9 +372,12 @@ export async function requestPasswordReset(
   });
   if (!user) return; // silent
 
-  const token = crypto.randomUUID();
+  const token = randomUUID();
   await redis.set(`pwd_reset:${token}`, user.id, "EX", 3600);
-  // TODO: send via SendGrid
+
+  const resetUrl = `${config.APP_URL}/reset-password?token=${token}`;
+  await sendEmail(passwordResetEmail(user.name, user.email, resetUrl));
+
   if (config.NODE_ENV === "development") {
     console.warn(`[DEV] Password reset token for ${email}: ${token}`);
   }

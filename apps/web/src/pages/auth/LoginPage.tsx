@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff } from "lucide-react";
 import { api, setTokens } from "../../lib/api.js";
@@ -94,17 +94,22 @@ export function LoginPage() {
               </div>
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                id="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 cursor-pointer accent-primary"
-              />
-              <Label htmlFor="remember-me" className="cursor-pointer font-normal text-muted-foreground">
-                {t("auth.remember_me")}
-              </Label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <input
+                  id="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 cursor-pointer accent-primary"
+                />
+                <Label htmlFor="remember-me" className="cursor-pointer font-normal text-muted-foreground">
+                  {t("auth.remember_me")}
+                </Label>
+              </div>
+              <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+                {t("auth.forgotPassword")}
+              </Link>
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? t("common.loading") : t("auth.sign_in")}

@@ -118,7 +118,18 @@
     "phone_placeholder": "+1 (555) 000-0000",
     "send_code": "Enviar código",
     "otp_failed": "No se pudo enviar el código. Por favor intenta de nuevo.",
-    "otp_invalid": "Código inválido o expirado. Por favor intenta de nuevo."
+    "otp_invalid": "Código inválido o expirado. Por favor intenta de nuevo.",
+    "forgot_password_description": "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.",
+    "send_reset_link": "Enviar enlace",
+    "back_to_login": "Volver al inicio de sesión",
+    "reset_email_sent_description": "Revisa tu bandeja de entrada.",
+    "reset_email_sent_hint": "Si existe una cuenta con ese correo, el enlace para restablecer la contraseña está en camino. El enlace expira en 1 hora.",
+    "reset_password_description": "Elige una nueva contraseña para tu cuenta.",
+    "reset_success": "Contraseña actualizada. Ya puedes iniciar sesión.",
+    "reset_failed": "Este enlace es inválido o ha expirado. Por favor solicita uno nuevo.",
+    "reset_link_invalid_title": "Enlace inválido",
+    "reset_link_invalid_description": "Este enlace para restablecer la contraseña falta o está mal formado.",
+    "request_new_link": "Solicitar un nuevo enlace"
   },
   "appointment": {
     "status.unassigned": "Sin asignar",
@@ -643,6 +654,8 @@
   "agencies": {
     "title": "Agencias",
     "new": "Nueva agencia",
+    "show_inactive": "Mostrar desactivadas",
+    "deactivated": "Desactivada",
     "name": "Nombre de la agencia",
     "details": "Detalles de la agencia",
     "notes": "Notas",

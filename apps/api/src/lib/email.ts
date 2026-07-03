@@ -110,3 +110,66 @@ export function welcomeAdminEmail(name: string, email: string, tempPassword: str
 
   return { to: email, subject: "Welcome to Dorada — your account is ready", html, text };
 }
+
+export function passwordResetEmail(name: string, email: string, resetUrl: string): SendEmailOptions {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset your Dorada password</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#18181b;padding:32px 40px;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Dorada</h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 12px;color:#18181b;font-size:20px;font-weight:600;">Reset your password</h2>
+              <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6;">
+                Hi ${name}, we received a request to reset the password for your Dorada account. Click the button below to choose a new password. This link expires in 1 hour.
+              </p>
+
+              <!-- CTA Button -->
+              <table cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background-color:#18181b;border-radius:6px;">
+                    <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;">Reset password →</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;color:#a1a1aa;font-size:13px;line-height:1.6;word-break:break-all;">
+                Or paste this link into your browser:<br />${resetUrl}
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px;border-top:1px solid #e4e4e7;">
+              <p style="margin:0;color:#a1a1aa;font-size:13px;">
+                If you didn't request a password reset, you can safely ignore this email — your password won't change.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  const text = `Reset your Dorada password\n\nHi ${name}, we received a request to reset the password for your Dorada account.\n\nUse this link to choose a new password (expires in 1 hour):\n${resetUrl}\n\nIf you didn't request a password reset, you can safely ignore this email — your password won't change.`;
+
+  return { to: email, subject: "Reset your Dorada password", html, text };
+}

@@ -7,6 +7,8 @@ import { PermissionGuard } from "./components/layout/PermissionGuard.js";
 import { LoginPage } from "./pages/auth/LoginPage.js";
 import { MfaPage } from "./pages/auth/MfaPage.js";
 import { MfaSetupPage } from "./pages/auth/MfaSetupPage.js";
+import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage.js";
+import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage.js";
 
 // Main pages
 import { DashboardPage } from "./pages/dashboard/DashboardPage.js";
@@ -45,6 +47,14 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/forgot-password",
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPasswordPage />,
   },
   {
     path: "/mfa",
