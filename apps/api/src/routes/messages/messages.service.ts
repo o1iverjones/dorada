@@ -205,6 +205,9 @@ export async function markRead(
   organizationId: string,
   prisma: PrismaClient,
 ) {
+  if (!isAdmin && requesterId !== interpreterId) {
+    throw new ForbiddenError("UNAUTHORIZED_CONVERSATION", "Cannot mark another interpreter's conversation as read");
+  }
   const result = await prisma.message.updateMany({
     where: {
       organization_id: organizationId,

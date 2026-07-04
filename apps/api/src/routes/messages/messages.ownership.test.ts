@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { listMessages, sendMessage } from "./messages.service.js";
+import { listMessages, sendMessage, markRead } from "./messages.service.js";
 import { ForbiddenError, NotFoundError } from "../../lib/errors.js";
 
 function fakePrisma(interpreter: Record<string, unknown> | null) {
@@ -7,6 +7,7 @@ function fakePrisma(interpreter: Record<string, unknown> | null) {
     interpreter: { findFirst: vi.fn(async () => interpreter) },
     message: {
       findMany: vi.fn(async () => []),
+      updateMany: vi.fn(async () => ({ count: 0 })),
       create: vi.fn(async (args: { data: Record<string, unknown> }) => ({
         ...args.data,
         id: "msg-1",
@@ -55,6 +56,20 @@ describe("conversation ownership", () => {
     await expect(
       sendMessage("int-2", "int-1", false, "org-1", { body: "hi" }, prisma as never),
     ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("blocks an interpreter from marking another interpreter's thread as read", async () => {
+    const prisma = fakePrisma({ id: "int-2", name: "Other", organization_id: "org-1" });
+    await expect(markRead("int-2", "int-1", false, "org-1", prisma as never)).rejects.toThrow(
+      ForbiddenError,
+    );
+    expect(prisma.message.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("allows admins and thread owners to mark read", async () => {
+    const prisma = fakePrisma({ id: "int-1", name: "Me", organization_id: "org-1" });
+    await expect(markRead("int-1", "int-1", false, "org-1", prisma as never)).resolves.toEqual({ marked_read: 0 });
+    await expect(markRead("int-1", "admin-1", true, "org-1", prisma as never)).resolves.toEqual({ marked_read: 0 });
   });
 
   it("records admin sender id on admin messages", async () => {

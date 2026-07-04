@@ -1,14 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { SendMessageBodySchema } from "@dorada/types";
 import { z } from "zod";
-import { authenticate } from "../../middleware/auth.js";
+import { authenticate, authenticateAdmin } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { listConversations, listMessages, sendMessage, markRead, searchMessages } from "./messages.service.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
 import { messageImagePath, resolveFileUrl } from "../../integrations/r2.js";
 
 export default async function messageRoutes(fastify: FastifyInstance) {
-  fastify.get("/search", { preHandler: authenticate }, async (req, reply) => {
+  // Admin-only: search spans every interpreter's conversation in the org.
+  fastify.get("/search", { preHandler: authenticateAdmin }, async (req, reply) => {
     const { q } = z.object({ q: z.string().min(1) }).parse(req.query);
     const payload = req.user as JwtPayload;
     return reply.send(await searchMessages(payload.organization_id, q, fastify.prisma));
@@ -62,6 +63,10 @@ export default async function messageRoutes(fastify: FastifyInstance) {
   // POST /messages/conversations/:interpreter_id/media  (upload image, returns URL)
   fastify.post("/conversations/:interpreter_id/media", { preHandler: authenticate }, async (req, reply) => {
     const { interpreter_id } = req.params as { interpreter_id: string };
+    const payload = req.user as JwtPayload;
+    if (payload.type !== "admin" && payload.sub !== interpreter_id) {
+      return reply.status(403).send({ error: { code: "UNAUTHORIZED_CONVERSATION", message: "Cannot upload to another interpreter's thread" } });
+    }
     const data = await req.file({ limits: { fileSize: 10 * 1024 * 1024 } });
     if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
     try {
