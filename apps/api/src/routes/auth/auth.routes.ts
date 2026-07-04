@@ -25,30 +25,33 @@ import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { config } from "../../config.js";
 
+/** Stricter per-IP throttles for credential endpoints (global default is 300/min). */
+const throttle = (max: number, timeWindow: string) => ({ config: { rateLimit: { max, timeWindow } } });
+
 export default async function authRoutes(fastify: FastifyInstance) {
   // POST /auth/interpreter/otp/request
-  fastify.post("/interpreter/otp/request", async (request, reply) => {
+  fastify.post("/interpreter/otp/request", throttle(5, "1 minute"), async (request, reply) => {
     const body = RequestOtpBodySchema.parse(request.body);
     await requestOtp(body.phone, fastify.prisma, fastify.redis);
     return reply.send({ message: "OTP sent if number is registered." });
   });
 
   // POST /auth/interpreter/otp/verify
-  fastify.post("/interpreter/otp/verify", async (request, reply) => {
+  fastify.post("/interpreter/otp/verify", throttle(15, "1 minute"), async (request, reply) => {
     const body = VerifyOtpBodySchema.parse(request.body);
     const result = await verifyOtp(body.phone, body.otp, fastify.prisma, fastify.redis, fastify);
     return reply.send(result);
   });
 
   // POST /auth/admin/login
-  fastify.post("/admin/login", async (request, reply) => {
+  fastify.post("/admin/login", throttle(10, "1 minute"), async (request, reply) => {
     const body = AdminLoginBodySchema.parse(request.body);
     const result = await adminLogin(body.email, body.password, fastify.prisma, fastify.redis, fastify);
     return reply.send(result);
   });
 
   // POST /auth/admin/mfa/verify
-  fastify.post("/admin/mfa/verify", async (request, reply) => {
+  fastify.post("/admin/mfa/verify", throttle(15, "1 minute"), async (request, reply) => {
     const body = AdminMfaVerifyBodySchema.parse(request.body);
     const result = await adminMfaVerify(body.mfa_token, body.totp_code, fastify.prisma, fastify);
     return reply.send(result);
@@ -143,15 +146,16 @@ export default async function authRoutes(fastify: FastifyInstance) {
     });
   }
 
-  // POST /auth/admin/password/reset-request
-  fastify.post("/admin/password/reset-request", async (request, reply) => {
+  // POST /auth/admin/password/reset-request — sends email; throttle hard to
+  // prevent outbound-email abuse and account probing.
+  fastify.post("/admin/password/reset-request", throttle(5, "15 minutes"), async (request, reply) => {
     const body = PasswordResetRequestBodySchema.parse(request.body);
     await requestPasswordReset(body.email, fastify.prisma, fastify.redis);
     return reply.send({ message: "Reset link sent if email is registered." });
   });
 
   // POST /auth/admin/password/reset-confirm
-  fastify.post("/admin/password/reset-confirm", async (request, reply) => {
+  fastify.post("/admin/password/reset-confirm", throttle(10, "1 minute"), async (request, reply) => {
     const body = PasswordResetConfirmBodySchema.parse(request.body);
     await confirmPasswordReset(body.reset_token, body.new_password, fastify.prisma, fastify.redis);
     return reply.send({ message: "Password updated successfully." });

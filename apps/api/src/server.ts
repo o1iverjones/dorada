@@ -21,12 +21,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export async function buildServer() {
   const fastify = Fastify({
     logger,
+    // Railway terminates TLS at its proxy — honor X-Forwarded-For so
+    // request.ip (and per-IP rate limits) see the real client address.
+    trustProxy: true,
     ajv: { customOptions: { strict: false } },
   });
 
   await fastify.register(fastifyHelmet);
   await fastify.register(fastifyCors, {
-    origin: config.CORS_ORIGIN ? config.CORS_ORIGIN.split(",").map((o) => o.trim()) : true,
+    // Never reflect arbitrary origins in production — fall back to the app
+    // domain if CORS_ORIGIN is not configured. Dev stays permissive.
+    origin: config.CORS_ORIGIN
+      ? config.CORS_ORIGIN.split(",").map((o) => o.trim())
+      : config.NODE_ENV === "production"
+        ? [config.APP_URL]
+        : true,
     credentials: true,
   });
   await fastify.register(fastifyRateLimit, {
