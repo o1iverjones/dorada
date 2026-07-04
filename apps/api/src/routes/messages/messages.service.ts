@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import type { SendMessageBody } from "@dorada/types";
 import { NotFoundError, ForbiddenError } from "../../lib/errors.js";
+import { normalizeFileRef, resolveFileUrl } from "../../integrations/r2.js";
 
 export async function listConversations(
   organizationId: string,
@@ -86,17 +87,17 @@ export async function listMessages(
       include: { sender_user: { select: { id: true, name: true } } },
     });
     return {
-      data: messages.map((m) => ({
+      data: await Promise.all(messages.map(async (m) => ({
         id: m.id,
         body: m.body,
-        image_url: m.image_url ?? null,
+        image_url: await resolveFileUrl(m.image_url),
         sender_type: m.sender_type,
         sender: m.sender_type === "admin" && m.sender_user
           ? { id: m.sender_user.id, name: m.sender_user.name }
           : { id: interpreter.id, name: interpreter.name },
         sent_at: m.sent_at.toISOString(),
         read_at: m.read_at?.toISOString() ?? null,
-      })),
+      }))),
       pagination: { next_cursor: null, has_more: false },
     };
   }
@@ -117,17 +118,17 @@ export async function listMessages(
   const data = hasMore ? messages.slice(0, -1) : messages;
 
   return {
-    data: data.map((m) => ({
+    data: await Promise.all(data.map(async (m) => ({
       id: m.id,
       body: m.body,
-      image_url: m.image_url ?? null,
+      image_url: await resolveFileUrl(m.image_url),
       sender_type: m.sender_type,
       sender: m.sender_type === "admin" && m.sender_user
         ? { id: m.sender_user.id, name: m.sender_user.name }
         : { id: interpreter.id, name: interpreter.name },
       sent_at: m.sent_at.toISOString(),
       read_at: m.read_at?.toISOString() ?? null,
-    })),
+    }))),
     pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
   };
 }
@@ -187,7 +188,8 @@ export async function sendMessage(
       sender_type: isAdmin ? "admin" : "interpreter",
       sender_user_id: isAdmin ? senderId : null,
       body: body.body,
-      image_url: body.image_url ?? null,
+      // Clients echo the signed URL from the media upload — store the bare key.
+      image_url: normalizeFileRef(body.image_url ?? null),
     },
     include: {
       sender_user: { select: { id: true, name: true } },

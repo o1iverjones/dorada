@@ -4,7 +4,7 @@ import type { Permission } from "@dorada/types";
 import { z } from "zod";
 import { NotFoundError } from "./errors.js";
 import { uploadImage, imageFilename, ImageUploadError } from "./uploadImage.js";
-import { noteImagePath } from "../integrations/r2.js";
+import { noteImagePath, normalizeFileRef, resolveFileUrl } from "../integrations/r2.js";
 import { authenticateAdmin } from "../middleware/auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/rbac.js";
@@ -85,10 +85,18 @@ async function ensureTenant(
   return parent;
 }
 
+/** Sign the note's image reference for client display (stored value is an R2 key). */
+async function withResolvedImage<T>(note: T): Promise<T> {
+  const n = note as T & { image_url?: string | null };
+  if (n.image_url === undefined) return note;
+  return { ...n, image_url: await resolveFileUrl(n.image_url) };
+}
+
 export async function getEntityNotes(entity: EntityType, id: string, organizationId: string, prisma: PrismaClient) {
   await ensureTenant(entity, id, organizationId, prisma);
   const cfg = CONFIG[entity];
-  return cfg.notes(prisma).findMany({ where: { [cfg.fk]: id }, orderBy: { created_at: "desc" } });
+  const notes = await cfg.notes(prisma).findMany({ where: { [cfg.fk]: id }, orderBy: { created_at: "desc" } });
+  return Promise.all(notes.map(withResolvedImage));
 }
 
 export async function addEntityNote(
@@ -109,7 +117,8 @@ export async function addEntityNote(
       content,
       admin_id: actor.id,
       admin_name: actor.name,
-      image_url: imageUrl,
+      // Clients echo back the signed URL from the upload endpoint — store the bare key.
+      image_url: normalizeFileRef(imageUrl),
     },
   });
   // Mirror the note into the shared activity log so every entity's Activity Log
@@ -125,7 +134,7 @@ export async function addEntityNote(
       admin_name: actor.name,
     },
   });
-  return note;
+  return withResolvedImage(note);
 }
 
 export async function getEntityActivity(entity: EntityType, id: string, organizationId: string, prisma: PrismaClient) {
@@ -169,8 +178,8 @@ export function registerEntityNotesRoutes(fastify: FastifyInstance, opts: { enti
     if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
     try {
       const filename = imageFilename(data.filename, data.mimetype);
-      const url = await uploadImage(data, noteImagePath(opts.entity, id, filename));
-      return reply.send({ url });
+      const ref = await uploadImage(data, noteImagePath(opts.entity, id, filename));
+      return reply.send({ url: await resolveFileUrl(ref) });
     } catch (err) {
       if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
       throw err;

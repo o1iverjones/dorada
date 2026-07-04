@@ -19,7 +19,8 @@ import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { sendExpoPushNotifications } from "../../lib/push.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
-import { noteImagePath } from "../../integrations/r2.js";
+import { noteImagePath, appointmentMediaPath, uploadBuffer, resolveFileUrl } from "../../integrations/r2.js";
+import { config } from "../../config.js";
 import { scheduleRemindersForAppointment, cancelRemindersForAppointment } from "../../workers/appointment-reminders.worker.js";
 import {
   listAppointments,
@@ -336,8 +337,8 @@ const payload = req.user as JwtPayload;
     if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
     try {
       const filename = imageFilename(data.filename, data.mimetype);
-      const url = await uploadImage(data, noteImagePath("appointment", id, filename));
-      return reply.send({ url });
+      const ref = await uploadImage(data, noteImagePath("appointment", id, filename));
+      return reply.send({ url: await resolveFileUrl(ref) });
     } catch (err) {
       if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
       throw err;
@@ -545,12 +546,18 @@ const payload = req.user as JwtPayload;
     const ext = extname(data.filename || "") || (data.mimetype === "image/png" ? ".png" : data.mimetype === "image/webp" ? ".webp" : ".jpg");
     const filename = `${randomUUID()}${ext}`;
 
-    // Local dev: save to uploads/; production: use GCS
-    const __dirname = fileURLToPath(new URL(".", import.meta.url));
-    const uploadsDir = join(__dirname, "..", "..", "..", "uploads", "appointment-media");
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(join(uploadsDir, filename), buffer);
-    const publicUrl = `/uploads/appointment-media/${filename}`;
+    // R2 when configured (Railway's disk is ephemeral — local files vanish on
+    // redeploy); local uploads/ only as a dev fallback. Stored value is the key.
+    let storedRef: string;
+    if (config.R2_ACCOUNT_ID) {
+      storedRef = await uploadBuffer(appointmentMediaPath(id, filename), buffer, data.mimetype);
+    } else {
+      const __dirname = fileURLToPath(new URL(".", import.meta.url));
+      const uploadsDir = join(__dirname, "..", "..", "..", "uploads", "appointment-media");
+      await mkdir(uploadsDir, { recursive: true });
+      await writeFile(join(uploadsDir, filename), buffer);
+      storedRef = `/uploads/appointment-media/${filename}`;
+    }
 
     const media = await uploadAppointmentMedia({
       appointmentId: id,
@@ -559,8 +566,8 @@ const payload = req.user as JwtPayload;
       filename: data.filename || filename,
       mimeType: data.mimetype,
       fileSize: buffer.length,
-      gcsPath: publicUrl,
-      publicUrl,
+      gcsPath: storedRef,
+      publicUrl: storedRef,
       prisma: fastify.prisma,
     });
 

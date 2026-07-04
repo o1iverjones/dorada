@@ -10,6 +10,7 @@ import { writeActivityLog } from "../../lib/activityLog.js";
 import { sendEmail, welcomeAdminEmail } from "../../lib/email.js";
 import { config } from "../../config.js";
 import { logger } from "../../lib/logger.js";
+import { resolveFileUrl, AVATAR_URL_TTL } from "../../integrations/r2.js";
 
 const CreateUserBody = z.object({
   name: z.string().min(1),
@@ -103,7 +104,7 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
       },
       select: { id: true, name: true, email: true, phone: true, phone_ext: true, profile_picture_url: true },
     });
-    return reply.send(user);
+    return reply.send({ ...user, profile_picture_url: await resolveFileUrl(user.profile_picture_url, AVATAR_URL_TTL) });
   });
 
   // POST /admin-users/me/avatar — upload profile picture
@@ -117,24 +118,23 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
     const buffer = Buffer.concat(chunks);
 
     const ext = extname(data.filename || "") || (data.mimetype === "image/png" ? ".png" : data.mimetype === "image/webp" ? ".webp" : ".jpg");
-    const filename = `avatars/${payload.sub}/${randomUUID()}${ext}`;
 
-    let publicUrl: string;
+    let storedRef: string;
     if (config.R2_ACCOUNT_ID) {
-      const { uploadBuffer } = await import("../../integrations/r2.js");
-      publicUrl = await uploadBuffer(filename, buffer, data.mimetype);
+      const { uploadBuffer, avatarPath } = await import("../../integrations/r2.js");
+      storedRef = await uploadBuffer(avatarPath("user", payload.sub, `${randomUUID()}${ext}`), buffer, data.mimetype);
     } else {
       // Dev fallback: store as base64 data URL
-      publicUrl = `data:${data.mimetype};base64,${buffer.toString("base64")}`;
+      storedRef = `data:${data.mimetype};base64,${buffer.toString("base64")}`;
     }
 
     const user = await fastify.prisma.user.update({
       where: { id: payload.sub },
-      data: { profile_picture_url: publicUrl },
+      data: { profile_picture_url: storedRef },
       select: { id: true, profile_picture_url: true },
     });
 
-    return reply.send(user);
+    return reply.send({ ...user, profile_picture_url: await resolveFileUrl(user.profile_picture_url, AVATAR_URL_TTL) });
   });
 
   // GET /admin-users/me — get current user's profile
@@ -144,6 +144,6 @@ export default async function adminUsersRoutes(fastify: FastifyInstance) {
       where: { id: payload.sub },
       select: { id: true, name: true, email: true, phone: true, phone_ext: true, profile_picture_url: true },
     });
-    return reply.send(user);
+    return reply.send({ ...user, profile_picture_url: await resolveFileUrl(user.profile_picture_url, AVATAR_URL_TTL) });
   });
 }

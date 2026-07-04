@@ -29,8 +29,12 @@ function extForMime(mime: string, originalFilename: string): string {
   return map[mime] ?? ".jpg";
 }
 
-/** Upload a multipart image file. Returns the public URL. */
-export async function uploadImage(data: MultipartFile, gcsDestination: string): Promise<string> {
+/**
+ * Upload a multipart image file. Returns the stored file reference:
+ * the R2 object KEY in production (resolve to a signed URL for clients
+ * via resolveFileUrl), or a local /uploads path in dev.
+ */
+export async function uploadImage(data: MultipartFile, destination: string): Promise<string> {
   if (!ALLOWED_MIME.has(data.mimetype)) {
     throw new ImageUploadError("INVALID_FILE_TYPE", "Only JPEG, PNG, HEIC, WebP, and GIF images are accepted");
   }
@@ -44,7 +48,7 @@ export async function uploadImage(data: MultipartFile, gcsDestination: string): 
   }
 
   if (config.NODE_ENV === "production" || config.R2_ACCOUNT_ID) {
-    return uploadBuffer(gcsDestination, buffer, data.mimetype);
+    return uploadBuffer(destination, buffer, data.mimetype);
   }
 
   // Local dev: save to uploads/images/
