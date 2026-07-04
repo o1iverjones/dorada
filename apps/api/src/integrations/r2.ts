@@ -94,23 +94,48 @@ export const AVATAR_URL_TTL = 6 * 24 * 3600;
 
 const R2_KEY_PREFIXES = ["dorada/", "avatars/"];
 
-/** Extract the R2 object key from a stored/echoed file reference, or null if it isn't an R2 object. */
+/**
+ * Extract the R2 object key from a stored/echoed file reference, or null if it
+ * isn't one of our R2 objects.
+ *
+ * Handles every form the value can take:
+ *   - a bare key already: "dorada/notes/…"
+ *   - a presigned URL the client echoes back on save
+ *   - a legacy permanent public URL
+ *
+ * Critically, it distinguishes the two S3 URL layouts. R2 presigned URLs are
+ * virtual-hosted by default — "https://<bucket>.<account>.r2.cloudflarestorage.com/<key>"
+ * — where the path IS the key. Only the bare account endpoint uses path-style
+ * "https://<account>.r2.cloudflarestorage.com/<bucket>/<key>". Getting this
+ * wrong corrupts keys whose first segment matches the bucket name (e.g. a
+ * bucket named "dorada" with keys under "dorada/").
+ */
 export function keyFromFileRef(ref: string | null | undefined): string | null {
   if (!ref) return null;
-  if (R2_KEY_PREFIXES.some((p) => ref.startsWith(p))) return ref;
-  if (config.R2_PUBLIC_URL && ref.startsWith(`${config.R2_PUBLIC_URL}/`)) {
-    return ref.slice(config.R2_PUBLIC_URL.length + 1).split("?")[0]!;
-  }
+
+  // Already a bare key.
+  if (R2_KEY_PREFIXES.some((p) => ref.startsWith(p))) return ref.split("?")[0]!;
+
+  let u: URL;
   try {
-    const u = new URL(ref);
-    if (u.hostname.endsWith(".r2.cloudflarestorage.com")) {
-      const path = decodeURIComponent(u.pathname.replace(/^\//, ""));
-      const bucketPrefix = `${config.R2_BUCKET}/`;
-      return path.startsWith(bucketPrefix) ? path.slice(bucketPrefix.length) : path;
-    }
+    u = new URL(ref);
   } catch {
-    // not a URL — fall through
+    return null; // not a URL and not a recognised bare key
   }
+  const rawPath = decodeURIComponent(u.pathname.replace(/^\//, ""));
+
+  // Path-style ONLY on the bare account endpoint: strip the leading "<bucket>/".
+  const pathStyleHost = config.R2_ACCOUNT_ID
+    ? `${config.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+    : null;
+  if (pathStyleHost && u.hostname === pathStyleHost && rawPath.startsWith(`${config.R2_BUCKET}/`)) {
+    return rawPath.slice(config.R2_BUCKET.length + 1);
+  }
+
+  // Everything else — virtual-hosted R2, r2.dev public URLs, custom domains —
+  // serves the key directly as the path. Only claim it if it lands on a key
+  // root we actually generate, so unrelated URLs pass through untouched.
+  if (R2_KEY_PREFIXES.some((p) => rawPath.startsWith(p))) return rawPath;
   return null;
 }
 
