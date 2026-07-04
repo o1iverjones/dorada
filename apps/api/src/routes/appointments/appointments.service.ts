@@ -53,7 +53,7 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
   }
 }
 
-const ADMIN_RESOLVABLE_STATUSES = [
+export const ADMIN_RESOLVABLE_STATUSES = [
   "cancelled", "late_cancellation", "no_show", "rescheduled",
   "double_booking", "pt_speaks_eng", "dr_speaks_es",
 ];
@@ -69,7 +69,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ["unassigned", "pending_offer", "accepted", ...ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)]])),
 };
 
-function assertValidTransition(from: string, to: string) {
+export function assertValidTransition(from: string, to: string) {
   if (from === to) return;
   if (!STATUS_TRANSITIONS[from]?.includes(to)) {
     throw new ValidationError("INVALID_STATUS_TRANSITION", `Cannot transition from ${from} to ${to}`);
