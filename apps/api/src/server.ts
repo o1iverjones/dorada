@@ -28,14 +28,16 @@ export async function buildServer() {
   });
 
   await fastify.register(fastifyHelmet);
+  if (!config.CORS_ORIGIN) {
+    // Railway builds run with NODE_ENV=production in BOTH environments, and
+    // each env serves the web app from a different origin — so there is no
+    // safe origin to guess here. Defaulting to a fixed list once took down
+    // the dev environment entirely (login + every XHR blocked). Reflect all
+    // origins but complain loudly: set CORS_ORIGIN on every deployment.
+    logger.warn("CORS_ORIGIN is not set — reflecting ALL origins. Set CORS_ORIGIN explicitly on this environment.");
+  }
   await fastify.register(fastifyCors, {
-    // Never reflect arbitrary origins in production — fall back to the app
-    // domain if CORS_ORIGIN is not configured. Dev stays permissive.
-    origin: config.CORS_ORIGIN
-      ? config.CORS_ORIGIN.split(",").map((o) => o.trim())
-      : config.NODE_ENV === "production"
-        ? [config.APP_URL]
-        : true,
+    origin: config.CORS_ORIGIN ? config.CORS_ORIGIN.split(",").map((o) => o.trim()) : true,
     credentials: true,
   });
   await fastify.register(fastifyRateLimit, {
