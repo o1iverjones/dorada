@@ -174,6 +174,7 @@ export async function getActivityLog(id: string, organizationId: string, prisma:
   return prisma.appointmentActivity.findMany({
     where: { appointment_id: id },
     orderBy: { created_at: "desc" },
+    take: 500, // protective cap — the card paginates client-side
   });
 }
 

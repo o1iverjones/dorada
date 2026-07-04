@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { listMessages, sendMessage, markRead } from "./messages.service.js";
+import { listMessages, sendMessage, markRead, listConversations } from "./messages.service.js";
 import { ForbiddenError, NotFoundError } from "../../lib/errors.js";
 
 function fakePrisma(interpreter: Record<string, unknown> | null) {
@@ -80,5 +80,29 @@ describe("conversation ownership", () => {
         data: expect.objectContaining({ sender_type: "admin", sender_user_id: "admin-1" }),
       }),
     );
+  });
+});
+
+describe("listConversations unread counts", () => {
+  it("uses ONE grouped query for unread counts instead of one count per interpreter", async () => {
+    const interpreters = [
+      { id: "int-1", name: "A", sent_messages: [] },
+      { id: "int-2", name: "B", sent_messages: [] },
+      { id: "int-3", name: "C", sent_messages: [] },
+    ];
+    const groupBy = vi.fn(async () => [
+      { interpreter_id: "int-2", _count: { _all: 4 } },
+    ]);
+    const count = vi.fn();
+    const prisma = {
+      interpreter: { findMany: vi.fn(async () => interpreters) },
+      message: { groupBy, count },
+    };
+
+    const res = await listConversations("org-1", "admin-1", true, { limit: 10 }, prisma as never);
+
+    expect(groupBy).toHaveBeenCalledTimes(1);
+    expect(count).not.toHaveBeenCalled(); // the old N+1 path
+    expect(res.data.map((c) => c.unread_count)).toEqual([0, 4, 0]);
   });
 });

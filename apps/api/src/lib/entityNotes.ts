@@ -142,6 +142,7 @@ export async function getEntityActivity(entity: EntityType, id: string, organiza
   return prisma.activityLog.findMany({
     where: { entity_type: entity, entity_id: id, organization_id: organizationId },
     orderBy: { created_at: "desc" },
+    take: 500, // protective cap — the card paginates client-side
   });
 }
 

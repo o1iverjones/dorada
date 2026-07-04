@@ -30,16 +30,21 @@ export async function listConversations(
   const hasMore = interpreters.length > query.limit;
   const data = hasMore ? interpreters.slice(0, -1) : interpreters;
 
-  const conversations = await Promise.all(
-    data.map(async (interpreter) => {
-      const unread = await prisma.message.count({
-        where: {
-          organization_id: organizationId,
-          interpreter_id: interpreter.id,
-          read_at: null,
-          sender_type: isAdmin ? "interpreter" : "admin",
-        },
-      });
+  // One grouped query for all unread counts (was one count query per
+  // interpreter — N+1 on every conversations poll).
+  const unreadCounts = await prisma.message.groupBy({
+    by: ["interpreter_id"],
+    where: {
+      organization_id: organizationId,
+      interpreter_id: { in: data.map((i) => i.id) },
+      read_at: null,
+      sender_type: isAdmin ? "interpreter" : "admin",
+    },
+    _count: { _all: true },
+  });
+  const unreadByInterpreter = new Map(unreadCounts.map((c) => [c.interpreter_id, c._count._all]));
+
+  const conversations = data.map((interpreter) => {
       const last = interpreter.sent_messages[0];
       return {
         id: interpreter.id,
@@ -47,10 +52,9 @@ export async function listConversations(
         last_message: last
           ? { body: last.body, sent_at: last.sent_at.toISOString(), sender_type: last.sender_type }
           : null,
-        unread_count: unread,
+        unread_count: unreadByInterpreter.get(interpreter.id) ?? 0,
       };
-    }),
-  );
+  });
 
   return {
     data: conversations,
