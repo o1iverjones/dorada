@@ -36,6 +36,9 @@ const ConfigSchema = z.object({
 
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
+  // Canonical name (matches docs). R2_SECRET_ACCESS_ID is the legacy
+  // spelling still set on Railway — accepted as a fallback below.
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_SECRET_ACCESS_ID: z.string().optional(),
   R2_BUCKET: z.string().default("dorada-media"),
   R2_PUBLIC_URL: z.string().optional(),
@@ -51,6 +54,10 @@ function loadConfig(): Config {
   if (!result.success) {
     process.stdout.write(`[config] FATAL - missing or invalid env vars:\n${JSON.stringify(result.error.format(), null, 2)}\n`);
     process.exit(1);
+  }
+  // Legacy fallback: accept the old R2_SECRET_ACCESS_ID spelling.
+  if (!result.data.R2_SECRET_ACCESS_KEY && result.data.R2_SECRET_ACCESS_ID) {
+    result.data.R2_SECRET_ACCESS_KEY = result.data.R2_SECRET_ACCESS_ID;
   }
   return result.data;
 }
