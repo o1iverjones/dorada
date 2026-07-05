@@ -6,6 +6,7 @@ import type { JwtPayload } from "../../middleware/auth.js";
 import { listConversations, listMessages, sendMessage, markRead, searchMessages } from "./messages.service.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
 import { messageImagePath, resolveFileUrl } from "../../integrations/r2.js";
+import { sendExpoPushNotifications } from "../../lib/push.js";
 
 export default async function messageRoutes(fastify: FastifyInstance) {
   // Admin-only: search spans every interpreter's conversation in the org.
@@ -56,6 +57,27 @@ export default async function messageRoutes(fastify: FastifyInstance) {
     // Also notify all admins for the unread badge, regardless of which page they're on
     if (!payload.type || payload.type === "interpreter") {
       fastify.io.to(`notify:${payload.organization_id}`).emit("new_message", emitPayload);
+    }
+
+    // Push to the interpreter's device on admin messages (fire-and-forget).
+    // The mobile app has no socket — this is what lets it drop the 1s poll:
+    // foreground pushes trigger an immediate refresh, background pushes notify.
+    if (isAdmin) {
+      void (async () => {
+        const interp = await fastify.prisma.interpreter.findUnique({
+          where: { id: interpreter_id },
+          select: { fcm_token: true },
+        });
+        if (!interp?.fcm_token) return;
+        await sendExpoPushNotifications([{
+          to: interp.fcm_token,
+          title: emitPayload.sender.name,
+          body: message.image_url ? "📷 Image" : message.body.slice(0, 140),
+          data: { type: "message" },
+          sound: "default" as const,
+          priority: "high" as const,
+        }]);
+      })().catch((err) => fastify.log.error({ err }, "message push notification failed"));
     }
     return reply.status(201).send(emitPayload);
   });
