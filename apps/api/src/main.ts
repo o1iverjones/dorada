@@ -3,13 +3,15 @@ import { config } from "./config.js";
 import { logger } from "./lib/logger.js";
 
 process.on("uncaughtException", (err) => {
-  process.stderr.write(`[startup] uncaughtException: ${err.message}\n${err.stack ?? ""}\n`);
+  // Unknown synchronous state — crash and let Railway restart us.
+  process.stderr.write(`uncaughtException: ${err.message}\n${err.stack ?? ""}\n`);
   process.exit(1);
 });
 
 process.on("unhandledRejection", (reason) => {
-  process.stderr.write(`[startup] unhandledRejection: ${String(reason)}\n`);
-  process.exit(1);
+  // A stray rejected promise (e.g. an unawaited fire-and-forget) is not worth
+  // dropping every in-flight request and socket for. Log loudly, keep serving.
+  logger.error({ err: reason }, "unhandledRejection — continuing");
 });
 
 async function start() {

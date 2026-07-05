@@ -58,6 +58,30 @@ export async function buildServer() {
   await fastify.register(multipartPlugin);
   await fastify.register(socketPlugin);
 
+  // Liveness/readiness probe — used by Railway health checks and for quick
+  // production triage. Raw queries bypass the tenant guard (model ops only).
+  fastify.get("/health", async (_request, reply) => {
+    const checks: Record<string, "ok" | "down"> = { database: "ok", redis: "ok" };
+    let healthy = true;
+    try {
+      await fastify.prisma.$queryRaw`SELECT 1`;
+    } catch {
+      checks.database = "down";
+      healthy = false;
+    }
+    try {
+      await fastify.redis.ping();
+    } catch {
+      checks.redis = "down";
+      healthy = false;
+    }
+    return reply.status(healthy ? 200 : 503).send({
+      status: healthy ? "ok" : "degraded",
+      checks,
+      uptime_seconds: Math.round(process.uptime()),
+    });
+  });
+
   await fastify.register(registerRoutes, { prefix: "/api/v1" });
 
   fastify.setErrorHandler((error, _request, reply) => {
