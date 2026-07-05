@@ -1,47 +1,56 @@
+import { lazy, type ComponentType } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout.js";
 import { AuthGuard } from "./components/layout/AuthGuard.js";
 import { PermissionGuard } from "./components/layout/PermissionGuard.js";
 
-// Auth pages
+// Auth pages stay eager — they are the first paint for logged-out users.
 import { LoginPage } from "./pages/auth/LoginPage.js";
 import { MfaPage } from "./pages/auth/MfaPage.js";
 import { MfaSetupPage } from "./pages/auth/MfaSetupPage.js";
 import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage.js";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage.js";
 
-// Main pages
-import { DashboardPage } from "./pages/dashboard/DashboardPage.js";
-import { CalendarPage } from "./pages/appointments/CalendarPage.js";
-import { AppointmentsPage } from "./pages/appointments/AppointmentsPage.js";
-import { AppointmentDetailPage } from "./pages/appointments/AppointmentDetailPage.js";
-import { NewAppointmentPage } from "./pages/appointments/NewAppointmentPage.js";
-import { EditAppointmentPage } from "./pages/appointments/EditAppointmentPage.js";
-import { FollowUpDraftsPage } from "./pages/appointments/FollowUpDraftsPage.js";
-import { InterpretersPage } from "./pages/interpreters/InterpretersPage.js";
-import { InterpreterDetailPage } from "./pages/interpreters/InterpreterDetailPage.js";
-import { NewInterpreterPage } from "./pages/interpreters/NewInterpreterPage.js";
-import { ClinicsPage } from "./pages/clinics/ClinicsPage.js";
-import { ClinicDetailPage } from "./pages/clinics/ClinicDetailPage.js";
-import { AgenciesPage } from "./pages/agencies/AgenciesPage.js";
-import { AgencyDetailPage } from "./pages/agencies/AgencyDetailPage.js";
-import { NewAgencyPage } from "./pages/agencies/NewAgencyPage.js";
-import { PatientsPage } from "./pages/patients/PatientsPage.js";
-import { PatientDetailPage } from "./pages/patients/PatientDetailPage.js";
-import { ReportsPage } from "./pages/reports/ReportsPage.js";
-import { MessagesPage } from "./pages/messages/MessagesPage.js";
-import { EmailIntakePage } from "./pages/email-intake/EmailIntakePage.js";
-import { EmailIntakeDraftsPage } from "./pages/email-intake/EmailIntakeDraftsPage.js";
-import { AdminUsersPage } from "./pages/admin-users/AdminUsersPage.js";
-import { RolesPage } from "./pages/admin-users/RolesPage.js";
-import { SettingsPage } from "./pages/settings/SettingsPage.js";
-import { LocalizationPage } from "./pages/settings/LocalizationPage.js";
-import { AccountPage } from "./pages/account/AccountPage.js";
-import { IconGalleryPage } from "./pages/icons/IconGalleryPage.js";
-import { InvoicesPage } from "./pages/invoices/InvoicesPage.js";
-import { InsuranceCompaniesPage } from "./pages/insurance-companies/InsuranceCompaniesPage.js";
-import { InsuranceCompanyDetailPage } from "./pages/insurance-companies/InsuranceCompanyDetailPage.js";
-import { AlertsPage } from "./pages/alerts/AlertsPage.js";
+/**
+ * All app pages are lazy — each becomes its own chunk so the initial bundle
+ * doesn't ship the calendar, reports, messaging, etc. up front (the single
+ * chunk had reached 1 MB). AppLayout provides the Suspense boundary.
+ */
+function lazyPage<M extends Record<string, ComponentType>>(loader: () => Promise<M>, name: keyof M) {
+  return lazy(async () => ({ default: (await loader())[name]! }));
+}
+
+const DashboardPage = lazyPage(() => import("./pages/dashboard/DashboardPage.js"), "DashboardPage");
+const CalendarPage = lazyPage(() => import("./pages/appointments/CalendarPage.js"), "CalendarPage");
+const AppointmentsPage = lazyPage(() => import("./pages/appointments/AppointmentsPage.js"), "AppointmentsPage");
+const AppointmentDetailPage = lazyPage(() => import("./pages/appointments/AppointmentDetailPage.js"), "AppointmentDetailPage");
+const NewAppointmentPage = lazyPage(() => import("./pages/appointments/NewAppointmentPage.js"), "NewAppointmentPage");
+const EditAppointmentPage = lazyPage(() => import("./pages/appointments/EditAppointmentPage.js"), "EditAppointmentPage");
+const FollowUpDraftsPage = lazyPage(() => import("./pages/appointments/FollowUpDraftsPage.js"), "FollowUpDraftsPage");
+const InterpretersPage = lazyPage(() => import("./pages/interpreters/InterpretersPage.js"), "InterpretersPage");
+const InterpreterDetailPage = lazyPage(() => import("./pages/interpreters/InterpreterDetailPage.js"), "InterpreterDetailPage");
+const NewInterpreterPage = lazyPage(() => import("./pages/interpreters/NewInterpreterPage.js"), "NewInterpreterPage");
+const ClinicsPage = lazyPage(() => import("./pages/clinics/ClinicsPage.js"), "ClinicsPage");
+const ClinicDetailPage = lazyPage(() => import("./pages/clinics/ClinicDetailPage.js"), "ClinicDetailPage");
+const AgenciesPage = lazyPage(() => import("./pages/agencies/AgenciesPage.js"), "AgenciesPage");
+const AgencyDetailPage = lazyPage(() => import("./pages/agencies/AgencyDetailPage.js"), "AgencyDetailPage");
+const NewAgencyPage = lazyPage(() => import("./pages/agencies/NewAgencyPage.js"), "NewAgencyPage");
+const PatientsPage = lazyPage(() => import("./pages/patients/PatientsPage.js"), "PatientsPage");
+const PatientDetailPage = lazyPage(() => import("./pages/patients/PatientDetailPage.js"), "PatientDetailPage");
+const ReportsPage = lazyPage(() => import("./pages/reports/ReportsPage.js"), "ReportsPage");
+const MessagesPage = lazyPage(() => import("./pages/messages/MessagesPage.js"), "MessagesPage");
+const EmailIntakePage = lazyPage(() => import("./pages/email-intake/EmailIntakePage.js"), "EmailIntakePage");
+const EmailIntakeDraftsPage = lazyPage(() => import("./pages/email-intake/EmailIntakeDraftsPage.js"), "EmailIntakeDraftsPage");
+const AdminUsersPage = lazyPage(() => import("./pages/admin-users/AdminUsersPage.js"), "AdminUsersPage");
+const RolesPage = lazyPage(() => import("./pages/admin-users/RolesPage.js"), "RolesPage");
+const SettingsPage = lazyPage(() => import("./pages/settings/SettingsPage.js"), "SettingsPage");
+const LocalizationPage = lazyPage(() => import("./pages/settings/LocalizationPage.js"), "LocalizationPage");
+const AccountPage = lazyPage(() => import("./pages/account/AccountPage.js"), "AccountPage");
+const IconGalleryPage = lazyPage(() => import("./pages/icons/IconGalleryPage.js"), "IconGalleryPage");
+const InvoicesPage = lazyPage(() => import("./pages/invoices/InvoicesPage.js"), "InvoicesPage");
+const InsuranceCompaniesPage = lazyPage(() => import("./pages/insurance-companies/InsuranceCompaniesPage.js"), "InsuranceCompaniesPage");
+const InsuranceCompanyDetailPage = lazyPage(() => import("./pages/insurance-companies/InsuranceCompanyDetailPage.js"), "InsuranceCompanyDetailPage");
+const AlertsPage = lazyPage(() => import("./pages/alerts/AlertsPage.js"), "AlertsPage");
 
 export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
   {
