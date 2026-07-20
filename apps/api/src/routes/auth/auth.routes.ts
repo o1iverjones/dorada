@@ -107,15 +107,22 @@ export default async function authRoutes(fastify: FastifyInstance) {
       await forceSendClinicConfirmations(fastify.prisma);
       return reply.send({ triggered: true, note: "confirmation emails sent directly (time window bypassed)" });
     });
+    // Match on normalized digits so formatted stored phones like "(831) 238-8020"
+    // resolve — same regexp_replace lookup requestOtp/verifyOtp use.
+    const findInterpreterByPhone = async (last10: string) => {
+      const rows = await fastify.prisma.$queryRaw<Array<{ phone: string }>>`
+        SELECT phone FROM "interpreters"
+        WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
+          AND is_active = true
+        LIMIT 1
+      `;
+      return rows[0] ?? null;
+    };
+
     fastify.get("/dev/otp/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };
-      const normalized = phone.replace(/\D/g, "");
-      const last10 = normalized.slice(-10);
-      // Find interpreter to get canonical phone key (same logic as requestOtp)
-      const interpreter = await fastify.prisma.interpreter.findFirst({
-        where: { phone: { endsWith: last10 }, is_active: true },
-        select: { phone: true },
-      });
+      const last10 = phone.replace(/\D/g, "").slice(-10);
+      const interpreter = await findInterpreterByPhone(last10);
       if (!interpreter) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No interpreter found for this number" } });
       const canonicalPhone = interpreter.phone.replace(/\D/g, "");
       const otp = await fastify.redis.get(`otp:${canonicalPhone}`);
@@ -128,10 +135,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const { phone } = request.params as { phone: string };
       const normalized = phone.replace(/\D/g, "");
       const last10 = normalized.slice(-10);
-      const interpreter = await fastify.prisma.interpreter.findFirst({
-        where: { phone: { endsWith: last10 }, is_active: true },
-        select: { phone: true },
-      });
+      const interpreter = await findInterpreterByPhone(last10);
       const canonicalPhone = interpreter ? interpreter.phone.replace(/\D/g, "") : normalized;
       await fastify.redis.del(
         `otp:rate:${normalized}`,
