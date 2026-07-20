@@ -92,9 +92,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
     return reply.status(204).send();
   });
 
-  // GET /auth/dev/otp/:phone — DEV ONLY: returns the pending OTP from Redis so
-  // we can test interpreter login without a real Twilio integration.
-  if (config.APP_ENV !== "production") {
+  // DEV-ONLY backdoors (OTP retrieval, SMS test, rate-limit reset, job
+  // triggers). These are UNAUTHENTICATED and dangerous in production, so gate
+  // on an explicit APP_ENV === "dev" — never a "not production" check that a
+  // stray env value ("staging", etc.) could slip through.
+  if (config.APP_ENV === "dev") {
     // POST /auth/dev/trigger-stale-billing — immediately enqueues a stale-billing-check job
     fastify.post("/dev/trigger-stale-billing", async (_request, reply) => {
       const { adminAlertQueue } = await import("../../workers/admin-alert.worker.js");

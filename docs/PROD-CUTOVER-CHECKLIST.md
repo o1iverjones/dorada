@@ -20,17 +20,32 @@ refactor progresses; delete it after the cutover is complete.
 | `APP_URL` | `https://web-dev-8acf.up.railway.app` |
 | `R2_SECRET_ACCESS_KEY` | *(same value as `R2_SECRET_ACCESS_ID`, then delete old)* |
 
+## CRITICAL security gate — verify BEFORE/at cutover
+
+- **`APP_ENV` MUST equal `production` on the prod API service.** All `/api/v1/auth/dev/*`
+  routes are unauthenticated backdoors — `/dev/otp/:phone` returns *any interpreter's
+  login code* (account takeover), `/dev/sms-test` sends arbitrary SMS on your account,
+  `/dev/reset/:phone` clears rate limits. They are enabled only when `APP_ENV === "dev"`.
+  The config default is `production` and the value is enum-constrained to `dev|production`,
+  so this is safe unless someone explicitly set `APP_ENV=dev` on prod. Verify with:
+  `curl -s -X POST https://api.dorada.app/api/v1/auth/dev/sms-test -d '{}'` → must return
+  **404 Route not found** (not a JSON body). If it returns anything else, the backdoors
+  are LIVE on prod — fix `APP_ENV` immediately.
+
 ## One-time actions at cutover (order matters)
 
 1. Merge `refactor` → `main`; wait for the production deploy to finish
    (the `add_performance_indexes` migration applies automatically).
-2. Verify images, reports, and avatars load in production
+2. Run the `APP_ENV` backdoor check above — confirm `/dev/*` routes 404.
+3. Verify images, reports, and avatars load in production
    (they now resolve through short-lived signed URLs).
-3. **Cloudflare dashboard → R2 → bucket → Settings → disable Public access.**
-   Do this only AFTER step 2 checks out. Old avatar URLs cached in logged-in
+4. **Cloudflare dashboard → R2 → bucket → Settings → disable Public access.**
+   Do this only AFTER step 3 checks out. Old avatar URLs cached in logged-in
    browsers break at this moment; a re-login fixes them.
-4. Confirm interpreter OTP login (Sinch) still works in production.
-5. Watch the API deploy logs for the `CORS_ORIGIN is not set` warning —
+5. Confirm interpreter OTP login (Sinch) works in production with a real
+   interpreter number (the `/dev/sms-test` diagnostic is prod-disabled by design —
+   Sinch is confirmed working end-to-end on dev as of 2026-07).
+6. Watch the API deploy logs for the `CORS_ORIGIN is not set` warning —
    if it appears, the env var didn't take.
 
 ## Already set (verify only)
