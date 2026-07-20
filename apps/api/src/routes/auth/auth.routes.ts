@@ -24,6 +24,7 @@ import {
 import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { config } from "../../config.js";
+import { z } from "zod";
 
 /** Stricter per-IP throttles for credential endpoints (global default is 300/min). */
 const throttle = (max: number, timeWindow: string) => ({ config: { rateLimit: { max, timeWindow } } });
@@ -128,6 +129,25 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const otp = await fastify.redis.get(`otp:${canonicalPhone}`);
       if (!otp) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No pending OTP — request one first" } });
       return reply.send({ otp });
+    });
+
+    // POST /auth/dev/sms-test { to } — sends a real Sinch SMS and returns the
+    // raw Sinch response synchronously. This is the Sinch diagnostic: Railway
+    // deploy logs don't stream runtime output, so this is how we actually see
+    // what Sinch says (200 accepted / 401 auth / 400 bad number / 403 sender
+    // not provisioned). `to` must be E.164, e.g. "+18312388020".
+    fastify.post("/dev/sms-test", async (request, reply) => {
+      const { to } = z.object({ to: z.string().min(8) }).parse(request.body);
+      const { sinchConfigured, sendSmsRaw } = await import("../../lib/sms.js");
+      if (!sinchConfigured()) {
+        return reply.status(400).send({ configured: false, message: "Sinch env vars are not all set on this service" });
+      }
+      const result = await sendSmsRaw(to, `Dorada test SMS ${new Date().toISOString()}`);
+      return reply.status(result.ok ? 200 : 502).send({
+        region: config.SINCH_REGION,
+        from: config.SINCH_FROM_NUMBER,
+        ...result,
+      });
     });
 
     // DELETE /auth/dev/reset/:phone — clears rate limit + OTP so you can retry immediately

@@ -1,7 +1,7 @@
 import { config } from "../config.js";
 import { logger } from "./logger.js";
 
-function sinchConfigured() {
+export function sinchConfigured() {
   return !!(
     config.SINCH_PROJECT_ID &&
     config.SINCH_KEY_ID &&
@@ -11,16 +11,25 @@ function sinchConfigured() {
   );
 }
 
+export interface SmsResult {
+  /** false when Sinch env vars are missing (dev no-op). */
+  configured: boolean;
+  /** true when Sinch accepted the message (2xx). */
+  ok: boolean;
+  /** HTTP status from Sinch, or 0 on a transport error. */
+  status: number;
+  /** Sinch response body (or error message) — the actual diagnostic. */
+  detail: string;
+}
+
 /**
- * Send an SMS via Sinch Conversation API.
- * Silently no-ops if Sinch credentials are not configured (dev without creds).
+ * Low-level Sinch Conversation API send. Returns the raw outcome so callers
+ * (and the dev diagnostic endpoint) can see exactly what Sinch said. Never
+ * throws — transport errors come back as { ok:false, status:0 }.
  */
-export async function sendSms(to: string, body: string): Promise<void> {
+export async function sendSmsRaw(to: string, body: string): Promise<SmsResult> {
   if (!sinchConfigured()) {
-    if (config.NODE_ENV !== "production") {
-      logger.warn(`[DEV SMS] to=${to}: ${body}`);
-    }
-    return;
+    return { configured: false, ok: false, status: 0, detail: "Sinch not configured" };
   }
 
   const region = config.SINCH_REGION.toUpperCase();
@@ -49,14 +58,27 @@ export async function sendSms(to: string, body: string): Promise<void> {
         },
       }),
     });
-
-    const responseText = await resp.text().catch(() => "");
-    if (!resp.ok) {
-      logger.error({ status: resp.status, detail: responseText, to }, "Sinch SMS send failed");
-    } else {
-      logger.info({ status: resp.status, response: responseText, to }, "Sinch SMS sent");
-    }
+    const detail = await resp.text().catch(() => "");
+    return { configured: true, ok: resp.ok, status: resp.status, detail };
   } catch (err) {
-    logger.error({ err, to }, "Sinch SMS send error");
+    return { configured: true, ok: false, status: 0, detail: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Send an SMS via Sinch. Fire-and-forget: logs the outcome, never throws — a
+ * failed SMS must not break the request that triggered it. Silently no-ops if
+ * Sinch is not configured (dev), logging the message so OTPs stay testable.
+ */
+export async function sendSms(to: string, body: string): Promise<void> {
+  const result = await sendSmsRaw(to, body);
+  if (!result.configured) {
+    if (config.NODE_ENV !== "production") logger.warn(`[DEV SMS] to=${to}: ${body}`);
+    return;
+  }
+  if (result.ok) {
+    logger.info({ status: result.status, to }, "Sinch SMS sent");
+  } else {
+    logger.error({ status: result.status, detail: result.detail, to }, "Sinch SMS send failed");
   }
 }
