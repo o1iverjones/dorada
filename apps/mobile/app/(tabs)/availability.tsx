@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput, ActivityIndicator } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Calendar } from "react-native-calendars";
@@ -69,11 +69,17 @@ export default function AvailabilityScreen() {
       setEndDate("");
       setNote("");
     },
+    onError: (err: Error & { code?: string }) => {
+      Alert.alert(t("common.error"), err.message || t("common.error"));
+    },
   });
 
   const remove = useMutation({
     mutationFn: (blockId: string) => api.delete(`/interpreters/me/availability/${blockId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["availability-blocks"] }),
+    onError: (err: Error) => {
+      Alert.alert(t("common.error"), err.message || t("common.error"));
+    },
   });
 
   function handleDayPress(day: { dateString: string }) {
@@ -193,11 +199,13 @@ export default function AvailabilityScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.saveBtn, !startDate && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, (!startDate || create.isPending) && styles.saveBtnDisabled]}
             onPress={handleSave}
             disabled={!startDate || create.isPending}
           >
-            <Text style={styles.saveBtnText}>{t("common.save")}</Text>
+            {create.isPending
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.saveBtnText}>{t("common.save")}</Text>}
           </TouchableOpacity>
         </View>
       </Modal>
