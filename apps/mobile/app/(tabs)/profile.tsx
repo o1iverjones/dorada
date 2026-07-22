@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, clearTokens } from "../../src/lib/api";
 import { useAuthStore } from "../../src/store/auth";
@@ -16,7 +16,19 @@ export default function ProfileScreen() {
     queryFn: () => api.get("/interpreters/me"),
   });
 
+  const qc = useQueryClient();
   const profile = data as Record<string, unknown> | undefined;
+
+  const updateChannel = useMutation({
+    mutationFn: (channel: "push" | "sms") =>
+      api.patch("/interpreters/me", { follow_up_channel: channel }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["interpreter-profile"] });
+    },
+    onError: (err: Error) => {
+      Alert.alert(t("common.error"), err.message || t("common.error"));
+    },
+  });
 
   function handleLogout() {
     Alert.alert(t("account.logout_confirm_title"), t("account.logout_confirm_body"), [
@@ -59,7 +71,8 @@ export default function ProfileScreen() {
             <TouchableOpacity
               key={ch}
               style={[styles.channelBtn, profile?.follow_up_channel === ch && styles.channelBtnActive]}
-              onPress={() => api.patch("/interpreters/me", { follow_up_channel: ch })}
+              onPress={() => updateChannel.mutate(ch)}
+              disabled={updateChannel.isPending}
             >
               <Ionicons
                 name={ch === "push" ? "notifications-outline" : "chatbubble-outline"}
