@@ -36,6 +36,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       return retry.json() as Promise<T>;
     }
     await clearTokens();
+    onSessionExpired?.();
     throw new ApiError(401, "UNAUTHORIZED", "Session expired");
   }
 
@@ -65,6 +66,12 @@ async function tryRefresh(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+let onSessionExpired: (() => void) | null = null;
+
+export function setSessionExpiredHandler(handler: () => void) {
+  onSessionExpired = handler;
 }
 
 export async function clearTokens() {

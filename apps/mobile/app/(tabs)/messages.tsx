@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "expo-router";
@@ -114,6 +114,9 @@ export default function MessagesScreen() {
       setImageUri(null);
       setImageUrl(null);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+    },
+    onError: (err: Error) => {
+      Alert.alert("Error", err.message || "Failed to send message");
     },
   });
 

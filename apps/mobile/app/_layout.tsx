@@ -5,6 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import { Image } from "react-native";
 import * as Notifications from "expo-notifications";
 import { queryClient } from "../src/lib/queryClient";
+import { useAuthStore } from "../src/store/auth";
+import { setSessionExpiredHandler } from "../src/lib/api";
 import "../src/lib/i18n";
 
 function HeaderLogo() {
@@ -17,6 +19,15 @@ function HeaderLogo() {
 }
 
 export default function RootLayout() {
+  const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      logout();
+      router.replace("/login");
+    });
+  }, [logout]);
+
   useEffect(() => {
     function handleNotificationTap(data: Record<string, string>) {
       switch (data.type) {
