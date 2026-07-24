@@ -46,19 +46,14 @@ export function DashboardPage() {
     queryFn: () => api.get<{ data: unknown[] }>("/appointments/follow-up-drafts?status=pending_review&limit=5"),
   });
 
-  const { data: alertsData, refetch: refetchAlerts } = useAlerts();
+  const { data: alertsData } = useAlerts();
   const markAlertRead = useMarkAlertRead();
   const markAllRead = useMarkAllAlertsRead();
   const allAlerts = (alertsData?.data ?? []) as Array<Record<string, unknown>>;
-  // Stat card: total unread across all time
   const unreadCount = alertsData?.unread_count ?? 0;
-  // Dashboard panel: today's alerts only, capped at 3
-  const todayAlerts = allAlerts.filter((a) => {
-    const alertDate = new Date(a.created_at as string).toLocaleDateString("en-CA", { timeZone: tz });
-    return alertDate === todayStr;
-  });
-  const alerts = todayAlerts.slice(0, 3);
-  const hasMore = todayAlerts.length > 3;
+  const unreadAlerts = allAlerts.filter((a) => !a.is_read);
+  const alerts = unreadAlerts.slice(0, 5);
+  const hasMore = unreadAlerts.length > 5;
   const qc = useQueryClient();
 
   // Real-time: refetch alerts when a new one arrives via socket
@@ -228,7 +223,7 @@ export function DashboardPage() {
               {hasMore && (
                 <div className="mt-3 text-center">
                   <Link to="/alerts" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    {t("dashboard.view_all_alerts", { count: todayAlerts.length })}
+                    {t("dashboard.view_all_alerts", { count: unreadAlerts.length })}
                   </Link>
                 </div>
               )}
