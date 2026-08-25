@@ -37,7 +37,7 @@ export function telHref(raw: string | null | undefined): string | null {
  * Strips non-digits and caps at 10 digits.
  */
 export function formatPhoneInput(value: string): string {
-  const digits = digitsOnly(value).slice(0, 10);
+  const digits = digitsOnly(value).slice(0, 20);
   if (digits.length === 0) return "";
   if (digits.length <= 3) return `(${digits}`;
   if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
