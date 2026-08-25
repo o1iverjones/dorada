@@ -32,8 +32,10 @@ describe("formatPhoneInput (progressive)", () => {
     expect(formatPhoneInput("831238")).toBe("(831) 238");
     expect(formatPhoneInput("8312388020")).toBe("(831) 238-8020");
   });
-  it("caps at 10 digits and strips non-digits", () => {
-    expect(formatPhoneInput("83123880209999")).toBe("(831) 238-8020");
+  it("allows more than 10 digits for international numbers", () => {
+    expect(formatPhoneInput("83123880209999")).toBe("83123880209999");
+  });
+  it("strips non-digits", () => {
     expect(formatPhoneInput("abc831!238-8020")).toBe("(831) 238-8020");
   });
   it("returns empty string for no digits", () => {
