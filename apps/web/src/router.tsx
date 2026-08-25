@@ -10,6 +10,7 @@ import { MfaPage } from "./pages/auth/MfaPage.js";
 import { MfaSetupPage } from "./pages/auth/MfaSetupPage.js";
 import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage.js";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage.js";
+import { DownloadPage } from "./pages/download/DownloadPage.js";
 
 /**
  * All app pages are lazy — each becomes its own chunk so the initial bundle
@@ -72,6 +73,10 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
   {
     path: "/mfa-setup",
     element: <MfaSetupPage />,
+  },
+  {
+    path: "/download",
+    element: <DownloadPage />,
   },
   {
     path: "/",
