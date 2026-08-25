@@ -29,6 +29,9 @@ export function useSendMessage(interpreterId: string) {
   return useMutation({
     mutationFn: (body: unknown) => api.post(`/messages/conversations/${interpreterId}`, body),
     onSuccess: () => {
+      // Refetch the thread immediately — without this the sent message only
+      // appears via the socket echo or the next 8s poll tick.
+      qc.invalidateQueries({ queryKey: ["messages", interpreterId] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
     },
   });

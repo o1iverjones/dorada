@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import type { SendMessageBody } from "@dorada/types";
 import { NotFoundError, ForbiddenError } from "../../lib/errors.js";
+import { normalizeFileRef, resolveFileUrl } from "../../integrations/r2.js";
 
 export async function listConversations(
   organizationId: string,
@@ -29,16 +30,21 @@ export async function listConversations(
   const hasMore = interpreters.length > query.limit;
   const data = hasMore ? interpreters.slice(0, -1) : interpreters;
 
-  const conversations = await Promise.all(
-    data.map(async (interpreter) => {
-      const unread = await prisma.message.count({
-        where: {
-          organization_id: organizationId,
-          interpreter_id: interpreter.id,
-          read_at: null,
-          sender_type: isAdmin ? "interpreter" : "admin",
-        },
-      });
+  // One grouped query for all unread counts (was one count query per
+  // interpreter — N+1 on every conversations poll).
+  const unreadCounts = await prisma.message.groupBy({
+    by: ["interpreter_id"],
+    where: {
+      organization_id: organizationId,
+      interpreter_id: { in: data.map((i) => i.id) },
+      read_at: null,
+      sender_type: isAdmin ? "interpreter" : "admin",
+    },
+    _count: { _all: true },
+  });
+  const unreadByInterpreter = new Map(unreadCounts.map((c) => [c.interpreter_id, c._count._all]));
+
+  const conversations = data.map((interpreter) => {
       const last = interpreter.sent_messages[0];
       return {
         id: interpreter.id,
@@ -46,10 +52,9 @@ export async function listConversations(
         last_message: last
           ? { body: last.body, sent_at: last.sent_at.toISOString(), sender_type: last.sender_type }
           : null,
-        unread_count: unread,
+        unread_count: unreadByInterpreter.get(interpreter.id) ?? 0,
       };
-    }),
-  );
+  });
 
   return {
     data: conversations,
@@ -86,17 +91,17 @@ export async function listMessages(
       include: { sender_user: { select: { id: true, name: true } } },
     });
     return {
-      data: messages.map((m) => ({
+      data: await Promise.all(messages.map(async (m) => ({
         id: m.id,
         body: m.body,
-        image_url: m.image_url ?? null,
+        image_url: await resolveFileUrl(m.image_url),
         sender_type: m.sender_type,
         sender: m.sender_type === "admin" && m.sender_user
           ? { id: m.sender_user.id, name: m.sender_user.name }
           : { id: interpreter.id, name: interpreter.name },
         sent_at: m.sent_at.toISOString(),
         read_at: m.read_at?.toISOString() ?? null,
-      })),
+      }))),
       pagination: { next_cursor: null, has_more: false },
     };
   }
@@ -117,17 +122,17 @@ export async function listMessages(
   const data = hasMore ? messages.slice(0, -1) : messages;
 
   return {
-    data: data.map((m) => ({
+    data: await Promise.all(data.map(async (m) => ({
       id: m.id,
       body: m.body,
-      image_url: m.image_url ?? null,
+      image_url: await resolveFileUrl(m.image_url),
       sender_type: m.sender_type,
       sender: m.sender_type === "admin" && m.sender_user
         ? { id: m.sender_user.id, name: m.sender_user.name }
         : { id: interpreter.id, name: interpreter.name },
       sent_at: m.sent_at.toISOString(),
       read_at: m.read_at?.toISOString() ?? null,
-    })),
+    }))),
     pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
   };
 }
@@ -187,7 +192,8 @@ export async function sendMessage(
       sender_type: isAdmin ? "admin" : "interpreter",
       sender_user_id: isAdmin ? senderId : null,
       body: body.body,
-      image_url: body.image_url ?? null,
+      // Clients echo the signed URL from the media upload — store the bare key.
+      image_url: normalizeFileRef(body.image_url ?? null),
     },
     include: {
       sender_user: { select: { id: true, name: true } },
@@ -203,6 +209,9 @@ export async function markRead(
   organizationId: string,
   prisma: PrismaClient,
 ) {
+  if (!isAdmin && requesterId !== interpreterId) {
+    throw new ForbiddenError("UNAUTHORIZED_CONVERSATION", "Cannot mark another interpreter's conversation as read");
+  }
   const result = await prisma.message.updateMany({
     where: {
       organization_id: organizationId,

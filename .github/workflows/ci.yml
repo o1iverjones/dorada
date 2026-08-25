@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, refactor]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, refactor]
 
 jobs:
   typecheck-and-lint:
@@ -12,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -35,6 +35,9 @@ jobs:
 
       - name: Lint all packages
         run: pnpm lint
+
+      - name: Build web bundle
+        run: pnpm --filter @dorada/web build
 
   test:
     runs-on: ubuntu-latest
@@ -62,9 +65,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -73,6 +76,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm --filter @dorada/types build && pnpm --filter @dorada/utils build
 
       - name: Generate Prisma client
         run: pnpm --filter @dorada/api db:generate

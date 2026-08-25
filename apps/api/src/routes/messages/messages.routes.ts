@@ -1,14 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { SendMessageBodySchema } from "@dorada/types";
 import { z } from "zod";
-import { authenticate } from "../../middleware/auth.js";
+import { authenticate, authenticateAdmin } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { listConversations, listMessages, sendMessage, markRead, searchMessages } from "./messages.service.js";
 import { uploadImage, imageFilename, ImageUploadError } from "../../lib/uploadImage.js";
-import { messageImagePath } from "../../integrations/r2.js";
+import { messageImagePath, resolveFileUrl } from "../../integrations/r2.js";
+import { sendExpoPushNotifications } from "../../lib/push.js";
 
 export default async function messageRoutes(fastify: FastifyInstance) {
-  fastify.get("/search", { preHandler: authenticate }, async (req, reply) => {
+  // Admin-only: search spans every interpreter's conversation in the org.
+  fastify.get("/search", { preHandler: authenticateAdmin }, async (req, reply) => {
     const { q } = z.object({ q: z.string().min(1) }).parse(req.query);
     const payload = req.user as JwtPayload;
     return reply.send(await searchMessages(payload.organization_id, q, fastify.prisma));
@@ -42,7 +44,7 @@ export default async function messageRoutes(fastify: FastifyInstance) {
     const emitPayload = {
       id: message.id,
       body: message.body,
-      image_url: message.image_url ?? null,
+      image_url: await resolveFileUrl(message.image_url),
       sender_type: message.sender_type,
       sender: message.sender_type === "admin" && message.sender_user
         ? { id: message.sender_user.id, name: message.sender_user.name }
@@ -56,18 +58,43 @@ export default async function messageRoutes(fastify: FastifyInstance) {
     if (!payload.type || payload.type === "interpreter") {
       fastify.io.to(`notify:${payload.organization_id}`).emit("new_message", emitPayload);
     }
+
+    // Push to the interpreter's device on admin messages (fire-and-forget).
+    // The mobile app has no socket — this is what lets it drop the 1s poll:
+    // foreground pushes trigger an immediate refresh, background pushes notify.
+    if (isAdmin) {
+      void (async () => {
+        const interp = await fastify.prisma.interpreter.findUnique({
+          where: { id: interpreter_id },
+          select: { fcm_token: true },
+        });
+        if (!interp?.fcm_token) return;
+        await sendExpoPushNotifications([{
+          to: interp.fcm_token,
+          title: emitPayload.sender.name,
+          body: message.image_url ? "📷 Image" : message.body.slice(0, 140),
+          data: { type: "message" },
+          sound: "default" as const,
+          priority: "high" as const,
+        }]);
+      })().catch((err) => fastify.log.error({ err }, "message push notification failed"));
+    }
     return reply.status(201).send(emitPayload);
   });
 
   // POST /messages/conversations/:interpreter_id/media  (upload image, returns URL)
   fastify.post("/conversations/:interpreter_id/media", { preHandler: authenticate }, async (req, reply) => {
     const { interpreter_id } = req.params as { interpreter_id: string };
+    const payload = req.user as JwtPayload;
+    if (payload.type !== "admin" && payload.sub !== interpreter_id) {
+      return reply.status(403).send({ error: { code: "UNAUTHORIZED_CONVERSATION", message: "Cannot upload to another interpreter's thread" } });
+    }
     const data = await req.file({ limits: { fileSize: 10 * 1024 * 1024 } });
     if (!data) return reply.status(400).send({ error: { code: "NO_FILE", message: "No file uploaded" } });
     try {
       const filename = imageFilename(data.filename, data.mimetype);
-      const url = await uploadImage(data, messageImagePath(interpreter_id, filename));
-      return reply.send({ url });
+      const ref = await uploadImage(data, messageImagePath(interpreter_id, filename));
+      return reply.send({ url: await resolveFileUrl(ref) });
     } catch (err) {
       if (err instanceof ImageUploadError) return reply.status(400).send({ error: { code: err.code, message: err.message } });
       throw err;

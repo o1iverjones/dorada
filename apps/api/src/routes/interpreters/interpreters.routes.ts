@@ -20,6 +20,8 @@ import {
 } from "./interpreters.service.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { registerEntityNotesRoutes } from "../../lib/entityNotes.js";
+import { uploadBuffer, avatarPath, resolveFileUrl, AVATAR_URL_TTL } from "../../integrations/r2.js";
+import { config } from "../../config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = join(__dirname, "..", "..", "..", "uploads");
@@ -186,20 +188,27 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
 
     const ext = extname(data.filename) || (data.mimetype === "image/png" ? ".png" : ".jpg");
     const filename = `${randomUUID()}${ext}`;
-    const filepath = join(UPLOADS_DIR, filename);
 
     const chunks: Buffer[] = [];
     for await (const chunk of data.file) chunks.push(chunk);
-    await writeFile(filepath, Buffer.concat(chunks));
+    const buffer = Buffer.concat(chunks);
 
-    const url = `/uploads/${filename}`;
     const interpreter = await fastify.prisma.interpreter.findFirst({
       where: { id, organization_id: payload.organization_id },
     });
     if (!interpreter) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "Interpreter not found" } });
 
-    await fastify.prisma.interpreter.update({ where: { id }, data: { profile_picture_url: url } });
+    // R2 when configured — Railway's local disk is wiped on redeploy.
+    let storedRef: string;
+    if (config.R2_ACCOUNT_ID) {
+      storedRef = await uploadBuffer(avatarPath("interpreter", id, filename), buffer, data.mimetype);
+    } else {
+      await writeFile(join(UPLOADS_DIR, filename), buffer);
+      storedRef = `/uploads/${filename}`;
+    }
 
-    return reply.send({ url });
+    await fastify.prisma.interpreter.update({ where: { id }, data: { profile_picture_url: storedRef } });
+
+    return reply.send({ url: await resolveFileUrl(storedRef, AVATAR_URL_TTL) });
   });
 }

@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { Queue } from "bullmq";
 import { redisConnection } from "../config.js";
+import { logger } from "../lib/logger.js";
 import { createAppointmentRemindersWorker } from "./appointment-reminders.worker.js";
 import { createFollowUpFlowWorker } from "./follow-up-flow.worker.js";
 import { createReportGenerationWorker } from "./report-generation.worker.js";
@@ -48,6 +49,20 @@ scheduleAdminAlertPolling().catch(console.error);
 scheduleClinicSummaryEmailPolling().catch(console.error);
 
 const workers = [reminderWorker, followUpWorker, reportWorker, emailIntakeWorker, adminAlertWorker, clinicConfirmationWorker, clinicSummaryEmailWorker];
+
+// Failed jobs previously vanished silently — surface every failure with
+// enough context to find the job in Redis and retrace it.
+for (const worker of workers) {
+  worker.on("failed", (job, err) => {
+    logger.error(
+      { queue: worker.name, jobId: job?.id, jobName: job?.name, attemptsMade: job?.attemptsMade, data: job?.data, err },
+      "worker job failed",
+    );
+  });
+  worker.on("error", (err) => {
+    logger.error({ queue: worker.name, err }, "worker error");
+  });
+}
 
 function shutdown() {
   console.log("Shutting down workers…");

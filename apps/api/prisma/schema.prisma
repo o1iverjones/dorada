@@ -115,6 +115,8 @@ model RefreshToken {
   user        User?        @relation(fields: [user_id], references: [id], onDelete: Cascade)
   interpreter Interpreter? @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
 
+  @@index([user_id])
+  @@index([interpreter_id])
   @@map("refresh_tokens")
 }
 
@@ -214,6 +216,7 @@ model InterpreterNote {
   interpreter  Interpreter  @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organization_id], references: [id])
 
+  @@index([interpreter_id])
   @@map("interpreter_notes")
 }
 
@@ -227,6 +230,7 @@ model AvailabilityBlock {
 
   interpreter Interpreter @relation(fields: [interpreter_id], references: [id], onDelete: Cascade)
 
+  @@index([interpreter_id])
   @@map("interpreter_availability")
 }
 
@@ -268,6 +272,7 @@ model Clinic {
   interpreter_notes    ClinicInterpreterNote[]
   doctors              ClinicDoctor[]
 
+  @@index([organization_id, name])
   @@map("clinics")
 }
 
@@ -279,6 +284,7 @@ model ClinicDoctor {
 
   clinic Clinic @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
 
+  @@index([clinic_id])
   @@map("clinic_doctors")
 }
 
@@ -339,6 +345,7 @@ model Agency {
   claims       Claim[]
   admin_notes  AgencyNote[]
 
+  @@index([organization_id, name])
   @@map("agencies")
 }
 
@@ -363,6 +370,7 @@ model Patient {
   claims                Claim[]
   admin_notes           PatientNote[]
 
+  @@index([organization_id, name])
   @@map("patients")
 }
 
@@ -387,6 +395,8 @@ model Claim {
   agency  Agency?  @relation(fields: [agency_id], references: [id], onDelete: SetNull)
   insurance_company InsuranceCompany? @relation(fields: [insurance_company_id], references: [id], onDelete: SetNull)
 
+  @@index([patient_id])
+  @@index([organization_id, case_number])
   @@map("claims")
 }
 
@@ -409,6 +419,7 @@ model InsuranceCompany {
   claims       Claim[]
   admin_notes  InsuranceCompanyNote[]
 
+  @@index([organization_id, name])
   @@map("insurance_companies")
 }
 
@@ -425,6 +436,7 @@ model InsuranceCompanyNote {
   insurance_company InsuranceCompany @relation(fields: [insurance_company_id], references: [id], onDelete: Cascade)
   organization      Organization     @relation(fields: [organization_id], references: [id])
 
+  @@index([insurance_company_id])
   @@map("insurance_company_notes")
 }
 
@@ -441,6 +453,7 @@ model PatientNote {
   patient      Patient      @relation(fields: [patient_id], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organization_id], references: [id])
 
+  @@index([patient_id])
   @@map("patient_notes")
 }
 
@@ -521,6 +534,15 @@ model Appointment {
   invoice            Invoice?
   media              AppointmentMedia[]
 
+  // Hot paths: calendar/date-range lists, dashboard status counts,
+  // interpreter schedules, and per-entity detail pages (FK joins).
+  @@index([organization_id, date_time])
+  @@index([organization_id, status])
+  @@index([interpreter_id, date_time])
+  @@index([clinic_id])
+  @@index([patient_id])
+  @@index([agency_id])
+  @@index([type_id])
   @@map("appointments")
 }
 
@@ -539,6 +561,7 @@ model AppointmentMedia {
   appointment  Appointment  @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
   interpreter  Interpreter  @relation(fields: [interpreter_id], references: [id])
 
+  @@index([appointment_id])
   @@map("appointment_media")
 }
 
@@ -555,6 +578,7 @@ model AppointmentActivity {
   appointment  Appointment  @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organization_id], references: [id])
 
+  @@index([appointment_id, created_at])
   @@map("appointment_activities")
 }
 
@@ -574,6 +598,8 @@ model ActivityLog {
   organization Organization @relation(fields: [organization_id], references: [id])
 
   @@index([organization_id, created_at(sort: Desc)])
+  // Per-entity activity feeds (shared ActivityLogCard)
+  @@index([organization_id, entity_type, entity_id, created_at(sort: Desc)])
   @@map("activity_logs")
 }
 
@@ -590,6 +616,7 @@ model AppointmentNote {
   appointment  Appointment  @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organization_id], references: [id])
 
+  @@index([appointment_id])
   @@map("appointment_notes")
 }
 
@@ -606,6 +633,7 @@ model ClinicNote {
   clinic       Clinic       @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organization_id], references: [id])
 
+  @@index([clinic_id])
   @@map("clinic_notes")
 }
 
@@ -622,6 +650,7 @@ model AgencyNote {
   agency       Agency       @relation(fields: [agency_id], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organization_id], references: [id])
 
+  @@index([agency_id])
   @@map("agency_notes")
 }
 
@@ -636,6 +665,7 @@ model ClinicInterpreterNote {
 
   clinic Clinic @relation(fields: [clinic_id], references: [id], onDelete: Cascade)
 
+  @@index([clinic_id])
   @@map("clinic_interpreter_notes")
 }
 
@@ -652,6 +682,8 @@ model AppointmentOffer {
   interpreter Interpreter @relation(fields: [interpreter_id], references: [id])
 
   @@unique([appointment_id, interpreter_id])
+  // Interpreter's pending-offer list (mobile app home screen)
+  @@index([interpreter_id, status])
   @@map("appointment_offers")
 }
 
@@ -687,6 +719,7 @@ model FollowUpMedia {
 
   follow_up_response FollowUpResponse @relation(fields: [follow_up_response_id], references: [id], onDelete: Cascade)
 
+  @@index([follow_up_response_id])
   @@map("follow_up_media")
 }
 
@@ -734,6 +767,7 @@ model EmailIntakeLog {
   extraction       EmailIntakeExtraction?
   draft            EmailIntakeDraft?
 
+  @@index([organization_id, created_at(sort: Desc)])
   @@map("email_intake_logs")
 }
 
@@ -793,6 +827,7 @@ model ReportJob {
   organization Organization @relation(fields: [organization_id], references: [id])
   requested_by_user User   @relation(fields: [requested_by], references: [id])
 
+  @@index([organization_id, created_at(sort: Desc)])
   @@map("report_jobs")
 }
 
@@ -813,6 +848,9 @@ model Message {
   sender_user  User?        @relation("SentByUser", fields: [sender_user_id], references: [id])
   interpreter  Interpreter  @relation("SentByInterpreter", fields: [interpreter_id], references: [id])
 
+  // Conversation thread loads + unread counts; org-wide search ordering
+  @@index([interpreter_id, sent_at])
+  @@index([organization_id, sent_at])
   @@map("messages")
 }
 
@@ -936,6 +974,8 @@ model Invoice {
   interpreter  Interpreter  @relation(fields: [interpreter_id], references: [id])
   approved_by  User?        @relation("InvoiceApprovedBy", fields: [approved_by_id], references: [id])
 
+  @@index([organization_id, status])
+  @@index([interpreter_id])
   @@map("invoices")
 }
 

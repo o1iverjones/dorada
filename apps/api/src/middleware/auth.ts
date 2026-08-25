@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { UnauthorizedError } from "../lib/errors.js";
+import { enterTenantContext } from "../lib/tenantContext.js";
 
 export interface JwtPayload {
   sub: string;
@@ -21,6 +22,10 @@ export async function authenticate(
     await reply.status(error.statusCode).send({ error: { code: error.code, message: error.message } });
     return;
   }
+  // Bind this request's async chain to the token's org so the Prisma tenant
+  // guard (lib/tenantGuard.ts) can scope list/bulk queries as a safety net.
+  const payload = request.user as JwtPayload;
+  if (payload.organization_id) enterTenantContext(payload.organization_id);
 }
 
 export async function authenticateInterpreter(

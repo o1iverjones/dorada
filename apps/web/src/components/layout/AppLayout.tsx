@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useOutlet, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket } from "../../lib/socket.js";
@@ -6,6 +6,7 @@ import { Sidebar } from "./Sidebar.js";
 import { TopBar } from "./TopBar.js";
 import { Toaster } from "../ui/toaster.js";
 import { PageHeaderProvider } from "../../contexts/PageHeaderContext.js";
+import { LoadingSpinner } from "../shared/LoadingSpinner.js";
 
 export function AppLayout() {
   const qc = useQueryClient();
@@ -66,7 +67,9 @@ export function AppLayout() {
         <div className="flex flex-1 flex-col overflow-hidden">
           {!isDashboard && <TopBar />}
           <main className="flex-1 overflow-y-auto px-6 pb-6 pt-0">
-            {outlet}
+            {/* Pages are lazy-loaded chunks (see router.tsx) — this boundary
+                shows while a route's chunk downloads on first visit. */}
+            <Suspense fallback={<LoadingSpinner />}>{outlet}</Suspense>
           </main>
         </div>
         <Toaster />

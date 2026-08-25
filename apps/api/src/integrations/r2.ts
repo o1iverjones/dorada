@@ -12,13 +12,18 @@ function getClient(): S3Client {
       endpoint: `https://${config.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: config.R2_ACCESS_KEY_ID!,
-        secretAccessKey: config.R2_SECRET_ACCESS_ID!,
+        secretAccessKey: config.R2_SECRET_ACCESS_KEY!,
       },
     });
   }
   return client;
 }
 
+/**
+ * Upload a buffer and return the OBJECT KEY (not a URL).
+ * The bucket is private: store keys in the DB and resolve them to short-lived
+ * signed URLs at read time via resolveFileUrl().
+ */
 export async function uploadBuffer(destination: string, buffer: Buffer, contentType: string): Promise<string> {
   await getClient().send(new PutObjectCommand({
     Bucket: config.R2_BUCKET,
@@ -26,7 +31,7 @@ export async function uploadBuffer(destination: string, buffer: Buffer, contentT
     Body: buffer,
     ContentType: contentType,
   }));
-  return `${config.R2_PUBLIC_URL}/${destination}`;
+  return destination;
 }
 
 export async function uploadString(destination: string, content: string, contentType = "text/plain"): Promise<string> {
@@ -68,4 +73,88 @@ export function noteImagePath(entityType: "appointment" | "clinic" | "agency" | 
 
 export function messageImagePath(interpreterId: string, filename: string): string {
   return `dorada/messages/${interpreterId}/${filename}`;
+}
+
+export function appointmentMediaPath(appointmentId: string, filename: string): string {
+  return `dorada/appointment-media/${appointmentId}/${filename}`;
+}
+
+export function avatarPath(kind: "user" | "interpreter", id: string, filename: string): string {
+  return `avatars/${kind}/${id}/${filename}`;
+}
+
+// ─── Signed-URL file references ───────────────────────────────────────────────
+//
+// The DB stores R2 object KEYS. Legacy rows may hold permanent public URLs
+// (`${R2_PUBLIC_URL}/<key>`), and clients echo signed URLs back on create —
+// keyFromFileRef() recovers the key from any of those forms.
+
+/** Avatars are cached client-side (auth store) — sign just under R2's 7-day cap. */
+export const AVATAR_URL_TTL = 6 * 24 * 3600;
+
+const R2_KEY_PREFIXES = ["dorada/", "avatars/"];
+
+/**
+ * Extract the R2 object key from a stored/echoed file reference, or null if it
+ * isn't one of our R2 objects.
+ *
+ * Handles every form the value can take:
+ *   - a bare key already: "dorada/notes/…"
+ *   - a presigned URL the client echoes back on save
+ *   - a legacy permanent public URL
+ *
+ * Critically, it distinguishes the two S3 URL layouts. R2 presigned URLs are
+ * virtual-hosted by default — "https://<bucket>.<account>.r2.cloudflarestorage.com/<key>"
+ * — where the path IS the key. Only the bare account endpoint uses path-style
+ * "https://<account>.r2.cloudflarestorage.com/<bucket>/<key>". Getting this
+ * wrong corrupts keys whose first segment matches the bucket name (e.g. a
+ * bucket named "dorada" with keys under "dorada/").
+ */
+export function keyFromFileRef(ref: string | null | undefined): string | null {
+  if (!ref) return null;
+
+  // Already a bare key.
+  if (R2_KEY_PREFIXES.some((p) => ref.startsWith(p))) return ref.split("?")[0]!;
+
+  let u: URL;
+  try {
+    u = new URL(ref);
+  } catch {
+    return null; // not a URL and not a recognised bare key
+  }
+  const rawPath = decodeURIComponent(u.pathname.replace(/^\//, ""));
+
+  // Path-style ONLY on the bare account endpoint: strip the leading "<bucket>/".
+  const pathStyleHost = config.R2_ACCOUNT_ID
+    ? `${config.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+    : null;
+  if (pathStyleHost && u.hostname === pathStyleHost && rawPath.startsWith(`${config.R2_BUCKET}/`)) {
+    return rawPath.slice(config.R2_BUCKET.length + 1);
+  }
+
+  // Everything else — virtual-hosted R2, r2.dev public URLs, custom domains —
+  // serves the key directly as the path. Only claim it if it lands on a key
+  // root we actually generate, so unrelated URLs pass through untouched.
+  if (R2_KEY_PREFIXES.some((p) => rawPath.startsWith(p))) return rawPath;
+  return null;
+}
+
+/** Normalize a client-supplied file reference to a bare key before persisting. */
+export function normalizeFileRef<T extends string | null | undefined>(ref: T): T | string {
+  return keyFromFileRef(ref) ?? ref;
+}
+
+/**
+ * Resolve a stored file reference to something a client can fetch:
+ * R2 objects become short-lived signed URLs; anything else (local /uploads
+ * paths in dev, data: URLs, external URLs) passes through unchanged.
+ */
+export async function resolveFileUrl(
+  ref: string | null | undefined,
+  expiresInSeconds = 3600,
+): Promise<string | null> {
+  if (!ref) return null;
+  const key = keyFromFileRef(ref);
+  if (!key || !config.R2_ACCOUNT_ID) return ref;
+  return getSignedUrl(key, expiresInSeconds);
 }

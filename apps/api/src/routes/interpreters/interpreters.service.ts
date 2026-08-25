@@ -7,6 +7,7 @@ import type {
   InterpreterListQuery,
 } from "@dorada/types";
 import { NotFoundError, ConflictError, ValidationError } from "../../lib/errors.js";
+import { resolveFileUrl, AVATAR_URL_TTL } from "../../integrations/r2.js";
 
 function ensureTenant(record: { organization_id: string } | null, organizationId: string, code: string) {
   if (!record || record.organization_id !== organizationId) {
@@ -52,10 +53,11 @@ export async function listInterpreters(query: InterpreterListQuery, organization
   const hasMore = items.length > query.limit;
   const data = hasMore ? items.slice(0, -1) : items;
   return {
-    data: data.map((i) => ({
+    data: await Promise.all(data.map(async (i) => ({
       ...formatInterpreter(i),
+      profile_picture_url: await resolveFileUrl(i.profile_picture_url, AVATAR_URL_TTL),
       ...(checkDate ? { is_available: (i as typeof i & { availability_blocks?: { id: string }[] }).availability_blocks?.length === 0 } : {}),
-    })),
+    }))),
     pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
   };
 }
@@ -110,7 +112,8 @@ export async function getInterpreter(id: string, organizationId: string, prisma:
     },
   });
   ensureTenant(interpreter, organizationId, "INTERPRETER_NOT_FOUND");
-  return formatInterpreter({ ...interpreter!, address_line1: interpreter!.address_line1, address_line2: interpreter!.address_line2, city: interpreter!.city, state: interpreter!.state, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, certificate_date: interpreter!.certificate_date, zip_code: interpreter!.zip_code, preferred_cities: interpreter!.preferred_cities });
+  const formatted = formatInterpreter({ ...interpreter!, address_line1: interpreter!.address_line1, address_line2: interpreter!.address_line2, city: interpreter!.city, state: interpreter!.state, emergency_contact_name: interpreter!.emergency_contact_name, emergency_contact_phone: interpreter!.emergency_contact_phone, notes: interpreter!.notes, certificate_number: interpreter!.certificate_number, certificate_date: interpreter!.certificate_date, zip_code: interpreter!.zip_code, preferred_cities: interpreter!.preferred_cities });
+  return { ...formatted, profile_picture_url: await resolveFileUrl(interpreter!.profile_picture_url, AVATAR_URL_TTL) };
 }
 
 function normalizePhone(phone: string): string {

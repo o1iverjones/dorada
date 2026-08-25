@@ -1,7 +1,9 @@
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 
-const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? "https://api.dorada.com/api/v1";
+// app.config.js always supplies apiUrl per APP_ENV; the fallback is a
+// last-resort safety net and must point at the real production domain.
+const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? "https://api.dorada.app/api/v1";
 
 class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -34,6 +36,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       return retry.json() as Promise<T>;
     }
     await clearTokens();
+    onSessionExpired?.();
     throw new ApiError(401, "UNAUTHORIZED", "Session expired");
   }
 
@@ -63,6 +66,12 @@ async function tryRefresh(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+let onSessionExpired: (() => void) | null = null;
+
+export function setSessionExpiredHandler(handler: () => void) {
+  onSessionExpired = handler;
 }
 
 export async function clearTokens() {

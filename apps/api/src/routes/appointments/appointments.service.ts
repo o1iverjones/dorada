@@ -17,6 +17,7 @@ import {
 } from "../../lib/errors.js";
 import { addMinutes, diffMinutes } from "@dorada/utils";
 import { writeActivityLog } from "../../lib/activityLog.js";
+import { normalizeFileRef, resolveFileUrl, AVATAR_URL_TTL } from "../../integrations/r2.js";
 import { distanceMiles } from "../../lib/geo.js";
 import { sendExpoPushNotifications } from "../../lib/push.js";
 
@@ -53,7 +54,7 @@ function ensureTenant(record: { organization_id: string } | null, organizationId
   }
 }
 
-const ADMIN_RESOLVABLE_STATUSES = [
+export const ADMIN_RESOLVABLE_STATUSES = [
   "cancelled", "late_cancellation", "no_show", "rescheduled",
   "double_booking", "pt_speaks_eng", "dr_speaks_es",
 ];
@@ -69,7 +70,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   ...Object.fromEntries(ADMIN_RESOLVABLE_STATUSES.map((s) => [s, ["unassigned", "pending_offer", "accepted", ...ADMIN_RESOLVABLE_STATUSES.filter((t) => t !== s)]])),
 };
 
-function assertValidTransition(from: string, to: string) {
+export function assertValidTransition(from: string, to: string) {
   if (from === to) return;
   if (!STATUS_TRANSITIONS[from]?.includes(to)) {
     throw new ValidationError("INVALID_STATUS_TRANSITION", `Cannot transition from ${from} to ${to}`);
@@ -127,8 +128,16 @@ export async function listAppointments(query: AppointmentListQuery, organization
 
   const hasMore = items.length > query.limit;
   const data = hasMore ? items.slice(0, -1) : items;
+  // Interpreter avatars are stored as R2 keys — sign them for display.
+  const resolved = await Promise.all(
+    data.map(async (a) =>
+      a.interpreter?.profile_picture_url
+        ? { ...a, interpreter: { ...a.interpreter, profile_picture_url: await resolveFileUrl(a.interpreter.profile_picture_url, AVATAR_URL_TTL) } }
+        : a,
+    ),
+  );
   return {
-    data,
+    data: resolved,
     pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
   };
 }
@@ -165,16 +174,18 @@ export async function getActivityLog(id: string, organizationId: string, prisma:
   return prisma.appointmentActivity.findMany({
     where: { appointment_id: id },
     orderBy: { created_at: "desc" },
+    take: 500, // protective cap — the card paginates client-side
   });
 }
 
 export async function getAdminNotes(id: string, organizationId: string, prisma: PrismaClient) {
   const appt = await prisma.appointment.findUnique({ where: { id }, select: { organization_id: true } });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
-  return prisma.appointmentNote.findMany({
+  const notes = await prisma.appointmentNote.findMany({
     where: { appointment_id: id },
     orderBy: { created_at: "desc" },
   });
+  return Promise.all(notes.map(async (n) => ({ ...n, image_url: await resolveFileUrl(n.image_url) })));
 }
 
 export async function addAdminNote(
@@ -188,10 +199,10 @@ export async function addAdminNote(
   const appt = await prisma.appointment.findUnique({ where: { id }, select: { organization_id: true, po_number: true, patient: { select: { name: true } } } });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
   const note = await prisma.appointmentNote.create({
-    data: { appointment_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: imageUrl },
+    data: { appointment_id: id, organization_id: organizationId, content, admin_id: actor.id, admin_name: actor.name, image_url: normalizeFileRef(imageUrl) },
   });
   await logActivity(id, organizationId, "note_added", actor.name, actor.id, null, prisma, appt!.patient?.name, appt!.po_number);
-  return note;
+  return { ...note, image_url: await resolveFileUrl(note.image_url) };
 }
 
 export async function createAppointment(
@@ -1050,7 +1061,7 @@ export async function listFollowUpDrafts(
   const hasMore = items.length > query.limit;
   const data = hasMore ? items.slice(0, -1) : items;
   return {
-    data: data.map((d) => ({
+    data: await Promise.all(data.map(async (d) => ({
       id: d.id,
       status: d.status,
       created_from_appointment: {
@@ -1070,10 +1081,10 @@ export async function listFollowUpDrafts(
         same_clinic: d.follow_up_response.same_clinic,
         follow_up_datetime: d.follow_up_response.follow_up_datetime,
         notes: d.follow_up_response.notes,
-        media: d.follow_up_response.media.map((m) => ({ id: m.id, url: m.public_url, type: m.mime_type })),
+        media: await Promise.all(d.follow_up_response.media.map(async (m) => ({ id: m.id, url: await resolveFileUrl(m.public_url), type: m.mime_type }))),
       },
       created_at: d.created_at.toISOString(),
-    })),
+    }))),
     pagination: { next_cursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, has_more: hasMore },
   };
 }
@@ -1150,18 +1161,20 @@ export async function uploadAppointmentMedia(params: {
   if (!appt || appt.interpreter_id !== interpreterId) {
     throw new ForbiddenError("NOT_ASSIGNED_INTERPRETER", "Not the assigned interpreter");
   }
-  return prisma.appointmentMedia.create({
+  const media = await prisma.appointmentMedia.create({
     data: { appointment_id: appointmentId, interpreter_id: interpreterId, organization_id: organizationId, filename, mime_type: mimeType, file_size: fileSize, gcs_path: gcsPath, public_url: publicUrl },
     select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true },
   });
+  return { ...media, public_url: await resolveFileUrl(media.public_url) };
 }
 
 export async function getAppointmentMedia(appointmentId: string, organizationId: string, prisma: PrismaClient) {
   const appt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
-  return prisma.appointmentMedia.findMany({
+  const media = await prisma.appointmentMedia.findMany({
     where: { appointment_id: appointmentId },
     select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true, interpreter: { select: { name: true } } },
     orderBy: { uploaded_at: "asc" },
   });
+  return Promise.all(media.map(async (m) => ({ ...m, public_url: await resolveFileUrl(m.public_url) })));
 }

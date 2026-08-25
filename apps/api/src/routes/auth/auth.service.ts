@@ -15,6 +15,7 @@ import {
 import { config } from "../../config.js";
 import { sendSms } from "../../lib/sms.js";
 import { sendEmail, passwordResetEmail } from "../../lib/email.js";
+import { resolveFileUrl, AVATAR_URL_TTL } from "../../integrations/r2.js";
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
@@ -179,7 +180,7 @@ export async function adminLogin(
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      admin: { id: user.id, name: user.name, email: user.email, role: { id: user.role.id, name: user.role.name }, permissions, phone: user.phone, phone_ext: user.phone_ext, profile_picture_url: user.profile_picture_url },
+      admin: { id: user.id, name: user.name, email: user.email, role: { id: user.role.id, name: user.role.name }, permissions, phone: user.phone, phone_ext: user.phone_ext, profile_picture_url: await resolveFileUrl(user.profile_picture_url, AVATAR_URL_TTL) },
     };
   }
 
@@ -256,7 +257,7 @@ export async function adminMfaVerify(
       permissions,
       phone: user.phone,
       phone_ext: user.phone_ext,
-      profile_picture_url: user.profile_picture_url,
+      profile_picture_url: await resolveFileUrl(user.profile_picture_url, AVATAR_URL_TTL),
     },
   };
 }

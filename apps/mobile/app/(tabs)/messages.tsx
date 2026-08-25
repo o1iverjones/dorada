@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import * as Notifications from "expo-notifications";
 import { api } from "../../src/lib/api";
 import { useAuthStore } from "../../src/store/auth";
 import { useMessagesStore } from "../../src/store/messages";
@@ -58,29 +59,47 @@ export default function MessagesScreen() {
       .finally(() => setIsLoading(false));
   }, [interpreterId]);
 
-  // 1-second polling — only fetches messages newer than the latest known timestamp
-  useEffect(() => {
-    if (!interpreterId) return;
-    const interval = setInterval(async () => {
-      if (!latestTimestampRef.current) return;
-      try {
-        const since = encodeURIComponent(latestTimestampRef.current);
-        const res = await api.get<{ data: Message[] }>(
-          `/messages/conversations/${interpreterId}?since=${since}`
-        );
-        if (res.data.length === 0) return;
-        setMessages((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
-          const newMsgs = res.data.filter((m) => !existingIds.has(m.id));
-          if (newMsgs.length === 0) return prev;
-          latestTimestampRef.current = newMsgs.at(-1)!.sent_at;
-          return [...prev, ...newMsgs];
-        });
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
-      } catch {}
-    }, 1000);
-    return () => clearInterval(interval);
+  // Fetch messages newer than the latest known timestamp and append them.
+  const fetchNew = useCallback(async () => {
+    if (!interpreterId || !latestTimestampRef.current) return;
+    try {
+      const since = encodeURIComponent(latestTimestampRef.current);
+      const res = await api.get<{ data: Message[] }>(
+        `/messages/conversations/${interpreterId}?since=${since}`
+      );
+      if (res.data.length === 0) return;
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const newMsgs = res.data.filter((m) => !existingIds.has(m.id));
+        if (newMsgs.length === 0) return prev;
+        latestTimestampRef.current = newMsgs.at(-1)!.sent_at;
+        return [...prev, ...newMsgs];
+      });
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+    } catch {}
   }, [interpreterId]);
+
+  // Poll every 3s, but ONLY while this screen is focused. Expo Router keeps
+  // tab screens mounted, so the previous mount-scoped 1s interval kept firing
+  // for the whole session from any tab (~86k requests/day per device — and a
+  // shared-IP hazard for interpreters behind carrier NAT now that per-IP rate
+  // limits are enforced). Instant delivery comes from the push listener below.
+  useFocusEffect(
+    useCallback(() => {
+      const interval = setInterval(() => void fetchNew(), 3000);
+      return () => clearInterval(interval);
+    }, [fetchNew])
+  );
+
+  // A message push arriving while the app is in the foreground refreshes the
+  // thread immediately (the API now pushes on every admin message).
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener((n) => {
+      const data = n.request.content.data as { type?: string } | null;
+      if (data?.type === "message") void fetchNew();
+    });
+    return () => sub.remove();
+  }, [fetchNew]);
 
   const send = useMutation({
     mutationFn: (body: unknown) => api.post(`/messages/conversations/${interpreterId}`, body),
@@ -95,6 +114,9 @@ export default function MessagesScreen() {
       setImageUri(null);
       setImageUrl(null);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+    },
+    onError: (err: Error) => {
+      Alert.alert("Error", err.message || "Failed to send message");
     },
   });
 

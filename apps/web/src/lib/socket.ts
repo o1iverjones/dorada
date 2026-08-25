@@ -7,11 +7,16 @@ let instance: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!instance) {
-    const token = localStorage.getItem("dorada_access_token") ?? "";
     instance = io(API_ORIGIN, {
-      auth: { token: `Bearer ${token}` },
+      // Read the token on EVERY (re)connect attempt. A static auth object
+      // captures the token at page load; access tokens rotate every 15 min,
+      // so after any disconnect (redeploy, laptop sleep, proxy idle) the
+      // reconnect presented a stale token, failed auth, and the socket died
+      // for the rest of the session — silently degrading messaging to the
+      // 8s/30s polling fallbacks.
+      auth: (cb) => cb({ token: `Bearer ${localStorage.getItem("dorada_access_token") ?? ""}` }),
       transports: ["websocket"],
-      reconnectionAttempts: 5,
+      // Keep retrying with backoff (socket.io default) instead of giving up after 5 attempts.
     });
   }
   return instance;

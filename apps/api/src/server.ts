@@ -21,10 +21,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export async function buildServer() {
   const fastify = Fastify({
     logger,
+    // Railway terminates TLS at its proxy — honor X-Forwarded-For so
+    // request.ip (and per-IP rate limits) see the real client address.
+    trustProxy: true,
     ajv: { customOptions: { strict: false } },
   });
 
   await fastify.register(fastifyHelmet);
+  if (!config.CORS_ORIGIN) {
+    // Railway builds run with NODE_ENV=production in BOTH environments, and
+    // each env serves the web app from a different origin — so there is no
+    // safe origin to guess here. Defaulting to a fixed list once took down
+    // the dev environment entirely (login + every XHR blocked). Reflect all
+    // origins but complain loudly: set CORS_ORIGIN on every deployment.
+    logger.warn("CORS_ORIGIN is not set — reflecting ALL origins. Set CORS_ORIGIN explicitly on this environment.");
+  }
   await fastify.register(fastifyCors, {
     origin: config.CORS_ORIGIN ? config.CORS_ORIGIN.split(",").map((o) => o.trim()) : true,
     credentials: true,
@@ -46,6 +57,30 @@ export async function buildServer() {
   await fastify.register(jwtPlugin);
   await fastify.register(multipartPlugin);
   await fastify.register(socketPlugin);
+
+  // Liveness/readiness probe — used by Railway health checks and for quick
+  // production triage. Raw queries bypass the tenant guard (model ops only).
+  fastify.get("/health", async (_request, reply) => {
+    const checks: Record<string, "ok" | "down"> = { database: "ok", redis: "ok" };
+    let healthy = true;
+    try {
+      await fastify.prisma.$queryRaw`SELECT 1`;
+    } catch {
+      checks.database = "down";
+      healthy = false;
+    }
+    try {
+      await fastify.redis.ping();
+    } catch {
+      checks.redis = "down";
+      healthy = false;
+    }
+    return reply.status(healthy ? 200 : 503).send({
+      status: healthy ? "ok" : "degraded",
+      checks,
+      uptime_seconds: Math.round(process.uptime()),
+    });
+  });
 
   await fastify.register(registerRoutes, { prefix: "/api/v1" });
 

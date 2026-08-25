@@ -24,31 +24,35 @@ import {
 import { authenticate } from "../../middleware/auth.js";
 import type { JwtPayload } from "../../middleware/auth.js";
 import { config } from "../../config.js";
+import { z } from "zod";
+
+/** Stricter per-IP throttles for credential endpoints (global default is 300/min). */
+const throttle = (max: number, timeWindow: string) => ({ config: { rateLimit: { max, timeWindow } } });
 
 export default async function authRoutes(fastify: FastifyInstance) {
   // POST /auth/interpreter/otp/request
-  fastify.post("/interpreter/otp/request", async (request, reply) => {
+  fastify.post("/interpreter/otp/request", throttle(5, "1 minute"), async (request, reply) => {
     const body = RequestOtpBodySchema.parse(request.body);
     await requestOtp(body.phone, fastify.prisma, fastify.redis);
     return reply.send({ message: "OTP sent if number is registered." });
   });
 
   // POST /auth/interpreter/otp/verify
-  fastify.post("/interpreter/otp/verify", async (request, reply) => {
+  fastify.post("/interpreter/otp/verify", throttle(15, "1 minute"), async (request, reply) => {
     const body = VerifyOtpBodySchema.parse(request.body);
     const result = await verifyOtp(body.phone, body.otp, fastify.prisma, fastify.redis, fastify);
     return reply.send(result);
   });
 
   // POST /auth/admin/login
-  fastify.post("/admin/login", async (request, reply) => {
+  fastify.post("/admin/login", throttle(10, "1 minute"), async (request, reply) => {
     const body = AdminLoginBodySchema.parse(request.body);
     const result = await adminLogin(body.email, body.password, fastify.prisma, fastify.redis, fastify);
     return reply.send(result);
   });
 
   // POST /auth/admin/mfa/verify
-  fastify.post("/admin/mfa/verify", async (request, reply) => {
+  fastify.post("/admin/mfa/verify", throttle(15, "1 minute"), async (request, reply) => {
     const body = AdminMfaVerifyBodySchema.parse(request.body);
     const result = await adminMfaVerify(body.mfa_token, body.totp_code, fastify.prisma, fastify);
     return reply.send(result);
@@ -88,9 +92,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
     return reply.status(204).send();
   });
 
-  // GET /auth/dev/otp/:phone — DEV ONLY: returns the pending OTP from Redis so
-  // we can test interpreter login without a real Twilio integration.
-  if (config.APP_ENV !== "production") {
+  // DEV-ONLY backdoors (OTP retrieval, SMS test, rate-limit reset, job
+  // triggers). These are UNAUTHENTICATED and dangerous in production, so gate
+  // on an explicit APP_ENV === "dev" — never a "not production" check that a
+  // stray env value ("staging", etc.) could slip through.
+  if (config.APP_ENV === "dev") {
     // POST /auth/dev/trigger-stale-billing — immediately enqueues a stale-billing-check job
     fastify.post("/dev/trigger-stale-billing", async (_request, reply) => {
       const { adminAlertQueue } = await import("../../workers/admin-alert.worker.js");
@@ -104,15 +110,22 @@ export default async function authRoutes(fastify: FastifyInstance) {
       await forceSendClinicConfirmations(fastify.prisma);
       return reply.send({ triggered: true, note: "confirmation emails sent directly (time window bypassed)" });
     });
+    // Match on normalized digits so formatted stored phones like "(831) 238-8020"
+    // resolve — same regexp_replace lookup requestOtp/verifyOtp use.
+    const findInterpreterByPhone = async (last10: string) => {
+      const rows = await fastify.prisma.$queryRaw<Array<{ phone: string }>>`
+        SELECT phone FROM "interpreters"
+        WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
+          AND is_active = true
+        LIMIT 1
+      `;
+      return rows[0] ?? null;
+    };
+
     fastify.get("/dev/otp/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };
-      const normalized = phone.replace(/\D/g, "");
-      const last10 = normalized.slice(-10);
-      // Find interpreter to get canonical phone key (same logic as requestOtp)
-      const interpreter = await fastify.prisma.interpreter.findFirst({
-        where: { phone: { endsWith: last10 }, is_active: true },
-        select: { phone: true },
-      });
+      const last10 = phone.replace(/\D/g, "").slice(-10);
+      const interpreter = await findInterpreterByPhone(last10);
       if (!interpreter) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No interpreter found for this number" } });
       const canonicalPhone = interpreter.phone.replace(/\D/g, "");
       const otp = await fastify.redis.get(`otp:${canonicalPhone}`);
@@ -120,15 +133,31 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return reply.send({ otp });
     });
 
+    // POST /auth/dev/sms-test { to } — sends a real Sinch SMS and returns the
+    // raw Sinch response synchronously. This is the Sinch diagnostic: Railway
+    // deploy logs don't stream runtime output, so this is how we actually see
+    // what Sinch says (200 accepted / 401 auth / 400 bad number / 403 sender
+    // not provisioned). `to` must be E.164, e.g. "+18312388020".
+    fastify.post("/dev/sms-test", async (request, reply) => {
+      const { to } = z.object({ to: z.string().min(8) }).parse(request.body);
+      const { sinchConfigured, sendSmsRaw } = await import("../../lib/sms.js");
+      if (!sinchConfigured()) {
+        return reply.status(400).send({ configured: false, message: "Sinch env vars are not all set on this service" });
+      }
+      const result = await sendSmsRaw(to, `Dorada test SMS ${new Date().toISOString()}`);
+      return reply.status(result.ok ? 200 : 502).send({
+        region: config.SINCH_REGION,
+        from: config.SINCH_FROM_NUMBER,
+        ...result,
+      });
+    });
+
     // DELETE /auth/dev/reset/:phone — clears rate limit + OTP so you can retry immediately
     fastify.delete("/dev/reset/:phone", async (request, reply) => {
       const { phone } = request.params as { phone: string };
       const normalized = phone.replace(/\D/g, "");
       const last10 = normalized.slice(-10);
-      const interpreter = await fastify.prisma.interpreter.findFirst({
-        where: { phone: { endsWith: last10 }, is_active: true },
-        select: { phone: true },
-      });
+      const interpreter = await findInterpreterByPhone(last10);
       const canonicalPhone = interpreter ? interpreter.phone.replace(/\D/g, "") : normalized;
       await fastify.redis.del(
         `otp:rate:${normalized}`,
@@ -143,15 +172,16 @@ export default async function authRoutes(fastify: FastifyInstance) {
     });
   }
 
-  // POST /auth/admin/password/reset-request
-  fastify.post("/admin/password/reset-request", async (request, reply) => {
+  // POST /auth/admin/password/reset-request — sends email; throttle hard to
+  // prevent outbound-email abuse and account probing.
+  fastify.post("/admin/password/reset-request", throttle(5, "15 minutes"), async (request, reply) => {
     const body = PasswordResetRequestBodySchema.parse(request.body);
     await requestPasswordReset(body.email, fastify.prisma, fastify.redis);
     return reply.send({ message: "Reset link sent if email is registered." });
   });
 
   // POST /auth/admin/password/reset-confirm
-  fastify.post("/admin/password/reset-confirm", async (request, reply) => {
+  fastify.post("/admin/password/reset-confirm", throttle(10, "1 minute"), async (request, reply) => {
     const body = PasswordResetConfirmBodySchema.parse(request.body);
     await confirmPasswordReset(body.reset_token, body.new_password, fastify.prisma, fastify.redis);
     return reply.send({ message: "Password updated successfully." });

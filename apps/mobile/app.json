@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Dorada",
-    "slug": "dorada",
+    "slug": "pulpito",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +15,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.dorada.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Used to suggest nearby appointments."
+        "NSLocationWhenInUseUsageDescription": "Used to suggest nearby appointments.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
