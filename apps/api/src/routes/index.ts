@@ -16,6 +16,7 @@ import insuranceCompanyRoutes from "./insurance-companies/insurance-companies.ro
 import alertRoutes from "./alerts/alerts.routes.js";
 import clinicConfirmationRoutes from "./clinic-confirmation/clinic-confirmation.routes.js";
 import cityRoutes from "./cities/cities.routes.js";
+import downloadRoutes from "./downloads/downloads.routes.js";
 
 export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(authRoutes, { prefix: "/auth" });
@@ -35,4 +36,5 @@ export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(alertRoutes, { prefix: "/alerts" });
   await fastify.register(clinicConfirmationRoutes, { prefix: "/clinic-confirmation" });
   await fastify.register(cityRoutes, { prefix: "/cities" });
+  await fastify.register(downloadRoutes, { prefix: "/downloads" });
 }

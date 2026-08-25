@@ -2,7 +2,8 @@ import { Download, Smartphone, Apple, ShieldCheck, FolderDown, PackageOpen, LogI
 import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 
-const APK_URL = "https://media.dorada.app/downloads/dorada-beta.apk";
+const API_BASE = `${(import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? ""}/api/v1`;
+const APK_URL = `${API_BASE}/downloads/dorada-beta.apk`;
 
 function Step({ number, icon: Icon, title, children }: { number: number; icon: typeof Download; title: string; children: React.ReactNode }) {
   return (
