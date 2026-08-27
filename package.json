@@ -26,16 +26,6 @@
     "transform:appointments": "tsx scripts/transform-appointments.ts",
     "seed:appointments": "tsx apps/api/scripts/seed-appointments.ts"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@prisma/client",
-      "@prisma/engines",
-      "esbuild",
-      "fastify-socket.io",
-      "msgpackr-extract",
-      "prisma"
-    ]
-  },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
