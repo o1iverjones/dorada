@@ -430,6 +430,7 @@ export async function unassignInterpreter(id: string, organizationId: string, ac
 export async function patchBilling(
   id: string,
   body: {
+    billing_amount?: number | null;
     billing_billed?: boolean;
     billing_invoiced?: boolean;
     billing_lost?: boolean;

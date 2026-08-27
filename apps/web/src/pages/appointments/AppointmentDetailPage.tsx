@@ -1094,10 +1094,18 @@ function BillingCard({ appointmentId, appointment, onPoRequired }: { appointment
   const patch = usePatchBilling(appointmentId);
 
   const b = appointment as unknown as BillingFields & Record<string, unknown>;
-  const [amountInput, setAmountInput] = useState(b.billing_amount != null ? String(b.billing_amount) : "");
+  const rawAmount = b.billing_amount as unknown as string | number | null;
+  const initialAmount = rawAmount != null && Number(rawAmount) !== 0 ? String(rawAmount) : "";
+  const [amountInput, setAmountInput] = useState(initialAmount);
 
   function toggle(field: keyof BillingFields, value: boolean | string | number | null) {
     patch.mutate({ [field]: value } as Partial<BillingFields>);
+  }
+
+  function saveAmount() {
+    const val = amountInput.trim() === "" ? null : parseFloat(amountInput);
+    if (val !== null && isNaN(val)) return;
+    toggle("billing_amount", val);
   }
 
   const checkboxes: { field: keyof BillingFields; label: string }[] = [
@@ -1129,11 +1137,8 @@ function BillingCard({ appointmentId, appointment, onPoRequired }: { appointment
               className="w-28 rounded-md border px-2 py-1.5 text-sm text-right bg-background"
               value={amountInput}
               onChange={(e) => setAmountInput(e.target.value)}
-              onBlur={() => {
-                const val = amountInput.trim() === "" ? null : parseFloat(amountInput);
-                if (val !== null && isNaN(val)) return;
-                toggle("billing_amount", val);
-              }}
+              onBlur={saveAmount}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
               disabled={patch.isPending}
               placeholder="0.00"
             />
