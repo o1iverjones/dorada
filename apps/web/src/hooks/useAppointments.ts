@@ -183,6 +183,7 @@ export function useAppointmentMedia(id: string) {
 }
 
 export interface BillingFields {
+  billing_amount: number | null;
   billing_billed: boolean;
   billing_invoiced: boolean;
   billing_lost: boolean;

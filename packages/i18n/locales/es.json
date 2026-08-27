@@ -426,6 +426,7 @@
     "pre_auth_mileage": "Millaje preautorizado",
     "shift_notes": "Notas del turno",
     "billing": "Facturación",
+    "billing_amount": "Monto de facturación",
     "billing_billed": "Facturado",
     "billing_invoiced": "Con factura",
     "billing_lost": "Perdido",

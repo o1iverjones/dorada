@@ -1094,8 +1094,9 @@ function BillingCard({ appointmentId, appointment, onPoRequired }: { appointment
   const patch = usePatchBilling(appointmentId);
 
   const b = appointment as unknown as BillingFields & Record<string, unknown>;
+  const [amountInput, setAmountInput] = useState(b.billing_amount != null ? String(b.billing_amount) : "");
 
-  function toggle(field: keyof BillingFields, value: boolean | string) {
+  function toggle(field: keyof BillingFields, value: boolean | string | number | null) {
     patch.mutate({ [field]: value } as Partial<BillingFields>);
   }
 
@@ -1116,6 +1117,31 @@ function BillingCard({ appointmentId, appointment, onPoRequired }: { appointment
         <CardTitle>{t("appointments.billing")}</CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
+        {/* Billing amount */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{t("appointments.billing_amount")}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">$</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className="w-28 rounded-md border px-2 py-1.5 text-sm text-right bg-background"
+              value={amountInput}
+              onChange={(e) => setAmountInput(e.target.value)}
+              onBlur={() => {
+                const val = amountInput.trim() === "" ? null : parseFloat(amountInput);
+                if (val !== null && isNaN(val)) return;
+                toggle("billing_amount", val);
+              }}
+              disabled={patch.isPending}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        <div className="border-t" />
+
         {/* Checkboxes */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
           {checkboxes.map(({ field, label }) => (

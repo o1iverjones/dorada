@@ -426,6 +426,7 @@
     "pre_auth_mileage": "Pre-auth mileage",
     "shift_notes": "Shift notes",
     "billing": "Billing",
+    "billing_amount": "Billing amount",
     "billing_billed": "Billed",
     "billing_invoiced": "Invoiced",
     "billing_lost": "Lost",

@@ -193,6 +193,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
     const body = z.object({
+      billing_amount: z.number().min(0).nullish(),
       billing_billed: z.boolean().optional(),
       billing_invoiced: z.boolean().optional(),
       billing_lost: z.boolean().optional(),
@@ -205,6 +206,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     }).parse(req.body);
     const updated = await patchBilling(id, body, payload.organization_id, actor, fastify.prisma);
     return reply.send({ ok: true, billing: {
+      billing_amount: updated.billing_amount != null ? Number(updated.billing_amount) : null,
       billing_billed: updated.billing_billed,
       billing_invoiced: updated.billing_invoiced,
       billing_lost: updated.billing_lost,

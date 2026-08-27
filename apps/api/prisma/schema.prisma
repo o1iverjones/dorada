@@ -508,6 +508,7 @@ model Appointment {
   pay_rate                   Decimal?  @db.Decimal(10, 2)
   follow_up_status           String?
   shift_notes                String?
+  billing_amount             Decimal?  @db.Decimal(10, 2)
   billing_billed             Boolean   @default(false)
   billing_invoiced           Boolean   @default(false)
   billing_lost               Boolean   @default(false)
