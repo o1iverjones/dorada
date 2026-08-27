@@ -4,7 +4,7 @@ RUN npm install -g pnpm
 # ── Dependencies ──────────────────────────────────────────────────────────────
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/types/package.json ./packages/types/
 COPY packages/utils/package.json ./packages/utils/
