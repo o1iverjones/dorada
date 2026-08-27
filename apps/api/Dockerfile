@@ -1,5 +1,5 @@
 FROM node:20-alpine AS base
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 FROM base AS deps
