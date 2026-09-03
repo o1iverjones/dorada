@@ -8,7 +8,7 @@ import { useOrgTimezone, useShowLanguage } from "../../hooks/useSettings.js";
 import { fromTzDateTimeInput } from "../../lib/timezone.js";
 import { useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useAgencies } from "../../hooks/useAgencies.js";
-import { usePatients } from "../../hooks/usePatients.js";
+import { usePatient, usePatients } from "../../hooks/usePatients.js";
 import { useSystemSettings, useInterpreterRates } from "../../hooks/useSettings.js";
 import { PageHeader } from "../../components/shared/PageHeader.js";
 import { AutocompleteInput } from "../../components/shared/AutocompleteInput.js";
@@ -52,7 +52,16 @@ export function NewAppointmentPage() {
 
   const { data: clinics } = useClinics({ limit: "500" });
   const { data: agencies } = useAgencies({ limit: "500" });
+  const { data: prefillPatient } = usePatient(prefill?.patient_id ?? "");
   const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
+  const patientSearchSeeded = useRef(false);
+  useEffect(() => {
+    if (prefillPatient && !patientSearchSeeded.current) {
+      const name = (prefillPatient as Record<string, unknown>).name as string;
+      if (name) setDebouncedPatientSearch(name);
+      patientSearchSeeded.current = true;
+    }
+  }, [prefillPatient]);
   const patientDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const handlePatientSearch = useCallback((text: string) => {
     clearTimeout(patientDebounceRef.current);
