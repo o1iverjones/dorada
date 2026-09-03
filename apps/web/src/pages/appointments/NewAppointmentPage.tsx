@@ -17,7 +17,7 @@ import { Card, CardContent } from "../../components/ui/card.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Label } from "../../components/ui/label.js";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "../../hooks/use-toast.js";
 import { DateTimePicker } from "../../components/ui/date-time-picker.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog.js";
@@ -52,7 +52,16 @@ export function NewAppointmentPage() {
 
   const { data: clinics } = useClinics({ limit: "500" });
   const { data: agencies } = useAgencies({ limit: "500" });
-  const { data: patients } = usePatients({ limit: "500" });
+  const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
+  const patientDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const handlePatientSearch = useCallback((text: string) => {
+    clearTimeout(patientDebounceRef.current);
+    patientDebounceRef.current = setTimeout(() => setDebouncedPatientSearch(text), 250);
+  }, []);
+  const { data: patients } = usePatients({
+    limit: "50",
+    ...(debouncedPatientSearch ? { search: debouncedPatientSearch } : {}),
+  });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
 
@@ -220,6 +229,7 @@ export function NewAppointmentPage() {
                   options={patientOptions}
                   value={field.value ?? ""}
                   onChange={field.onChange}
+                  onSearchChange={handlePatientSearch}
                   placeholder={t("common.search")}
                 />
               )} />

@@ -11,12 +11,14 @@ interface AutocompleteInputProps {
   value: string;
   onChange: (value: string) => void;
   onLabelChange?: (label: string) => void;
+  /** Called with the raw input text so the parent can do server-side filtering */
+  onSearchChange?: (text: string) => void;
   placeholder?: string;
   /** If true, the stored value is the label text itself (free-text fields like referring physician) */
   freeText?: boolean;
 }
 
-export function AutocompleteInput({ options, value, onChange, placeholder, freeText = false }: AutocompleteInputProps) {
+export function AutocompleteInput({ options, value, onChange, onSearchChange, placeholder, freeText = false }: AutocompleteInputProps) {
   const selectedLabel = freeText ? value : (options.find((o) => o.value === value)?.label ?? "");
   const [inputText, setInputText] = useState(selectedLabel);
   const [open, setOpen] = useState(false);
@@ -38,13 +40,16 @@ export function AutocompleteInput({ options, value, onChange, placeholder, freeT
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  const filtered = inputText.trim()
-    ? options.filter((o) => o.label.toLowerCase().includes(inputText.toLowerCase()))
-    : options;
+  const filtered = onSearchChange
+    ? options
+    : inputText.trim()
+      ? options.filter((o) => o.label.toLowerCase().includes(inputText.toLowerCase()))
+      : options;
 
   function handleInputChange(text: string) {
     setInputText(text);
     setOpen(true);
+    onSearchChange?.(text);
     if (freeText) onChange(text);
     else if (!text) onChange("");
   }

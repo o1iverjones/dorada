@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppointment, useUpdateAppointment } from "../../hooks/useAppointments.js";
 import { useOrgTimezone } from "../../hooks/useSettings.js";
 import { toTzDateTimeInput, fromTzDateTimeInput } from "../../lib/timezone.js";
@@ -54,7 +54,16 @@ export function EditAppointmentPage() {
 
   const { data: clinics } = useClinics({ limit: "500" });
   const { data: agencies } = useAgencies({ limit: "500" });
-  const { data: patients } = usePatients({ limit: "500" });
+  const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
+  const patientDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const handlePatientSearch = useCallback((text: string) => {
+    clearTimeout(patientDebounceRef.current);
+    patientDebounceRef.current = setTimeout(() => setDebouncedPatientSearch(text), 250);
+  }, []);
+  const { data: patients } = usePatients({
+    limit: "50",
+    ...(debouncedPatientSearch ? { search: debouncedPatientSearch } : {}),
+  });
   const { data: interpreters } = useInterpreters({ limit: "500" });
   const { data: settings } = useSystemSettings();
   const { data: ratesData } = useInterpreterRates();
@@ -84,6 +93,8 @@ export function EditAppointmentPage() {
     const a = appt as Record<string, unknown>;
     const clinicId = (a.clinic as Record<string, unknown>)?.id as string;
     setSelectedClinicId(clinicId ?? "");
+    const patientName = (a.patient as Record<string, unknown>)?.name as string;
+    if (patientName) setDebouncedPatientSearch(patientName);
     reset({
       date_time: toTzDateTimeInput(a.date_time as string, tz),
       duration_minutes: a.duration_minutes as number,
@@ -207,7 +218,7 @@ export function EditAppointmentPage() {
 
             <FormField label={t("appointments.patient")} error={errors.patient_id?.message}>
               <Controller name="patient_id" control={control} render={({ field }) => (
-                <AutocompleteInput options={patientOptions} value={field.value ?? ""} onChange={field.onChange} placeholder={t("common.search")} />
+                <AutocompleteInput options={patientOptions} value={field.value ?? ""} onChange={field.onChange} onSearchChange={handlePatientSearch} placeholder={t("common.search")} />
               )} />
             </FormField>
 
