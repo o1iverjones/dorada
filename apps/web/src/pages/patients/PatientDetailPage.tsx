@@ -340,7 +340,12 @@ export function PatientDetailPage() {
 
       {/* Appointment history */}
       <Card>
-        <CardHeader><CardTitle>{t("patients.appointment_history")}</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>{t("patients.appointment_history")}</CardTitle>
+          <Button size="sm" onClick={() => navigate("/appointments/new", { state: { prefill: { patient_id: id } } })}>
+            <Plus className="h-4 w-4 mr-1" />{t("patients.new_appointment")}
+          </Button>
+        </CardHeader>
         <CardContent className="p-0">
           {!appts?.data.length ? (
             <p className="text-sm text-muted-foreground px-6 py-4">{t("patients.no_appointments")}</p>

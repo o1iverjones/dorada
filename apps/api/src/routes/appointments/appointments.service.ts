@@ -506,6 +506,16 @@ export async function patchBilling(
     }
   }
 
+  if (body.billing_amount !== undefined) {
+    const oldAmount = appt!.billing_amount != null ? Number(appt!.billing_amount) : null;
+    const newAmount = body.billing_amount;
+    if (newAmount !== oldAmount) {
+      const from = oldAmount != null ? `$${oldAmount.toFixed(2)}` : "none";
+      const to = newAmount != null ? `$${newAmount.toFixed(2)}` : "none";
+      changes.push(`Amount: ${from} → ${to}`);
+    }
+  }
+
   if (changes.length > 0) {
     await logActivity(
       id,
