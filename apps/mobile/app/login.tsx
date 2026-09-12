@@ -8,37 +8,32 @@ import { api, setTokens } from "../src/lib/api";
 import { useAuthStore } from "../src/store/auth";
 import { registerForPushNotifications, syncFcmToken } from "../src/lib/notifications";
 
-const SAVED_PHONE_KEY = "dorada_saved_phone";
+const SAVED_EMAIL_KEY = "dorada_saved_email";
 
-function normalizePhone(raw: string): string {
-  const trimmed = raw.trim();
-  return trimmed.startsWith("+") ? trimmed : `+${trimmed}`;
-}
-
-type Step = "phone" | "otp";
+type Step = "email" | "otp";
 
 export default function LoginScreen() {
   const { t } = useTranslation();
   const setInterpreter = useAuthStore((s) => s.setInterpreter);
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    SecureStore.getItemAsync(SAVED_PHONE_KEY).then((saved) => {
-      if (saved) setPhone(saved);
+    SecureStore.getItemAsync(SAVED_EMAIL_KEY).then((saved) => {
+      if (saved) setEmail(saved);
     });
   }, []);
 
   async function requestOtp() {
-    if (!phone.trim()) return;
-    const normalized = normalizePhone(phone);
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
     setLoading(true);
     try {
-      await api.post("/auth/interpreter/otp/request", { phone: normalized });
-      await SecureStore.setItemAsync(SAVED_PHONE_KEY, normalized);
-      setPhone(normalized);
+      await api.post("/auth/interpreter/otp/request", { email: trimmed });
+      await SecureStore.setItemAsync(SAVED_EMAIL_KEY, trimmed);
+      setEmail(trimmed);
       setStep("otp");
     } catch {
       Alert.alert(t("auth.error"), t("auth.otp_failed"));
@@ -55,7 +50,7 @@ export default function LoginScreen() {
         access_token: string;
         refresh_token: string;
         interpreter: { id: string; name: string; phone: string; organization_id: string };
-      }>("/auth/interpreter/otp/verify", { phone: normalizePhone(phone), otp: otp.trim() });
+      }>("/auth/interpreter/otp/verify", { email: email.trim().toLowerCase(), otp: otp.trim() });
 
       await setTokens(res.access_token, res.refresh_token);
       setInterpreter(res.interpreter);
@@ -79,17 +74,19 @@ export default function LoginScreen() {
           <Text style={styles.logo}>Dorada</Text>
         </View>
         <Text style={styles.subtitle}>
-          {step === "phone" ? t("auth.enter_phone") : t("auth.enter_otp")}
+          {step === "email" ? t("auth.enter_email") : t("auth.enter_otp")}
         </Text>
 
-        {step === "phone" ? (
+        {step === "email" ? (
           <>
             <TextInput
               style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder={t("auth.phone_placeholder")}
-              keyboardType="phone-pad"
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t("auth.email_placeholder")}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
               autoFocus
             />
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={requestOtp} disabled={loading}>
@@ -110,7 +107,7 @@ export default function LoginScreen() {
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={verifyOtp} disabled={loading}>
               <Text style={styles.buttonText}>{loading ? t("common.loading") : t("auth.verify")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.backButton} onPress={() => setStep("phone")}>
+            <TouchableOpacity style={styles.backButton} onPress={() => setStep("email")}>
               <Text style={styles.backText}>{t("common.back")}</Text>
             </TouchableOpacity>
           </>

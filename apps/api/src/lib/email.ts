@@ -111,6 +111,56 @@ export function welcomeAdminEmail(name: string, email: string, tempPassword: str
   return { to: email, subject: "Welcome to Dorada — your account is ready", html, text };
 }
 
+export function otpEmail(name: string, email: string, otp: string): SendEmailOptions {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Dorada login code</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color:#18181b;padding:32px 40px;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Dorada</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 12px;color:#18181b;font-size:20px;font-weight:600;">Your login code</h2>
+              <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6;">
+                Hi ${name}, use the code below to log in to the Dorada app. It expires in 10 minutes.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;border-radius:6px;margin-bottom:24px;">
+                <tr>
+                  <td align="center" style="padding:24px;">
+                    <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#18181b;font-family:monospace;">${otp}</span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;color:#a1a1aa;font-size:13px;line-height:1.6;">
+                If you didn't request this code, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  const text = `Your Dorada login code is: ${otp}\n\nHi ${name}, use this code to log in to the Dorada app. It expires in 10 minutes.\n\nIf you didn't request this code, you can safely ignore this email.`;
+
+  return { to: email, subject: `${otp} — your Dorada login code`, html, text };
+}
+
 export function passwordResetEmail(name: string, email: string, resetUrl: string): SendEmailOptions {
   const html = `
 <!DOCTYPE html>

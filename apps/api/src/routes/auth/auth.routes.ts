@@ -33,14 +33,14 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // POST /auth/interpreter/otp/request
   fastify.post("/interpreter/otp/request", throttle(5, "1 minute"), async (request, reply) => {
     const body = RequestOtpBodySchema.parse(request.body);
-    await requestOtp(body.phone, fastify.prisma, fastify.redis);
-    return reply.send({ message: "OTP sent if number is registered." });
+    await requestOtp(body.email, fastify.prisma, fastify.redis);
+    return reply.send({ message: "OTP sent if email is registered." });
   });
 
   // POST /auth/interpreter/otp/verify
   fastify.post("/interpreter/otp/verify", throttle(15, "1 minute"), async (request, reply) => {
     const body = VerifyOtpBodySchema.parse(request.body);
-    const result = await verifyOtp(body.phone, body.otp, fastify.prisma, fastify.redis, fastify);
+    const result = await verifyOtp(body.email, body.otp, fastify.prisma, fastify.redis, fastify);
     return reply.send(result);
   });
 
@@ -110,63 +110,28 @@ export default async function authRoutes(fastify: FastifyInstance) {
       await forceSendClinicConfirmations(fastify.prisma);
       return reply.send({ triggered: true, note: "confirmation emails sent directly (time window bypassed)" });
     });
-    // Match on normalized digits so formatted stored phones like "(831) 238-8020"
-    // resolve — same regexp_replace lookup requestOtp/verifyOtp use.
-    const findInterpreterByPhone = async (last10: string) => {
-      const rows = await fastify.prisma.$queryRaw<Array<{ phone: string }>>`
-        SELECT phone FROM "interpreters"
-        WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
-          AND is_active = true
-        LIMIT 1
-      `;
-      return rows[0] ?? null;
-    };
-
-    fastify.get("/dev/otp/:phone", async (request, reply) => {
-      const { phone } = request.params as { phone: string };
-      const last10 = phone.replace(/\D/g, "").slice(-10);
-      const interpreter = await findInterpreterByPhone(last10);
-      if (!interpreter) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No interpreter found for this number" } });
-      const canonicalPhone = interpreter.phone.replace(/\D/g, "");
-      const otp = await fastify.redis.get(`otp:${canonicalPhone}`);
+    // GET /auth/dev/otp/:email — retrieve the pending OTP for an interpreter email
+    fastify.get("/dev/otp/:email", async (request, reply) => {
+      const { email } = request.params as { email: string };
+      const normalizedEmail = email.toLowerCase().trim();
+      const interpreter = await fastify.prisma.interpreter.findFirst({
+        where: { email: { equals: normalizedEmail, mode: "insensitive" }, is_active: true },
+      });
+      if (!interpreter) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No interpreter found for this email" } });
+      const otp = await fastify.redis.get(`otp:${normalizedEmail}`);
       if (!otp) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "No pending OTP — request one first" } });
       return reply.send({ otp });
     });
 
-    // POST /auth/dev/sms-test { to } — sends a real Sinch SMS and returns the
-    // raw Sinch response synchronously. This is the Sinch diagnostic: Railway
-    // deploy logs don't stream runtime output, so this is how we actually see
-    // what Sinch says (200 accepted / 401 auth / 400 bad number / 403 sender
-    // not provisioned). `to` must be E.164, e.g. "+18312388020".
-    fastify.post("/dev/sms-test", async (request, reply) => {
-      const { to } = z.object({ to: z.string().min(8) }).parse(request.body);
-      const { sinchConfigured, sendSmsRaw } = await import("../../lib/sms.js");
-      if (!sinchConfigured()) {
-        return reply.status(400).send({ configured: false, message: "Sinch env vars are not all set on this service" });
-      }
-      const result = await sendSmsRaw(to, `Dorada test SMS ${new Date().toISOString()}`);
-      return reply.status(result.ok ? 200 : 502).send({
-        region: config.SINCH_REGION,
-        from: config.SINCH_FROM_NUMBER,
-        ...result,
-      });
-    });
-
-    // DELETE /auth/dev/reset/:phone — clears rate limit + OTP so you can retry immediately
-    fastify.delete("/dev/reset/:phone", async (request, reply) => {
-      const { phone } = request.params as { phone: string };
-      const normalized = phone.replace(/\D/g, "");
-      const last10 = normalized.slice(-10);
-      const interpreter = await findInterpreterByPhone(last10);
-      const canonicalPhone = interpreter ? interpreter.phone.replace(/\D/g, "") : normalized;
+    // DELETE /auth/dev/reset/:email — clears rate limit + OTP so you can retry immediately
+    fastify.delete("/dev/reset/:email", async (request, reply) => {
+      const { email } = request.params as { email: string };
+      const normalizedEmail = email.toLowerCase().trim();
       await fastify.redis.del(
-        `otp:rate:${normalized}`,
-        `otp:rate:${canonicalPhone}`,
-        `otp:${canonicalPhone}`,
-        `otp:lock:${normalized}`,
-        `otp:lock:${canonicalPhone}`,
-        `otp:attempts:${normalized}`,
-        `otp:attempts:${canonicalPhone}`,
+        `otp:rate:${normalizedEmail}`,
+        `otp:${normalizedEmail}`,
+        `otp:lock:${normalizedEmail}`,
+        `otp:attempts:${normalizedEmail}`,
       );
       return reply.send({ cleared: true });
     });

@@ -2,11 +2,11 @@ import { z } from "zod";
 import { UuidSchema } from "./common.js";
 
 export const RequestOtpBodySchema = z.object({
-  phone: z.string().regex(/^\+[1-9]\d{6,14}$/, "Phone must be in E.164 format"),
+  email: z.string().email(),
 });
 
 export const VerifyOtpBodySchema = z.object({
-  phone: z.string().regex(/^\+[1-9]\d{6,14}$/),
+  email: z.string().email(),
   otp: z.string().length(6).regex(/^\d{6}$/),
 });
 

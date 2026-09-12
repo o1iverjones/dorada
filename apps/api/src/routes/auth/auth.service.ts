@@ -13,13 +13,8 @@ import {
   ValidationError,
 } from "../../lib/errors.js";
 import { config } from "../../config.js";
-import { sendSms } from "../../lib/sms.js";
-import { sendEmail, passwordResetEmail } from "../../lib/email.js";
+import { sendEmail, otpEmail, passwordResetEmail } from "../../lib/email.js";
 import { resolveFileUrl, AVATAR_URL_TTL } from "../../integrations/r2.js";
-
-function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
 
 const OTP_TTL_SECONDS = 600; // 10 minutes
 const OTP_RATE_LIMIT_WINDOW = 600;
@@ -33,67 +28,50 @@ const BCRYPT_ROUNDS = 12;
 // ─── OTP (Interpreter) ────────────────────────────────────────────────────────
 
 export async function requestOtp(
-  phone: string,
+  email: string,
   prisma: PrismaClient,
   redis: Redis,
 ): Promise<void> {
-  const normalized = normalizePhone(phone);
-  const rateLimitKey = `otp:rate:${normalized}`;
+  const normalizedEmail = email.toLowerCase().trim();
+  const rateLimitKey = `otp:rate:${normalizedEmail}`;
   const count = await redis.incr(rateLimitKey);
   if (count === 1) await redis.expire(rateLimitKey, OTP_RATE_LIMIT_WINDOW);
   if (count > OTP_RATE_LIMIT_MAX) {
     throw new TooManyRequestsError("OTP_RATE_LIMITED", "Too many OTP requests");
   }
 
-  // Normalize stored phone in DB before matching — handles any formatting
-  // (e.g. "(831) 238-8020", "831-238-8020", "+18312388020", bare digits)
-  const last10 = normalized.slice(-10);
-  const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
-    SELECT id, name, phone, organization_id, is_active
-    FROM "interpreters"
-    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
-      AND is_active = true
-    LIMIT 1
-  `;
-  const interpreter = rows[0] ?? null;
+  const interpreter = await prisma.interpreter.findFirst({
+    where: { email: { equals: normalizedEmail, mode: "insensitive" }, is_active: true },
+  });
   if (!interpreter) return; // silent — prevents enumeration
 
-  // Canonical key: digits-only of the interpreter's stored phone
-  const canonicalPhone = interpreter.phone.replace(/\D/g, "");
   const otp = String(randomInt(100000, 999999));
-  const otpKey = `otp:${canonicalPhone}`;
+  const otpKey = `otp:${normalizedEmail}`;
   await redis.set(otpKey, otp, "EX", OTP_TTL_SECONDS);
 
-  await sendSms(interpreter.phone, `Your Dorada login code is: ${otp}. It expires in 10 minutes.`);
+  await sendEmail(otpEmail(interpreter.name, normalizedEmail, otp));
 }
 
 export async function verifyOtp(
-  phone: string,
+  email: string,
   otp: string,
   prisma: PrismaClient,
   redis: Redis,
   fastify: FastifyInstance,
 ): Promise<{ access_token: string; refresh_token: string; interpreter: { id: string; name: string; phone: string; organization_id: string } }> {
-  const normalized = normalizePhone(phone);
-  const lockKey = `otp:lock:${normalized}`;
-  const attemptsKey = `otp:attempts:${normalized}`;
+  const normalizedEmail = email.toLowerCase().trim();
+  const lockKey = `otp:lock:${normalizedEmail}`;
+  const attemptsKey = `otp:attempts:${normalizedEmail}`;
 
   const locked = await redis.get(lockKey);
   if (locked) throw new TooManyRequestsError("ACCOUNT_LOCKED", "Account locked. Try again later.");
 
-  const last10 = normalized.slice(-10);
-  const rows = await prisma.$queryRaw<Array<{ id: string; name: string; phone: string; organization_id: string; is_active: boolean }>>`
-    SELECT id, name, phone, organization_id, is_active
-    FROM "interpreters"
-    WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = ${last10}
-      AND is_active = true
-    LIMIT 1
-  `;
-  const interpreter = rows[0] ?? null;
+  const interpreter = await prisma.interpreter.findFirst({
+    where: { email: { equals: normalizedEmail, mode: "insensitive" }, is_active: true },
+  });
   if (!interpreter) throw new UnauthorizedError("INVALID_CREDENTIALS", "Invalid OTP");
 
-  const canonicalPhone = interpreter.phone.replace(/\D/g, "");
-  const storedOtp = await redis.get(`otp:${canonicalPhone}`);
+  const storedOtp = await redis.get(`otp:${normalizedEmail}`);
   if (!storedOtp || storedOtp !== otp) {
     const attempts = await redis.incr(attemptsKey);
     if (attempts === 1) await redis.expire(attemptsKey, OTP_LOCK_SECONDS);
@@ -104,7 +82,7 @@ export async function verifyOtp(
     throw new UnauthorizedError("INVALID_CREDENTIALS", "Invalid OTP");
   }
 
-  await redis.del(`otp:${normalized}`, attemptsKey);
+  await redis.del(`otp:${normalizedEmail}`, attemptsKey);
 
   const accessToken = fastify.jwt.sign(
     { sub: interpreter.id, type: "interpreter", organization_id: interpreter.organization_id },
