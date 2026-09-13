@@ -1,7 +1,6 @@
 import { Worker, Queue, type Job } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
 import { redisConnection } from "../config.js";
-import { sendSms } from "../lib/sms.js";
 import { sendExpoPushNotifications } from "../lib/push.js";
 
 interface FollowUpPromptJobData {
@@ -50,11 +49,7 @@ export function createFollowUpFlowWorker(
         return;
       }
 
-      const channel = interpreter.follow_up_channel ?? "push";
-
-      if (channel === "sms" && interpreter.phone) {
-        await sendSms(interpreter.phone, "Did your patient have a follow-up appointment? Reply YES or NO.");
-      } else if (interpreter.fcm_token) {
+      if (interpreter.fcm_token) {
         await sendExpoPushNotifications([{
           to: interpreter.fcm_token,
           title: "Follow-up Question",

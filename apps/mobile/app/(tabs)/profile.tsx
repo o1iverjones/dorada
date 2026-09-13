@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import { router } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, clearTokens } from "../../src/lib/api";
 import { useAuthStore } from "../../src/store/auth";
@@ -16,19 +16,7 @@ export default function ProfileScreen() {
     queryFn: () => api.get("/interpreters/me"),
   });
 
-  const qc = useQueryClient();
   const profile = data as Record<string, unknown> | undefined;
-
-  const updateChannel = useMutation({
-    mutationFn: (channel: "push" | "sms") =>
-      api.patch("/interpreters/me", { follow_up_channel: channel }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["interpreter-profile"] });
-    },
-    onError: (err: Error) => {
-      Alert.alert(t("common.error"), err.message || t("common.error"));
-    },
-  });
 
   function handleLogout() {
     Alert.alert(t("account.logout_confirm_title"), t("account.logout_confirm_body"), [
@@ -63,30 +51,6 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("account.notification_preference")}</Text>
-        <Text style={styles.sectionHint}>{t("account.follow_up_channel_hint")}</Text>
-        <View style={styles.channelRow}>
-          {(["push", "sms"] as const).map((ch) => (
-            <TouchableOpacity
-              key={ch}
-              style={[styles.channelBtn, profile?.follow_up_channel === ch && styles.channelBtnActive]}
-              onPress={() => updateChannel.mutate(ch)}
-              disabled={updateChannel.isPending}
-            >
-              <Ionicons
-                name={ch === "push" ? "notifications-outline" : "chatbubble-outline"}
-                size={18}
-                color={profile?.follow_up_channel === ch ? "#fff" : C.textMuted}
-              />
-              <Text style={[styles.channelBtnText, profile?.follow_up_channel === ch && styles.channelBtnActiveText]}>
-                {ch === "push" ? "Push" : "SMS"}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="#dc2626" />
         <Text style={styles.logoutText}>{t("nav.logout")}</Text>
@@ -113,16 +77,9 @@ const styles = StyleSheet.create({
   name: { fontSize: 20, fontWeight: "700", color: C.text },
   phone: { fontSize: 14, color: C.textMuted, marginTop: 2 },
   section: { backgroundColor: C.surface, borderRadius: 12, padding: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: "600", color: C.text, marginBottom: 4 },
-  sectionHint: { fontSize: 12, color: C.textSubtle, marginBottom: 12 },
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border },
   rowLabel: { fontSize: 14, color: C.textMuted },
   rowValue: { fontSize: 14, color: C.text, fontWeight: "500", flex: 1, textAlign: "right" },
-  channelRow: { flexDirection: "row", gap: 10 },
-  channelBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: C.border },
-  channelBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
-  channelBtnText: { color: C.textMuted, fontWeight: "500" },
-  channelBtnActiveText: { color: "#fff" },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.surface, borderRadius: 12, paddingVertical: 14, borderWidth: 1, borderColor: C.dangerBorder },
   logoutText: { color: C.danger, fontWeight: "600", fontSize: 15 },
 });
