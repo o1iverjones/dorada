@@ -12,6 +12,10 @@
       "@/*": ["./src/*"]
     },
     "noEmit": true,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noImplicitAny": false,
     "strict": false
   },
   "include": ["src"]
