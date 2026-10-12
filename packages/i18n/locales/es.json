@@ -77,7 +77,8 @@
     "availability": "Horario",
     "profile": "Perfil",
     "invoices": "Facturas",
-    "alerts": "Alertas"
+    "alerts": "Alertas",
+    "earnings": "Ingresos"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -534,7 +535,9 @@
     "note": "Nota",
     "no_blocks": "No hay tiempo libre programado.",
     "delete_confirm": "¿Eliminar este bloque de tiempo libre?",
-    "select_dates": "Seleccionar fechas"
+    "select_dates": "Seleccionar fechas",
+    "reason": "Motivo",
+    "reason_placeholder": "Motivo opcional del tiempo libre"
   },
   "follow_up": {
     "question": "¿Este paciente necesita una cita de seguimiento?",
@@ -742,6 +745,7 @@
     "title": "Mensajes",
     "send": "Enviar",
     "placeholder": "Escribe un mensaje...",
+    "type_message": "Escribe un mensaje...",
     "conversations": "Conversaciones",
     "select_conversation": "Selecciona una conversación para comenzar a escribir.",
     "unread_one": "{{count}} sin leer",
@@ -971,5 +975,15 @@
     "total_earnings": "Total Ganado",
     "approved_count": "Facturas Aprobadas",
     "submitted_count": "Facturas Enviadas"
+  },
+  "earnings": {
+    "total": "Total",
+    "approved": "Aprobadas",
+    "submitted": "Pendientes",
+    "this_month": "Este Mes",
+    "year_to_date": "Año en Curso",
+    "all_time": "Todo",
+    "custom": "Personalizado",
+    "no_invoices": "No se encontraron facturas para este período."
   }
 }

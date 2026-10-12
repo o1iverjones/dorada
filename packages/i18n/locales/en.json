@@ -77,7 +77,8 @@
     "availability": "Schedule",
     "profile": "Profile",
     "invoices": "Invoices",
-    "alerts": "Alerts"
+    "alerts": "Alerts",
+    "earnings": "Earnings"
   },
   "auth": {
     "login": "Log in",
@@ -534,7 +535,9 @@
     "note": "Note",
     "no_blocks": "No time off scheduled.",
     "delete_confirm": "Remove this time-off block?",
-    "select_dates": "Select dates"
+    "select_dates": "Select dates",
+    "reason": "Reason",
+    "reason_placeholder": "Optional reason for time off"
   },
   "follow_up": {
     "question": "Does this patient need a follow-up appointment?",
@@ -742,6 +745,7 @@
     "title": "Messages",
     "send": "Send",
     "placeholder": "Type a message...",
+    "type_message": "Type a message...",
     "conversations": "Conversations",
     "select_conversation": "Select a conversation to start messaging.",
     "unread_one": "{{count}} unread",
@@ -971,5 +975,15 @@
     "total_earnings": "Total Earnings",
     "approved_count": "Invoices Approved",
     "submitted_count": "Invoices Submitted"
+  },
+  "earnings": {
+    "total": "Total",
+    "approved": "Approved",
+    "submitted": "Pending",
+    "this_month": "This Month",
+    "year_to_date": "Year to Date",
+    "all_time": "All Time",
+    "custom": "Custom",
+    "no_invoices": "No invoices found for this period."
   }
 }
