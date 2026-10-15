@@ -6,25 +6,25 @@ import {
 } from "../src/auth.js";
 import { AgencyListQuerySchema } from "../src/agency.js";
 
-describe("RequestOtpBodySchema (E.164)", () => {
-  it("accepts E.164 numbers", () => {
-    expect(RequestOtpBodySchema.safeParse({ phone: "+18312388020" }).success).toBe(true);
+describe("RequestOtpBodySchema (email)", () => {
+  it("accepts a valid email", () => {
+    expect(RequestOtpBodySchema.safeParse({ email: "user@example.com" }).success).toBe(true);
   });
-  it.each(["8312388020", "(831) 238-8020", "+0123456789", "+1831238802012345678"])(
+  it.each(["not-an-email", "", "user@", "@example.com"])(
     "rejects %s",
-    (phone) => {
-      expect(RequestOtpBodySchema.safeParse({ phone }).success).toBe(false);
+    (email) => {
+      expect(RequestOtpBodySchema.safeParse({ email }).success).toBe(false);
     },
   );
 });
 
 describe("VerifyOtpBodySchema", () => {
-  const phone = "+18312388020";
+  const email = "user@example.com";
   it("accepts a 6-digit code", () => {
-    expect(VerifyOtpBodySchema.safeParse({ phone, otp: "123456" }).success).toBe(true);
+    expect(VerifyOtpBodySchema.safeParse({ email, otp: "123456" }).success).toBe(true);
   });
   it.each(["12345", "1234567", "abcdef", "12 456"])("rejects %s", (otp) => {
-    expect(VerifyOtpBodySchema.safeParse({ phone, otp }).success).toBe(false);
+    expect(VerifyOtpBodySchema.safeParse({ email, otp }).success).toBe(false);
   });
 });
 

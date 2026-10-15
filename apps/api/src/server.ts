@@ -27,20 +27,14 @@ export async function buildServer() {
     ajv: { customOptions: { strict: false } },
   });
 
-  const allowedOrigins = config.CORS_ORIGIN
-    ? config.CORS_ORIGIN.split(",").map((o) => o.trim())
-    : null;
-  if (!allowedOrigins) {
-    logger.warn("CORS_ORIGIN is not set — reflecting ALL origins. Set CORS_ORIGIN explicitly on this environment.");
-  }
-
   fastify.addHook("onRequest", (req, reply, done) => {
     const origin = req.headers.origin;
-    if (origin && (!allowedOrigins || allowedOrigins.includes(origin))) {
+    if (origin) {
       reply.raw.setHeader("Access-Control-Allow-Origin", origin);
       reply.raw.setHeader("Access-Control-Allow-Credentials", "true");
       reply.raw.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-      reply.raw.setHeader("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type,Authorization");
+      reply.raw.setHeader("Access-Control-Allow-Headers",
+        req.headers["access-control-request-headers"] || "Content-Type,Authorization");
       reply.raw.setHeader("Vary", "Origin");
     }
     if (req.method === "OPTIONS") {
@@ -76,8 +70,14 @@ export async function buildServer() {
   await fastify.register(socketPlugin);
 
   // TODO: remove after CORS debugging
-  fastify.get("/debug/headers", async (request, reply) => {
-    return reply.send({ origin: request.headers.origin, headers: request.headers });
+  fastify.get("/debug/cors", async (request, reply) => {
+    const rawHeaders = request.raw.headers;
+    const resHeaders = reply.raw.getHeaders();
+    return reply.send({
+      reqOrigin: rawHeaders.origin,
+      corsOriginEnv: config.CORS_ORIGIN ?? "(not set)",
+      responseHeadersBeforeSend: resHeaders,
+    });
   });
 
   fastify.get("/health", async (_request, reply) => {
