@@ -27,13 +27,24 @@ export async function buildServer() {
     ajv: { customOptions: { strict: false } },
   });
 
-  if (!config.CORS_ORIGIN) {
+  const allowedOrigins = config.CORS_ORIGIN
+    ? config.CORS_ORIGIN.split(",").map((o) => o.trim())
+    : null;
+  if (!allowedOrigins) {
     logger.warn("CORS_ORIGIN is not set — reflecting ALL origins. Set CORS_ORIGIN explicitly on this environment.");
   }
   await fastify.register(fastifyCors, {
-    origin: config.CORS_ORIGIN
-      ? config.CORS_ORIGIN.split(",").map((o) => o.trim())
-      : true,
+    origin: (requestOrigin, cb) => {
+      if (!requestOrigin) {
+        cb(null, false);
+        return;
+      }
+      if (!allowedOrigins || allowedOrigins.includes(requestOrigin)) {
+        cb(null, requestOrigin);
+      } else {
+        cb(null, false);
+      }
+    },
     credentials: true,
   });
   await fastify.register(fastifyHelmet, {
