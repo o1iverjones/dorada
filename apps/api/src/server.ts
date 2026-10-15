@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import fastifyCors from "@fastify/cors";
+
 import fastifyHelmet from "@fastify/helmet";
 import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
@@ -33,20 +33,23 @@ export async function buildServer() {
   if (!allowedOrigins) {
     logger.warn("CORS_ORIGIN is not set — reflecting ALL origins. Set CORS_ORIGIN explicitly on this environment.");
   }
-  await fastify.register(fastifyCors, {
-    origin: (requestOrigin, cb) => {
-      if (!requestOrigin) {
-        cb(null, true);
-        return;
-      }
-      if (!allowedOrigins || allowedOrigins.includes(requestOrigin)) {
-        cb(null, requestOrigin);
-      } else {
-        cb(null, false);
-      }
-    },
-    credentials: true,
+
+  fastify.addHook("onRequest", (req, reply, done) => {
+    const origin = req.headers.origin;
+    if (origin && (!allowedOrigins || allowedOrigins.includes(origin))) {
+      reply.header("Access-Control-Allow-Origin", origin);
+      reply.header("Access-Control-Allow-Credentials", "true");
+      reply.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+      reply.header("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type,Authorization");
+      reply.header("Vary", "Origin");
+    }
+    if (req.method === "OPTIONS") {
+      reply.status(204).send();
+      return;
+    }
+    done();
   });
+
   await fastify.register(fastifyHelmet, {
     crossOriginResourcePolicy: false,
     crossOriginOpenerPolicy: false,
