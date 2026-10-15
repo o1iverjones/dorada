@@ -36,7 +36,7 @@ export async function buildServer() {
   await fastify.register(fastifyCors, {
     origin: (requestOrigin, cb) => {
       if (!requestOrigin) {
-        cb(null, false);
+        cb(null, true);
         return;
       }
       if (!allowedOrigins || allowedOrigins.includes(requestOrigin)) {
@@ -71,8 +71,11 @@ export async function buildServer() {
   await fastify.register(multipartPlugin);
   await fastify.register(socketPlugin);
 
-  // Liveness/readiness probe — used by Railway health checks and for quick
-  // production triage. Raw queries bypass the tenant guard (model ops only).
+  // TODO: remove after CORS debugging
+  fastify.get("/debug/headers", async (request, reply) => {
+    return reply.send({ origin: request.headers.origin, headers: request.headers });
+  });
+
   fastify.get("/health", async (_request, reply) => {
     const checks: Record<string, "ok" | "down"> = { database: "ok", redis: "ok" };
     let healthy = true;
