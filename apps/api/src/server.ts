@@ -37,14 +37,15 @@ export async function buildServer() {
   fastify.addHook("onRequest", (req, reply, done) => {
     const origin = req.headers.origin;
     if (origin && (!allowedOrigins || allowedOrigins.includes(origin))) {
-      reply.header("Access-Control-Allow-Origin", origin);
-      reply.header("Access-Control-Allow-Credentials", "true");
-      reply.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-      reply.header("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type,Authorization");
-      reply.header("Vary", "Origin");
+      reply.raw.setHeader("Access-Control-Allow-Origin", origin);
+      reply.raw.setHeader("Access-Control-Allow-Credentials", "true");
+      reply.raw.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+      reply.raw.setHeader("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type,Authorization");
+      reply.raw.setHeader("Vary", "Origin");
     }
     if (req.method === "OPTIONS") {
-      reply.status(204).send();
+      reply.raw.writeHead(204);
+      reply.raw.end();
       return;
     }
     done();
