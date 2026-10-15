@@ -69,16 +69,6 @@ export async function buildServer() {
   await fastify.register(multipartPlugin);
   await fastify.register(socketPlugin);
 
-  // TODO: remove after CORS debugging
-  fastify.get("/debug/cors", async (request, reply) => {
-    const rawHeaders = request.raw.headers;
-    const resHeaders = reply.raw.getHeaders();
-    return reply.send({
-      reqOrigin: rawHeaders.origin,
-      corsOriginEnv: config.CORS_ORIGIN ?? "(not set)",
-      responseHeadersBeforeSend: resHeaders,
-    });
-  });
 
   fastify.get("/health", async (_request, reply) => {
     const checks: Record<string, "ok" | "down"> = { database: "ok", redis: "ok" };
