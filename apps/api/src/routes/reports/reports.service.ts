@@ -36,19 +36,42 @@ export async function fetchReportData(
         ...dateFilter,
         ...(interpreterIds?.length ? { interpreter_id: { in: interpreterIds } } : {}),
       },
-      include: { interpreter: true, clinic: true, type: true },
+      include: { interpreter: true, clinic: true, type: true, invoice: true },
       orderBy: [{ interpreter: { name: "asc" } }, { date_time: "asc" }],
     });
-    return appointments.map((a) => ({
-      date: a.date_time.toISOString().slice(0, 10),
-      interpreter: a.interpreter?.name ?? "—",
-      clinic: a.clinic.name,
-      appointment_type: a.type.name,
-      clocked_minutes: a.actual_duration_minutes ?? 0,
-      billable_minutes: a.billable_duration_minutes ?? 0,
-      rate_per_hour: Number(a.pay_rate ?? 0),
-      amount: Number((((a.billable_duration_minutes ?? 0) / 60) * Number(a.pay_rate ?? 0)).toFixed(2)),
-    }));
+
+    let defaultRates: { qualified: number; certified: number } | null = null;
+    const needsDefault = appointments.some((a) => !a.invoice?.pay_rate && !a.pay_rate && !a.interpreter?.pay_rate);
+    if (needsDefault) {
+      const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
+      defaultRates = {
+        qualified: settings ? Number(settings.default_pay_rate_qualified) : 30,
+        certified: settings ? Number(settings.default_pay_rate_certified) : 40,
+      };
+    }
+
+    return appointments.map((a) => {
+      const rate = a.invoice?.pay_rate
+        ? Number(a.invoice.pay_rate)
+        : a.pay_rate
+          ? Number(a.pay_rate)
+          : a.interpreter?.pay_rate
+            ? Number(a.interpreter.pay_rate)
+            : defaultRates
+              ? (a.interpreter_type_required.toLowerCase() === "qualified" ? defaultRates.qualified : defaultRates.certified)
+              : 0;
+      const billable = a.billable_duration_minutes ?? 0;
+      return {
+        date: a.date_time.toISOString().slice(0, 10),
+        interpreter: a.interpreter?.name ?? "—",
+        clinic: a.clinic.name,
+        appointment_type: a.type.name,
+        clocked_minutes: a.actual_duration_minutes ?? 0,
+        billable_minutes: billable,
+        rate_per_hour: rate,
+        amount: Number(((billable / 60) * rate).toFixed(2)),
+      };
+    });
   }
 
   if (type === "agency_billing") {
@@ -60,19 +83,24 @@ export async function fetchReportData(
         ...dateFilter,
         ...(agencyIds?.length ? { agency_id: { in: agencyIds } } : {}),
       },
-      include: { patient: true, clinic: true, interpreter: true, agency: true },
+      include: { patient: true, clinic: true, interpreter: true, agency: true, invoice: true },
       orderBy: [{ agency: { name: "asc" } }, { date_time: "asc" }],
     });
-    return appointments.map((a) => ({
-      date: a.date_time.toISOString().slice(0, 10),
-      agency: a.agency?.name ?? "—",
-      patient: a.patient.name,
-      clinic: a.clinic.name,
-      interpreter: a.interpreter?.name ?? "—",
-      pre_auth_amount: a.pre_auth_amount ?? 0,
-      pre_auth_mileage: a.pre_auth_mileage ?? 0,
-      actual_amount: Number((((a.billable_duration_minutes ?? 0) / 60) * Number(a.pay_rate ?? 0)).toFixed(2)),
-    }));
+    return appointments.map((a) => {
+      const actualAmount = a.invoice?.amount
+        ? Number(a.invoice.amount)
+        : Number((((a.billable_duration_minutes ?? 0) / 60) * Number(a.pay_rate ?? 0)).toFixed(2));
+      return {
+        date: a.date_time.toISOString().slice(0, 10),
+        agency: a.agency?.name ?? "—",
+        patient: a.patient.name,
+        clinic: a.clinic.name,
+        interpreter: a.interpreter?.name ?? "—",
+        pre_auth_amount: a.pre_auth_amount ?? 0,
+        pre_auth_mileage: a.pre_auth_mileage ?? 0,
+        actual_amount: actualAmount,
+      };
+    });
   }
 
   if (type === "appointment_history") {
