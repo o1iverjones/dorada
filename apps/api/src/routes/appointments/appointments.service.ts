@@ -836,8 +836,9 @@ export async function clockOut(appointmentId: string, interpreterId: string, pri
     data: { clock_out_time: now, status: "completed", actual_duration_minutes: actualMinutes, billable_duration_minutes: billableMinutes },
   });
 
-  // Determine pay rate: appointment-level → interpreter-level → system default
+  // Determine pay rate: appointment pay_rate → pre_auth_amount → interpreter → system default
   let payRate = appt.pay_rate ? Number(appt.pay_rate) : null;
+  if (!payRate) payRate = appt.pre_auth_amount ? Number(appt.pre_auth_amount) : null;
   if (!payRate) payRate = appt.interpreter?.pay_rate ? Number(appt.interpreter.pay_rate) : null;
   if (!payRate) {
     const settings = await prisma.systemSettings.findUnique({ where: { organization_id: appt.organization_id } });

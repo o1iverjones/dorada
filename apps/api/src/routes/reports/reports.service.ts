@@ -41,7 +41,7 @@ export async function fetchReportData(
     });
 
     let defaultRates: { qualified: number; certified: number } | null = null;
-    const needsDefault = appointments.some((a) => !a.invoice?.pay_rate && !a.pay_rate && !a.interpreter?.pay_rate);
+    const needsDefault = appointments.some((a) => !a.invoice?.pay_rate && !a.pay_rate && !(a.pre_auth_amount && Number(a.pre_auth_amount) > 0) && !a.interpreter?.pay_rate);
     if (needsDefault) {
       const settings = await prisma.systemSettings.findUnique({ where: { organization_id: organizationId } });
       defaultRates = {
@@ -55,11 +55,13 @@ export async function fetchReportData(
         ? Number(a.invoice.pay_rate)
         : a.pay_rate
           ? Number(a.pay_rate)
-          : a.interpreter?.pay_rate
-            ? Number(a.interpreter.pay_rate)
-            : defaultRates
-              ? (a.interpreter_type_required.toLowerCase() === "qualified" ? defaultRates.qualified : defaultRates.certified)
-              : 0;
+          : a.pre_auth_amount && Number(a.pre_auth_amount) > 0
+            ? Number(a.pre_auth_amount)
+            : a.interpreter?.pay_rate
+              ? Number(a.interpreter.pay_rate)
+              : defaultRates
+                ? (a.interpreter_type_required.toLowerCase() === "qualified" ? defaultRates.qualified : defaultRates.certified)
+                : 0;
       const billable = a.billable_duration_minutes ?? 0;
       return {
         date: a.date_time.toISOString().slice(0, 10),
