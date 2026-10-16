@@ -131,41 +131,65 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {(selectedType === "interpreter_compensation" || selectedType === "interpreter_performance") && (
-              <div className="space-y-1">
-                <Label>{t("reports.select_interpreters")}</Label>
-                <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
-                  {((interpreters?.data ?? []) as Array<{ id: string; name: string }>).map((i) => (
-                    <label key={i.id} className="flex items-center gap-2 cursor-pointer text-sm">
+            {(selectedType === "interpreter_compensation" || selectedType === "interpreter_performance") && (() => {
+              const allIds = ((interpreters?.data ?? []) as Array<{ id: string; name: string }>).map((i) => i.id);
+              const allSelected = allIds.length > 0 && allIds.every((id) => interpreterIds.includes(id));
+              return (
+                <div className="space-y-1">
+                  <Label>{t("reports.select_interpreters")}</Label>
+                  <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium border-b pb-1 mb-1">
                       <input
                         type="checkbox"
-                        checked={interpreterIds.includes(i.id)}
-                        onChange={(e) => setInterpreterIds(e.target.checked ? [...interpreterIds, i.id] : interpreterIds.filter((x) => x !== i.id))}
+                        checked={allSelected}
+                        onChange={() => setInterpreterIds(allSelected ? [] : allIds)}
                       />
-                      {i.name}
+                      Select all
                     </label>
-                  ))}
+                    {((interpreters?.data ?? []) as Array<{ id: string; name: string }>).map((i) => (
+                      <label key={i.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={interpreterIds.includes(i.id)}
+                          onChange={(e) => setInterpreterIds(e.target.checked ? [...interpreterIds, i.id] : interpreterIds.filter((x) => x !== i.id))}
+                        />
+                        {i.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
-            {selectedType === "agency_billing" && (
-              <div className="space-y-1">
-                <Label>{t("reports.select_agencies")}</Label>
-                <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
-                  {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map((a) => (
-                    <label key={a.id} className="flex items-center gap-2 cursor-pointer text-sm">
+            {selectedType === "agency_billing" && (() => {
+              const allIds = ((agencies?.data ?? []) as Array<{ id: string; name: string }>).map((a) => a.id);
+              const allSelected = allIds.length > 0 && allIds.every((id) => agencyIds.includes(id));
+              return (
+                <div className="space-y-1">
+                  <Label>{t("reports.select_agencies")}</Label>
+                  <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium border-b pb-1 mb-1">
                       <input
                         type="checkbox"
-                        checked={agencyIds.includes(a.id)}
-                        onChange={(e) => setAgencyIds(e.target.checked ? [...agencyIds, a.id] : agencyIds.filter((x) => x !== a.id))}
+                        checked={allSelected}
+                        onChange={() => setAgencyIds(allSelected ? [] : allIds)}
                       />
-                      {a.name}
+                      Select all
                     </label>
-                  ))}
+                    {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={agencyIds.includes(a.id)}
+                          onChange={(e) => setAgencyIds(e.target.checked ? [...agencyIds, a.id] : agencyIds.filter((x) => x !== a.id))}
+                        />
+                        {a.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="flex gap-3">
               <Button
