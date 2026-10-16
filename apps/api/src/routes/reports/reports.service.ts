@@ -51,12 +51,13 @@ export async function fetchReportData(
     }
 
     return appointments.map((a) => {
-      const rate = a.invoice?.pay_rate
-        ? Number(a.invoice.pay_rate)
-        : a.pay_rate
-          ? Number(a.pay_rate)
-          : a.pre_auth_amount && Number(a.pre_auth_amount) > 0
-            ? Number(a.pre_auth_amount)
+      // pre_auth_amount is the admin-selected rate from the dropdown — authoritative when set
+      const rate = a.pre_auth_amount && Number(a.pre_auth_amount) > 0
+        ? Number(a.pre_auth_amount)
+        : a.invoice?.pay_rate
+          ? Number(a.invoice.pay_rate)
+          : a.pay_rate
+            ? Number(a.pay_rate)
             : a.interpreter?.pay_rate
               ? Number(a.interpreter.pay_rate)
               : defaultRates
