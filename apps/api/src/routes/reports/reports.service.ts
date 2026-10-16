@@ -2,17 +2,15 @@ import type { PrismaClient } from "@prisma/client";
 import type { GenerateReportBody, ReportListQuery } from "@dorada/types";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { Queue } from "bullmq";
-import { resolveFileUrl } from "../../integrations/r2.js";
 
 /**
- * Reports live in a private bucket; the worker stores the object key in
- * gcs_path. Re-sign on every read so links never go stale (the previously
- * stored download_url expired after 24h). Dev fallback keeps the local
- * /reports/:id/download path stored in download_url.
+ * Always return the API proxy URL so the frontend fetches through the
+ * authenticated endpoint (avoids R2 CORS issues with direct signed URLs).
  */
-async function reportDownloadUrl(job: { gcs_path: string | null; download_url: string | null }): Promise<string | null> {
-  if (job.gcs_path) return resolveFileUrl(job.gcs_path);
-  return job.download_url ?? null;
+function reportDownloadUrl(job: { id: string; gcs_path: string | null; download_url: string | null; status: string }): string | null {
+  if (job.status !== "completed") return null;
+  if (job.gcs_path || job.download_url) return `/api/v1/reports/${job.id}/download`;
+  return null;
 }
 
 const REQUIRED_FILTERS: Record<string, string[]> = {
@@ -79,7 +77,7 @@ export async function getReportStatus(jobId: string, organizationId: string, pri
     type: job.type,
     format: job.format,
     filters: job.filters,
-    download_url: await reportDownloadUrl(job),
+    download_url: reportDownloadUrl(job),
     expires_at: null,
     error: job.error_message ?? null,
     created_at: job.created_at.toISOString(),
@@ -102,17 +100,17 @@ export async function listReports(query: ReportListQuery, organizationId: string
   const data = hasMore ? jobs.slice(0, limit) : jobs;
 
   return {
-    data: await Promise.all(data.map(async (j) => ({
+    data: data.map((j) => ({
       id: j.id,
       type: j.type,
       format: j.format,
       status: j.status,
       filters: j.filters,
-      download_url: await reportDownloadUrl(j),
+      download_url: reportDownloadUrl(j),
       error_message: j.error_message ?? null,
       created_at: j.created_at.toISOString(),
       completed_at: j.completed_at?.toISOString() ?? null,
-    }))),
+    })),
     pagination: {
       next_cursor: hasMore ? data[data.length - 1]!.created_at.toISOString() : null,
       has_more: hasMore,

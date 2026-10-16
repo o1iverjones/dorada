@@ -35,7 +35,6 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     return reply.send(await getReportStatus(job_id, (req.user as JwtPayload).organization_id, fastify.prisma));
   });
 
-  /** Dev-only: serve locally saved report files when GCS is not configured. */
   fastify.get("/:job_id/download", { preHandler }, async (req, reply) => {
     const { job_id } = req.params as { job_id: string };
     const job = await fastify.prisma.reportJob.findFirst({
@@ -43,15 +42,22 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     });
     if (!job) return reply.status(404).send({ error: "Not found" });
 
-    // Only serve local files (no gcs_path stored)
-    if (job.gcs_path) return reply.status(400).send({ error: "Use signed URL for GCS files" });
+    const contentType = job.format === "csv" ? "text/csv" : "application/pdf";
+    const downloadName = `report-${job.type}-${job_id.slice(0, 8)}.${job.format}`;
+
+    if (job.gcs_path) {
+      const { downloadAsBuffer } = await import("../../integrations/r2.js");
+      const buffer = await downloadAsBuffer(job.gcs_path);
+      return reply
+        .header("Content-Type", contentType)
+        .header("Content-Disposition", `attachment; filename="${downloadName}"`)
+        .send(buffer);
+    }
 
     const filename = `${job_id}.${job.format}`;
     const filepath = path.join(LOCAL_REPORTS_DIR, filename);
     if (!fs.existsSync(filepath)) return reply.status(404).send({ error: "File not found on disk" });
 
-    const contentType = job.format === "csv" ? "text/csv" : "application/pdf";
-    const downloadName = `report-${job.type}-${job_id.slice(0, 8)}.${job.format}`;
     return reply
       .header("Content-Type", contentType)
       .header("Content-Disposition", `attachment; filename="${downloadName}"`)
