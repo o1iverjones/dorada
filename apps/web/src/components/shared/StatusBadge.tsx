@@ -3,7 +3,7 @@ import { Badge } from "../ui/badge.js";
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
   accepted: "success",
-  completed: "secondary",
+  completed: "success",
   pending_offer: "warning",
   in_progress: "default",
   cancelled: "destructive",
