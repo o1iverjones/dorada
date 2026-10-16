@@ -179,6 +179,7 @@ model Interpreter {
   // "push" | "sms"
   follow_up_channel       String    @default("push")
   fcm_token               String?
+  web_push_subscription   String?
   notes                   String?
   is_active               Boolean   @default(true)
   failed_otp_attempts     Int       @default(0)

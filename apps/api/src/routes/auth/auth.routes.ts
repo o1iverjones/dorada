@@ -92,6 +92,13 @@ export default async function authRoutes(fastify: FastifyInstance) {
     return reply.status(204).send();
   });
 
+  fastify.get("/vapid-public-key", async (_request, reply) => {
+    if (!config.VAPID_PUBLIC_KEY) {
+      return reply.status(404).send({ error: { message: "Web push not configured" } });
+    }
+    return reply.send({ publicKey: config.VAPID_PUBLIC_KEY });
+  });
+
   // DEV-ONLY backdoors (OTP retrieval, SMS test, rate-limit reset, job
   // triggers). These are UNAUTHENTICATED and dangerous in production, so gate
   // on an explicit APP_ENV === "dev" — never a "not production" check that a

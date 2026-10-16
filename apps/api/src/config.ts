@@ -45,6 +45,10 @@ const ConfigSchema = z.object({
 
   ANTHROPIC_API_KEY: z.string().optional(),
   CLAUDE_MODEL: z.string().default("claude-sonnet-4-6"),
+
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default("mailto:noreply@dorada.app"),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

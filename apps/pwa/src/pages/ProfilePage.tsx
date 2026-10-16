@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LogOut, Globe } from "lucide-react";
+import { LogOut, Globe, Bell, BellOff } from "lucide-react";
 import { api, clearTokens } from "../lib/api";
 import { useAuthStore } from "../store/auth";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 
 export default function ProfilePage() {
   const { t, i18n } = useTranslation();
@@ -16,6 +17,7 @@ export default function ProfilePage() {
   });
 
   const profile = data as Record<string, unknown> | undefined;
+  const { permission, subscribed, supported, subscribe, unsubscribe } = usePushNotifications();
 
   function handleLogout() {
     if (!confirm(t("account.logout_confirm_body"))) return;
@@ -49,6 +51,26 @@ export default function ProfilePage() {
             <Row label={t("interpreters.languages")} value={((profile.languages as string[]) ?? []).join(", ")} />
             <Row label={t("interpreters.email")} value={(profile.email as string) ?? "—"} />
           </div>
+        )}
+
+        {/* Push notifications */}
+        {supported && (
+          <button
+            onClick={subscribed ? unsubscribe : subscribe}
+            className={`w-full flex items-center justify-center gap-2 bg-surface rounded-xl py-3.5 border text-sm font-semibold active:bg-gray-50 ${
+              subscribed
+                ? "border-green-200 text-green-700"
+                : "border-[var(--color-border)] text-[var(--color-text-muted)]"
+            }`}
+            disabled={permission === "denied"}
+          >
+            {subscribed ? <Bell size={18} /> : <BellOff size={18} />}
+            {permission === "denied"
+              ? "Notifications blocked in browser settings"
+              : subscribed
+                ? "Notifications enabled"
+                : "Enable notifications"}
+          </button>
         )}
 
         {/* Language toggle */}

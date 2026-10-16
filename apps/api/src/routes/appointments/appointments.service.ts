@@ -19,7 +19,7 @@ import { addMinutes, diffMinutes } from "@dorada/utils";
 import { writeActivityLog } from "../../lib/activityLog.js";
 import { normalizeFileRef, resolveFileUrl, AVATAR_URL_TTL } from "../../integrations/r2.js";
 import { distanceMiles } from "../../lib/geo.js";
-import { sendExpoPushNotifications } from "../../lib/push.js";
+import { sendExpoPushNotifications, sendWebPushNotification } from "../../lib/push.js";
 
 async function logActivity(
   appointmentId: string,
@@ -604,14 +604,15 @@ export async function offerAppointment(
 
   // Send push notifications to each offered interpreter
   const interpreterIds = created.map((o) => o.interpreter_id);
-  const tokens = await prisma.interpreter.findMany({
-    where: { id: { in: interpreterIds }, fcm_token: { not: null } },
-    select: { fcm_token: true },
+  const interpretersForPush = await prisma.interpreter.findMany({
+    where: { id: { in: interpreterIds } },
+    select: { fcm_token: true, web_push_subscription: true },
   });
   const apptDate = new Date(appt!.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const messages = tokens
-    .map((t) => t.fcm_token!)
-    .filter((token) => token.startsWith("ExponentPushToken"))
+
+  const expoMessages = interpretersForPush
+    .map((t) => t.fcm_token)
+    .filter((token): token is string => !!token && token.startsWith("ExponentPushToken"))
     .map((token) => ({
       to: token,
       title: "New Appointment Offer",
@@ -620,7 +621,18 @@ export async function offerAppointment(
       sound: "default" as const,
       priority: "high" as const,
     }));
-  await sendExpoPushNotifications(messages);
+  void sendExpoPushNotifications(expoMessages);
+
+  const webPushSubs = interpretersForPush
+    .map((t) => t.web_push_subscription)
+    .filter((sub): sub is string => !!sub);
+  for (const sub of webPushSubs) {
+    void sendWebPushNotification(sub, {
+      title: "New Appointment Offer",
+      body: `You have a new appointment offer for ${apptDate}. Tap to view details.`,
+      data: { type: "offer", appointmentId: id },
+    });
+  }
 
   return { offers: created };
 }

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Check, X, AlertCircle, AlertTriangle, Info } from "lucide-react";
+import { ChevronRight, Check, X, AlertCircle, AlertTriangle, Info, Bell } from "lucide-react";
 import { useMyAppointments, useAppointmentOffers, useConfirmOffer, useDeclineOffer } from "../hooks/useAppointments";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 
 const STATUS_COLORS: Record<string, string> = {
   accepted: "bg-green-500",
@@ -26,6 +27,10 @@ export default function AppointmentsPage() {
   const pendingOffers = (offers?.data ?? []) as Array<Record<string, unknown>>;
   const history = (historyData?.data ?? []) as Array<Record<string, unknown>>;
 
+  const { supported, subscribed, permission, subscribe } = usePushNotifications();
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem("dorada-push-dismissed") === "1");
+  const showBanner = supported && !subscribed && permission !== "denied" && !dismissed;
+
   const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "upcoming", label: t("appointments.upcoming") },
     { key: "offers", label: t("appointments.offers"), badge: pendingOffers.length || undefined },
@@ -34,6 +39,25 @@ export default function AppointmentsPage() {
 
   return (
     <div className="flex flex-col h-full">
+      {showBanner && (
+        <div className="flex items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-3">
+          <Bell size={18} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-800 flex-1">Enable notifications to get alerts for new offers.</p>
+          <button
+            onClick={() => subscribe()}
+            className="text-sm font-semibold text-forest whitespace-nowrap"
+          >
+            Enable
+          </button>
+          <button
+            onClick={() => { setDismissed(true); localStorage.setItem("dorada-push-dismissed", "1"); }}
+            className="text-sm text-[var(--color-text-muted)]"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <div className="flex bg-surface border-b border-[var(--color-border)]">
         {tabs.map(({ key, label, badge }) => (
           <button

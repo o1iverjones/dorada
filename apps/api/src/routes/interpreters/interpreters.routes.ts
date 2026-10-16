@@ -45,6 +45,26 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
     return reply.send(await updateSelf(payload.sub, body, fastify.prisma));
   });
 
+  fastify.post("/me/push-subscription", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const { subscription } = req.body as { subscription: unknown };
+    if (!subscription) return reply.status(400).send({ error: { message: "subscription required" } });
+    const payload = req.user as JwtPayload;
+    await fastify.prisma.interpreter.update({
+      where: { id: payload.sub },
+      data: { web_push_subscription: JSON.stringify(subscription) },
+    });
+    return reply.status(204).send();
+  });
+
+  fastify.delete("/me/push-subscription", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const payload = req.user as JwtPayload;
+    await fastify.prisma.interpreter.update({
+      where: { id: payload.sub },
+      data: { web_push_subscription: null },
+    });
+    return reply.status(204).send();
+  });
+
   fastify.get("/me/availability", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const payload = req.user as JwtPayload;
     return reply.send(await listAvailabilityBlocks(payload.sub, fastify.prisma));
