@@ -96,7 +96,9 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const body = UpdateAppointmentBodySchema.parse(req.body);
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
-    return reply.send(await updateAppointment(id, body, payload.organization_id, actor, fastify.prisma));
+    const updated = await updateAppointment(id, body, payload.organization_id, actor, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "updated" });
+    return reply.send(updated);
   });
 
   // PATCH /appointments/:id/clock-times
@@ -184,6 +186,7 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
       }
     }
 
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "clock_times_patched" });
     return reply.send(result);
   });
 
@@ -418,6 +421,7 @@ const payload = req.user as JwtPayload;
     }
 
     const result = await manualConfirmInterpreter(id, interpreter_id, payload.organization_id, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "manual_confirm" });
     // Schedule reminders (fire-and-forget)
     const { getQueues } = await import("../../workers/queues.js");
     const appt = await fastify.prisma.appointment.findUnique({ where: { id }, select: { date_time: true } });
@@ -433,6 +437,7 @@ const payload = req.user as JwtPayload;
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
     await unassignInterpreter(id, payload.organization_id, actor, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "unassign" });
     const { getQueues } = await import("../../workers/queues.js");
     cancelRemindersForAppointment(id, fastify.prisma, getQueues().appointmentRemindersQueue).catch(console.error);
     return reply.status(200).send({ success: true });
@@ -446,21 +451,27 @@ const payload = req.user as JwtPayload;
       lat: z.number().optional(),
       lng: z.number().optional(),
     }).parse(req.body ?? {});
-    return reply.send(await clockIn(id, payload.sub, fastify.prisma, lat, lng));
+    const clockInResult = await clockIn(id, payload.sub, fastify.prisma, lat, lng);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "clock_in" });
+    return reply.send(clockInResult);
   });
 
   // POST /appointments/:id/clock-out
   fastify.post("/:id/clock-out", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
-    return reply.send(await clockOut(id, payload.sub, fastify.prisma));
+    const clockOutResult = await clockOut(id, payload.sub, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "clock_out" });
+    return reply.send(clockOutResult);
   });
 
   // POST /appointments/:id/patient-arrived
   fastify.post("/:id/patient-arrived", { preHandler: authenticateInterpreter }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const payload = req.user as JwtPayload;
-    return reply.send(await markPatientArrived(id, payload.sub, fastify.prisma));
+    const arrivedResult = await markPatientArrived(id, payload.sub, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "patient_arrived" });
+    return reply.send(arrivedResult);
   });
 
   // POST /appointments/:id/notes

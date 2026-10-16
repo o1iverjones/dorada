@@ -52,8 +52,18 @@ export function AppLayout() {
       });
     };
 
+    const handleAppointmentUpdate = () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+    };
+
     socket.on("new_message", handleNewMessage);
-    return () => { socket.off("new_message", handleNewMessage); };
+    socket.on("appointment:updated", handleAppointmentUpdate);
+    socket.on("appointment:offer_updated", handleAppointmentUpdate);
+    return () => {
+      socket.off("new_message", handleNewMessage);
+      socket.off("appointment:updated", handleAppointmentUpdate);
+      socket.off("appointment:offer_updated", handleAppointmentUpdate);
+    };
   // qc is stable — intentionally omitted from deps
   }, []);
 
