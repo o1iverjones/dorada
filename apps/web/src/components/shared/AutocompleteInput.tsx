@@ -23,17 +23,21 @@ export function AutocompleteInput({ options, value, onChange, onSearchChange, pl
   const [inputText, setInputText] = useState(selectedLabel);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isTypingRef = useRef(false);
 
-  // Keep input text in sync when value changes externally (e.g. form reset)
+  // Keep input text in sync when value changes externally (e.g. form reset, prefill)
+  // but NOT while the user is actively typing — otherwise incoming search results reset the input
   useEffect(() => {
+    if (isTypingRef.current) return;
     setInputText(freeText ? value : (options.find((o) => o.value === value)?.label ?? ""));
   }, [value, freeText, options]);
 
-  // Close on outside click
+  // Close on outside click and clear typing flag
   useEffect(() => {
     function handle(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        isTypingRef.current = false;
       }
     }
     document.addEventListener("mousedown", handle);
@@ -47,6 +51,7 @@ export function AutocompleteInput({ options, value, onChange, onSearchChange, pl
       : options;
 
   function handleInputChange(text: string) {
+    isTypingRef.current = true;
     setInputText(text);
     setOpen(true);
     onSearchChange?.(text);
@@ -55,13 +60,21 @@ export function AutocompleteInput({ options, value, onChange, onSearchChange, pl
   }
 
   function handleSelect(opt: Option) {
+    isTypingRef.current = false;
     setInputText(opt.label);
     onChange(freeText ? opt.label : opt.value);
     setOpen(false);
   }
 
+  function handleBlur() {
+    isTypingRef.current = false;
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") setOpen(false);
+    if (e.key === "Escape") {
+      setOpen(false);
+      isTypingRef.current = false;
+    }
   }
 
   return (
@@ -70,6 +83,7 @@ export function AutocompleteInput({ options, value, onChange, onSearchChange, pl
         value={inputText}
         onChange={(e) => handleInputChange(e.target.value)}
         onFocus={() => setOpen(true)}
+        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoComplete="off"
