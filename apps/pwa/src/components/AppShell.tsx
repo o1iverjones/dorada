@@ -16,7 +16,7 @@ export default function AppShell() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto no-scrollbar safe-top">
         <Outlet />
       </div>
       <nav className="flex-shrink-0 bg-surface border-t border-[var(--color-border)] safe-bottom">
