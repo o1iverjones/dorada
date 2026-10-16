@@ -49,9 +49,9 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       const { downloadAsBuffer } = await import("../../integrations/r2.js");
       const buffer = await downloadAsBuffer(job.gcs_path);
       return reply
-        .header("Content-Type", contentType)
+        .type(contentType)
         .header("Content-Disposition", `attachment; filename="${downloadName}"`)
-        .send(buffer);
+        .send(Buffer.from(buffer));
     }
 
     const filename = `${job_id}.${job.format}`;

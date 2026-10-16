@@ -72,24 +72,16 @@ export function buildReportFilename(
  * Fetch a report file via the authenticated API client and trigger a browser download.
  * Works for both local dev URLs (/api/v1/reports/:id/download) and GCS signed URLs.
  */
-export async function downloadReport(downloadUrl: string, filename: string): Promise<void> {
-  // GCS signed URLs are fully-qualified and already public — fetch directly
-  // Local dev URLs start with /api/v1 and need the auth header
-  const isLocal = downloadUrl.startsWith("/");
-  let blob: Blob;
+const API_BASE = `${(import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? ""}`;
 
-  if (isLocal) {
-    const token = localStorage.getItem("dorada_access_token");
-    const res = await fetch(downloadUrl, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-    blob = await res.blob();
-  } else {
-    const res = await fetch(downloadUrl);
-    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-    blob = await res.blob();
-  }
+export async function downloadReport(downloadUrl: string, filename: string): Promise<void> {
+  const token = localStorage.getItem("dorada_access_token");
+  const url = downloadUrl.startsWith("/") ? `${API_BASE}${downloadUrl}` : downloadUrl;
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  const blob = await res.blob();
 
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
