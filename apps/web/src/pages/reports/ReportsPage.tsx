@@ -40,6 +40,7 @@ export function ReportsPage() {
   const [agencyIds, setAgencyIds] = useState<string[]>([]);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
   const [previewPage, setPreviewPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const generate = useGenerateReport();
   const preview = usePreviewReport();
@@ -343,58 +344,89 @@ export function ReportsPage() {
           <CardContent>
             {!jobHistory?.data.length ? (
               <p className="text-sm text-muted-foreground">{t("reports.no_history")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {(jobHistory.data as Array<Record<string, unknown>>).map((j) => {
-                  const typeKey = j.type as ReportType;
-                  const typeLabel = REPORT_INFO[typeKey]?.title ?? String(j.type);
-                  const historyLabel = buildReportLabel(
-                    j.type as string,
-                    (j.filters as Record<string, unknown>) ?? {},
-                    interpreterMap,
-                  );
-                  return (
-                    <li key={j.id as string} className="flex flex-wrap items-center justify-between rounded-md border p-3 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{typeLabel}</p>
-                        {historyLabel && <p className="text-sm truncate">{historyLabel}</p>}
-                        <p className="text-muted-foreground text-xs">
-                          {new Date(j.created_at as string).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                          {" · "}
-                          <span className="uppercase">{j.format as string}</span>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 ml-3 shrink-0">
-                        <StatusBadge status={j.status as string} />
-                        {j.download_url && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => downloadReport(
-                              j.download_url as string,
-                              buildReportFilename(
-                                j.type as string,
-                                j.format as string,
-                                (j.filters as Record<string, unknown>) ?? {},
-                                interpreterMap,
-                              ),
-                            ).catch(() => toast({ title: t("common.error"), variant: "destructive" }))}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                      {j.status === "failed" && j.error_message && (
-                        <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1 mt-1 w-full">
-                          {j.error_message as string}
-                        </p>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            ) : (() => {
+              const HISTORY_PER_PAGE = 15;
+              const allJobs = jobHistory.data as Array<Record<string, unknown>>;
+              const totalPages = Math.ceil(allJobs.length / HISTORY_PER_PAGE);
+              const pagedJobs = allJobs.slice((historyPage - 1) * HISTORY_PER_PAGE, historyPage * HISTORY_PER_PAGE);
+              return (
+                <div className="space-y-3">
+                  <ul className="space-y-2">
+                    {pagedJobs.map((j) => {
+                      const typeKey = j.type as ReportType;
+                      const typeLabel = REPORT_INFO[typeKey]?.title ?? String(j.type);
+                      const historyLabel = buildReportLabel(
+                        j.type as string,
+                        (j.filters as Record<string, unknown>) ?? {},
+                        interpreterMap,
+                      );
+                      return (
+                        <li key={j.id as string} className="flex flex-wrap items-center justify-between rounded-md border p-3 text-sm">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{typeLabel}</p>
+                            {historyLabel && <p className="text-sm truncate">{historyLabel}</p>}
+                            <p className="text-muted-foreground text-xs">
+                              {new Date(j.created_at as string).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                              {" · "}
+                              <span className="uppercase">{j.format as string}</span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-3 shrink-0">
+                            <StatusBadge status={j.status as string} />
+                            {j.download_url && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => downloadReport(
+                                  j.download_url as string,
+                                  buildReportFilename(
+                                    j.type as string,
+                                    j.format as string,
+                                    (j.filters as Record<string, unknown>) ?? {},
+                                    interpreterMap,
+                                  ),
+                                ).catch(() => toast({ title: t("common.error"), variant: "destructive" }))}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          {j.status === "failed" && j.error_message && (
+                            <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1 mt-1 w-full">
+                              {j.error_message as string}
+                            </p>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={historyPage <= 1}
+                        onClick={() => setHistoryPage(historyPage - 1)}
+                      >
+                        <ChevronLeft className="mr-1 h-4 w-4" /> {t("common.previous")}
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {t("common.page")} {historyPage} / {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={historyPage >= totalPages}
+                        onClick={() => setHistoryPage(historyPage + 1)}
+                      >
+                        {t("common.next")} <ChevronRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
