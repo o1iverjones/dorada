@@ -362,6 +362,7 @@ model Patient {
   email                    String?
   preferred_language       String?
   notes                    String?
+  is_active                Boolean   @default(true)
   created_at               DateTime  @default(now())
   updated_at               DateTime  @updatedAt
 

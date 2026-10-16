@@ -25,6 +25,7 @@ import { toast } from "../../hooks/use-toast.js";
 import { Pencil, Plus, X } from "lucide-react";
 import { AdminNotesCard } from "../../components/shared/AdminNotesCard.js";
 import { ActivityLogCard } from "../../components/shared/ActivityLogCard.js";
+import { DeactivateCard } from "../../components/shared/DeactivateCard.js";
 
 interface Claim {
   id: string;
@@ -397,6 +398,8 @@ export function PatientDetailPage() {
         <AdminNotesCard entity="patient" id={id!} legacyNote={(p.notes as string | null) ?? null} legacyTag="Imported" />
         <ActivityLogCard entity="patient" id={id!} />
       </div>
+
+      <DeactivateCard entity="patient" id={id!} isActive={(p.is_active as boolean) !== false} />
 
       {/* Edit patient — Dialog on mobile only */}
       <Dialog open={editing && isMobile} onOpenChange={(open) => { if (!open) setEditing(false); }}>

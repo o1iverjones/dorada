@@ -869,7 +869,8 @@
     "entity_clinic": "Clinic",
     "entity_agency": "Agency",
     "entity_insurance_company": "Insurance company",
-    "entity_interpreter": "Interpreter"
+    "entity_interpreter": "Interpreter",
+    "entity_patient": "Patient"
   },
   "settings": {
     "title": "System settings",

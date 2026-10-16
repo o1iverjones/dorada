@@ -72,7 +72,7 @@ export function useUploadEntityNoteImage(entity: EntityType, id: string) {
 }
 
 /** Entities that support deactivate / reactivate. */
-export type StatusEntity = "clinic" | "agency" | "insurance_company" | "interpreter";
+export type StatusEntity = "clinic" | "agency" | "insurance_company" | "interpreter" | "patient";
 
 /**
  * Unified deactivate / reactivate for entities that support it.

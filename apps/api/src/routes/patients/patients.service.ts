@@ -91,6 +91,7 @@ export async function updatePatient(id: string, body: UpdatePatientBody, organiz
       ...(body.email !== undefined ? { email: body.email } : {}),
       ...(body.preferred_language !== undefined ? { preferred_language: body.preferred_language } : {}),
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      ...(body.is_active !== undefined ? { is_active: body.is_active } : {}),
     },
     include: patientInclude,
   });

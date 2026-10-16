@@ -869,7 +869,8 @@
     "entity_clinic": "Clínica",
     "entity_agency": "Agencia",
     "entity_insurance_company": "Aseguradora",
-    "entity_interpreter": "Intérprete"
+    "entity_interpreter": "Intérprete",
+    "entity_patient": "Paciente"
   },
   "settings": {
     "title": "Configuración del sistema",

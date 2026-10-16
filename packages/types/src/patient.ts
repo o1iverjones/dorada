@@ -63,6 +63,7 @@ export const UpdatePatientBodySchema = CreatePatientBodySchema.partial().extend(
   date_of_birth: z.string().date().nullable().optional(),
   preferred_interpreter_id: UuidSchema.nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
+  is_active: z.boolean().optional(),
 });
 
 export const PatientListQuerySchema = z.object({

@@ -49,7 +49,20 @@ export function PatientsPage() {
   }
 
   const columns = [
-    { key: "name", header: t("patients.name") },
+    {
+      key: "name",
+      header: t("patients.name"),
+      render: (r: Record<string, unknown>) => (
+        <span className="flex items-center gap-2">
+          {r.name as string}
+          {r.is_active === false && (
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#fee2e2", color: "#b91c1c" }}>
+              {t("status.inactive")}
+            </span>
+          )}
+        </span>
+      ),
+    },
     { key: "phone", header: t("patients.phone"), render: (r: Record<string, unknown>) => formatPhone(r.phone as string) },
     {
       key: "date_of_birth",
@@ -117,6 +130,7 @@ export function PatientsPage() {
           data={(data?.data ?? []) as Array<{ id: string } & Record<string, unknown>>}
           onRowClick={(row) => navigate(`/patients/${row.id}`)}
           emptyMessage={t("patients.empty")}
+          rowStyle={(row) => (row as Record<string, unknown>).is_active === false ? { backgroundColor: "#fef2f2" } : {}}
         />
       )}
 
