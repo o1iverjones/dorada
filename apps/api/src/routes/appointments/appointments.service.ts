@@ -931,10 +931,11 @@ export async function getInterpreterAppointment(appointmentId: string, interpret
 
 export async function getInterpreterAppointments(
   interpreterId: string,
-  query: { status?: string; date_from?: string; date_to?: string; cursor?: string; limit: number },
+  query: { status?: string; date_from?: string; date_to?: string; cursor?: string; limit: number; sort?: "asc" | "desc" },
   prisma: PrismaClient,
 ) {
   const statuses = query.status ? query.status.split(",") : undefined;
+  const sortOrder = query.sort ?? "asc";
   const items = await prisma.appointment.findMany({
     where: {
       interpreter_id: interpreterId,
@@ -949,7 +950,7 @@ export async function getInterpreterAppointments(
         : {}),
     },
     take: query.limit + 1,
-    orderBy: { date_time: "asc" },
+    orderBy: { date_time: sortOrder },
     include: {
       type: true,
       clinic: {

@@ -492,6 +492,7 @@ const payload = req.user as JwtPayload;
       date_to: z.string().optional(),
       cursor: z.string().optional(),
       limit: z.coerce.number().default(25),
+      sort: z.enum(["asc", "desc"]).default("asc"),
     }).parse(req.query);
     const payload = req.user as JwtPayload;
     return reply.send(await getInterpreterAppointments(payload.sub, query, fastify.prisma));

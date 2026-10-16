@@ -21,13 +21,11 @@ export default function AppointmentsPage() {
 
   const { data: appts, isLoading: apptLoading, refetch: refetchAppts } = useMyAppointments({ status: "accepted,in_progress", limit: "30" });
   const { data: offers, isLoading: offersLoading, refetch: refetchOffers } = useAppointmentOffers();
-  const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useMyAppointments({ status: "completed,cancelled", limit: "50" });
+  const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useMyAppointments({ status: "completed,cancelled", limit: "50", sort: "desc" });
 
   const upcoming = (appts?.data ?? []) as Array<Record<string, unknown>>;
   const pendingOffers = (offers?.data ?? []) as Array<Record<string, unknown>>;
-  const history = [...((historyData?.data ?? []) as Array<Record<string, unknown>>)].sort(
-    (a, b) => new Date(b.date_time as string).getTime() - new Date(a.date_time as string).getTime(),
-  );
+  const history = (historyData?.data ?? []) as Array<Record<string, unknown>>;
 
   const { supported, subscribed, permission, subscribe } = usePushNotifications();
   const [dismissed, setDismissed] = useState(() => localStorage.getItem("dorada-push-dismissed") === "1");
