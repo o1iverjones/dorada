@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, MapPin, Navigation, Car, Clock, LogIn, LogOut, UserPlus, FileText, Camera, CheckCircle, AlertCircle, AlertTriangle, Info, Loader2 } from "lucide-react";
 import { useAppointmentDetail, useClockIn, useClockOut, usePatientArrived, useAddShiftNotes, useSubmitFollowUp, useUploadAppointmentMedia } from "../hooks/useAppointments";
+import { api } from "../lib/api";
 
 export default function AppointmentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +29,8 @@ export default function AppointmentDetailPage() {
     same_clinic: true,
     follow_up_datetime: "",
     notes: "",
+    preferred_clinic_name: "",
+    preferred_doctor_name: "",
   });
 
   if (isLoading) return <div className="flex items-center justify-center h-full text-[var(--color-text-subtle)]">{t("common.loading")}</div>;
@@ -91,7 +94,20 @@ export default function AppointmentDetailPage() {
 
   async function handleSubmitFollowUp() {
     try {
-      await submitFollowUp.mutateAsync(followUp.has_follow_up ? followUp : { has_follow_up: false });
+      const body: Record<string, unknown> = { has_follow_up: followUp.has_follow_up };
+      if (followUp.has_follow_up) {
+        body.same_physician = followUp.same_physician;
+        body.same_clinic = followUp.same_clinic;
+        body.follow_up_datetime = followUp.follow_up_datetime;
+        body.notes = followUp.notes || undefined;
+        if (!followUp.same_clinic && followUp.preferred_clinic_name) {
+          body.preferred_clinic_name = followUp.preferred_clinic_name;
+        }
+        if (!followUp.same_physician && followUp.preferred_doctor_name) {
+          body.preferred_doctor_name = followUp.preferred_doctor_name;
+        }
+      }
+      await submitFollowUp.mutateAsync(body);
       setShowFollowUp(false);
       setFollowUpSent(true);
     } catch { alert(t("common.error")); }
@@ -116,6 +132,33 @@ export default function AppointmentDetailPage() {
       </div>
 
       <div className="p-4 space-y-2">
+        {/* Action buttons — at top for visibility */}
+        {status === "accepted" && (
+          <ActionButton onClick={handleClockIn} loading={clockIn.isPending} icon={<LogIn size={20} />} className="bg-forest">
+            {t("appointments.clock_in")}
+          </ActionButton>
+        )}
+
+        {status === "in_progress" && (
+          <>
+            {appt.patient_arrived_at ? (
+              <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-xl px-4 py-3">
+                <CheckCircle size={18} className="text-green-600" />
+                <span className="text-green-700 text-sm font-semibold">
+                  {t("appointments.patient_arrived_at", { time: new Date(appt.patient_arrived_at as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}
+                </span>
+              </div>
+            ) : (
+              <ActionButton onClick={handlePatientArrived} loading={patientArrived.isPending} icon={<UserPlus size={20} />} className="bg-green-600">
+                {t("appointments.patient_arrived")}
+              </ActionButton>
+            )}
+            <ActionButton onClick={handleClockOut} loading={clockOut.isPending} icon={<LogOut size={20} />} className="bg-red-600">
+              {t("appointments.clock_out")}
+            </ActionButton>
+          </>
+        )}
+
         {/* Invoice banner */}
         {invoice && (
           <div className={`flex items-center gap-3 rounded-xl p-4 border ${
@@ -223,35 +266,9 @@ export default function AppointmentDetailPage() {
         {/* Language */}
         <Section label={t("appointments.language")} value={appt.language as string} />
 
-        {/* Clock In */}
-        {status === "accepted" && (
-          <ActionButton onClick={handleClockIn} loading={clockIn.isPending} icon={<LogIn size={20} />} className="bg-forest">
-            {t("appointments.clock_in")}
-          </ActionButton>
-        )}
-
-        {/* In Progress actions */}
-        {status === "in_progress" && (
-          <>
-            {appt.clock_in_time && (
-              <Section label={t("appointments.clocked_in_at")} value={new Date(appt.clock_in_time as string).toLocaleTimeString()} />
-            )}
-            {appt.patient_arrived_at ? (
-              <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-xl px-4 py-3">
-                <CheckCircle size={18} className="text-green-600" />
-                <span className="text-green-700 text-sm font-semibold">
-                  {t("appointments.patient_arrived_at", { time: new Date(appt.patient_arrived_at as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}
-                </span>
-              </div>
-            ) : (
-              <ActionButton onClick={handlePatientArrived} loading={patientArrived.isPending} icon={<UserPlus size={20} />} className="bg-green-600">
-                {t("appointments.patient_arrived")}
-              </ActionButton>
-            )}
-            <ActionButton onClick={handleClockOut} loading={clockOut.isPending} icon={<LogOut size={20} />} className="bg-red-600">
-              {t("appointments.clock_out")}
-            </ActionButton>
-          </>
+        {/* Clock-in time for in-progress */}
+        {status === "in_progress" && appt.clock_in_time && (
+          <Section label={t("appointments.clocked_in_at")} value={new Date(appt.clock_in_time as string).toLocaleTimeString()} />
         )}
 
         {/* Notes */}
@@ -290,10 +307,23 @@ export default function AppointmentDetailPage() {
             />
             {followUp.has_follow_up && (
               <>
-                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.same_physician")}</label>
-                <ToggleRow value={followUp.same_physician} onChange={(v) => setFollowUp((s) => ({ ...s, same_physician: v }))} />
                 <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.same_clinic")}</label>
-                <ToggleRow value={followUp.same_clinic} onChange={(v) => setFollowUp((s) => ({ ...s, same_clinic: v }))} />
+                <ToggleRow value={followUp.same_clinic} onChange={(v) => setFollowUp((s) => ({ ...s, same_clinic: v, preferred_clinic_name: "", preferred_doctor_name: "" }))} />
+                {!followUp.same_clinic && (
+                  <ClinicAutocomplete
+                    value={followUp.preferred_clinic_name}
+                    onChange={(name) => setFollowUp((s) => ({ ...s, preferred_clinic_name: name, preferred_doctor_name: "" }))}
+                  />
+                )}
+                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.same_physician")}</label>
+                <ToggleRow value={followUp.same_physician} onChange={(v) => setFollowUp((s) => ({ ...s, same_physician: v, preferred_doctor_name: "" }))} />
+                {!followUp.same_physician && (
+                  <DoctorAutocomplete
+                    clinicName={followUp.same_clinic ? (clinic?.name as string) : followUp.preferred_clinic_name}
+                    value={followUp.preferred_doctor_name}
+                    onChange={(name) => setFollowUp((s) => ({ ...s, preferred_doctor_name: name }))}
+                  />
+                )}
                 <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.date_time")}</label>
                 <input
                   type="datetime-local"
@@ -402,6 +432,107 @@ function SuccessBanner({ text }: { text: string }) {
     <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-xl px-4 py-3">
       <CheckCircle size={18} className="text-green-600" />
       <span className="text-green-700 text-sm font-semibold">{text}</span>
+    </div>
+  );
+}
+
+function ClinicAutocomplete({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [query, setQuery] = useState(value);
+  const [results, setResults] = useState<Array<{ id: string; name: string }>>([]);
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  function handleInput(q: string) {
+    setQuery(q);
+    onChange(q);
+    clearTimeout(timer.current);
+    if (q.length < 2) { setResults([]); setOpen(false); return; }
+    timer.current = setTimeout(async () => {
+      try {
+        const res = await api.get<{ data: Array<{ id: string; name: string }> }>(`/interpreters/me/clinics?q=${encodeURIComponent(q)}`);
+        setResults(res.data);
+        setOpen(res.data.length > 0);
+      } catch { setResults([]); }
+    }, 300);
+  }
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => handleInput(e.target.value)}
+        onFocus={() => results.length > 0 && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        placeholder="Search clinic…"
+        className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm outline-none focus:border-forest"
+      />
+      {open && (
+        <div className="absolute z-10 mt-1 w-full bg-surface border border-[var(--color-border)] rounded-lg shadow-sm max-h-40 overflow-y-auto">
+          {results.map((c) => (
+            <button key={c.id} type="button" className="w-full text-left px-3 py-2 text-sm active:bg-gray-50" onMouseDown={() => { onChange(c.name); setQuery(c.name); setOpen(false); }}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DoctorAutocomplete({ clinicName, value, onChange }: { clinicName: string; value: string; onChange: (v: string) => void }) {
+  const [query, setQuery] = useState(value);
+  const [doctors, setDoctors] = useState<Array<{ id: string; name: string }>>([]);
+  const [open, setOpen] = useState(false);
+  const [clinicId, setClinicId] = useState<string | null>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    if (!clinicName) { setDoctors([]); setClinicId(null); return; }
+    (async () => {
+      try {
+        const res = await api.get<{ data: Array<{ id: string; name: string }> }>(`/interpreters/me/clinics?q=${encodeURIComponent(clinicName)}`);
+        const match = res.data.find((c) => c.name.toLowerCase() === clinicName.toLowerCase());
+        if (match) {
+          setClinicId(match.id);
+          const docs = await api.get<{ data: Array<{ id: string; name: string }> }>(`/interpreters/me/clinics/${match.id}/doctors`);
+          setDoctors(docs.data);
+        } else {
+          setClinicId(null);
+          setDoctors([]);
+        }
+      } catch { setDoctors([]); }
+    })();
+  }, [clinicName]);
+
+  const filtered = query.length > 0
+    ? doctors.filter((d) => d.name.toLowerCase().includes(query.toLowerCase()))
+    : doctors;
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+        onFocus={() => filtered.length > 0 && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        placeholder={clinicId ? "Search doctor…" : "Select a clinic first"}
+        disabled={!clinicId && !clinicName}
+        className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm outline-none focus:border-forest disabled:opacity-40"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-10 mt-1 w-full bg-surface border border-[var(--color-border)] rounded-lg shadow-sm max-h-40 overflow-y-auto">
+          {filtered.map((d) => (
+            <button key={d.id} type="button" className="w-full text-left px-3 py-2 text-sm active:bg-gray-50" onMouseDown={() => { onChange(d.name); setQuery(d.name); setOpen(false); }}>
+              {d.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

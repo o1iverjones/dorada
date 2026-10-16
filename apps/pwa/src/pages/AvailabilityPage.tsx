@@ -38,7 +38,7 @@ export default function AvailabilityPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!startDate || !endDate) return;
-    addBlock.mutate({ start_date: startDate, end_date: endDate, reason: reason || undefined });
+    addBlock.mutate({ from: new Date(startDate).toISOString(), to: new Date(endDate + "T23:59:59").toISOString(), reason: reason || undefined });
   }
 
   return (
@@ -112,7 +112,7 @@ export default function AvailabilityPage() {
               <div key={block.id as string} className="bg-surface rounded-xl p-4 flex items-center gap-3">
                 <div className="flex-1">
                   <p className="font-semibold text-sm">
-                    {new Date(block.start_date as string).toLocaleDateString()} – {new Date(block.end_date as string).toLocaleDateString()}
+                    {new Date(block.from as string).toLocaleDateString()} – {new Date(block.to as string).toLocaleDateString()}
                   </p>
                   {block.reason && <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{block.reason as string}</p>}
                 </div>

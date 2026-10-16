@@ -1023,6 +1023,14 @@ export async function submitFollowUp(
     throw new ValidationError("MISSING_FOLLOW_UP_DATETIME", "follow_up_datetime is required");
   }
 
+  let combinedNotes = body.notes ?? "";
+  if (body.preferred_clinic_name) {
+    combinedNotes = `[Preferred clinic: ${body.preferred_clinic_name}]${combinedNotes ? `\n${combinedNotes}` : ""}`;
+  }
+  if (body.preferred_doctor_name) {
+    combinedNotes = `[Preferred doctor: ${body.preferred_doctor_name}]${combinedNotes ? `\n${combinedNotes}` : ""}`;
+  }
+
   const response = await prisma.followUpResponse.create({
     data: {
       appointment_id: appointmentId,
@@ -1031,7 +1039,7 @@ export async function submitFollowUp(
       same_physician: body.same_physician ?? null,
       same_clinic: body.same_clinic ?? null,
       follow_up_datetime: body.follow_up_datetime ?? null,
-      notes: body.notes ?? null,
+      notes: combinedNotes || null,
     },
   });
 

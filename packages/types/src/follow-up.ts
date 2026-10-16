@@ -25,6 +25,8 @@ export const SubmitFollowUpBodySchema = z.object({
   has_follow_up: z.boolean(),
   same_physician: z.boolean().optional(),
   same_clinic: z.boolean().optional(),
+  preferred_clinic_name: z.string().max(200).optional(),
+  preferred_doctor_name: z.string().max(200).optional(),
   follow_up_datetime: z.string().max(500).optional(),
   notes: z.string().max(5000).optional(),
 });

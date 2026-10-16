@@ -83,6 +83,37 @@ export default async function interpreterRoutes(fastify: FastifyInstance) {
     return reply.status(204).send();
   });
 
+  fastify.get("/me/clinics", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const { q } = req.query as { q?: string };
+    const payload = req.user as JwtPayload;
+    const clinics = await fastify.prisma.clinic.findMany({
+      where: {
+        organization_id: payload.organization_id,
+        is_active: true,
+        ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+      take: 20,
+    });
+    return reply.send({ data: clinics });
+  });
+
+  fastify.get("/me/clinics/:clinicId/doctors", { preHandler: authenticateInterpreter }, async (req, reply) => {
+    const { clinicId } = req.params as { clinicId: string };
+    const payload = req.user as JwtPayload;
+    const clinic = await fastify.prisma.clinic.findUnique({ where: { id: clinicId } });
+    if (!clinic || clinic.organization_id !== payload.organization_id) {
+      return reply.status(404).send({ error: { code: "NOT_FOUND", message: "Clinic not found" } });
+    }
+    const doctors = await fastify.prisma.clinicDoctor.findMany({
+      where: { clinic_id: clinicId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+    return reply.send({ data: doctors });
+  });
+
   // Also expose interpreter's own appointments here for mobile
   fastify.get("/me/appointments", { preHandler: authenticateInterpreter }, async (req, reply) => {
     return reply.redirect("/api/v1/appointments/me/appointments");

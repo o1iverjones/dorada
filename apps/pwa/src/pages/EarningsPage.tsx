@@ -100,23 +100,32 @@ export default function EarningsPage() {
           <p className="text-center text-[var(--color-text-subtle)] mt-8">{t("earnings.no_invoices")}</p>
         ) : (
           <div className="space-y-3">
-            {invoices.map((inv) => (
-              <div key={inv.id as string} className="bg-surface rounded-xl p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-semibold text-sm">{(inv.patient_name as string) ?? "—"}</p>
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                    inv.status === "approved" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                  }`}>{inv.status as string}</span>
+            {invoices.map((inv) => {
+              const appt = inv.appointment as Record<string, unknown> | undefined;
+              const patient = appt?.patient as Record<string, unknown> | undefined;
+              const clinic = appt?.clinic as Record<string, unknown> | undefined;
+              const dt = appt?.date_time ? new Date(appt.date_time as string) : null;
+              const duration = appt?.duration_minutes as number | undefined;
+              return (
+                <div key={inv.id as string} className="bg-surface rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-semibold text-sm">{(patient?.name as string) ?? "—"}</p>
+                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                      inv.status === "approved" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                    }`}>{inv.status as string}</span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {dt ? dt.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "—"}
+                    {dt ? ` · ${dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{(clinic?.name as string) ?? ""}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-[var(--color-text-muted)]">{duration ? `${duration} min` : ""}</span>
+                    <span className="font-bold">${Number(inv.amount ?? 0).toFixed(2)}</span>
+                  </div>
                 </div>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  {new Date(inv.appointment_date as string).toLocaleDateString()} · {inv.po_number ? `PO ${inv.po_number}` : ""}
-                </p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-[var(--color-text-muted)]">{inv.minutes as number} min</span>
-                  <span className="font-bold">${Number(inv.amount ?? 0).toFixed(2)}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
