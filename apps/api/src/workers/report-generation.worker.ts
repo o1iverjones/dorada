@@ -7,6 +7,7 @@ import path from "node:path";
 import os from "node:os";
 import { config, redisConnection } from "../config.js";
 import { uploadBuffer, reportPath, getSignedUrl } from "../integrations/r2.js";
+import { fetchReportData } from "../routes/reports/reports.service.js";
 
 function isR2Available(): boolean {
   return !!(config.R2_ACCOUNT_ID && config.R2_ACCESS_KEY_ID && config.R2_SECRET_ACCESS_KEY);
@@ -91,115 +92,6 @@ export function createReportGenerationWorker(prisma: PrismaClient) {
       concurrency: 3,
     },
   );
-}
-
-// ─── Data fetching ────────────────────────────────────────────────────────────
-
-async function fetchReportData(
-  type: string,
-  organizationId: string,
-  filters: Record<string, unknown>,
-  prisma: PrismaClient,
-): Promise<Record<string, unknown>[]> {
-  const dateFrom = filters["date_from"] ? new Date(filters["date_from"] as string) : undefined;
-  const dateTo = filters["date_to"] ? new Date(`${filters["date_to"] as string}T23:59:59Z`) : undefined;
-  const dateFilter = dateFrom || dateTo
-    ? { date_time: { ...(dateFrom ? { gte: dateFrom } : {}), ...(dateTo ? { lte: dateTo } : {}) } }
-    : {};
-
-  if (type === "interpreter_compensation") {
-    const interpreterIds = filters["interpreter_ids"] as string[] | undefined;
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        organization_id: organizationId,
-        status: "completed",
-        ...dateFilter,
-        ...(interpreterIds?.length ? { interpreter_id: { in: interpreterIds } } : {}),
-      },
-      include: { interpreter: true, clinic: true, type: true },
-      orderBy: [{ interpreter: { name: "asc" } }, { date_time: "asc" }],
-    });
-    return appointments.map((a) => ({
-      date: a.date_time.toISOString().slice(0, 10),
-      interpreter: a.interpreter?.name ?? "—",
-      clinic: a.clinic.name,
-      appointment_type: a.type.name,
-      clocked_minutes: a.actual_duration_minutes ?? 0,
-      billable_minutes: a.billable_duration_minutes ?? 0,
-      rate_per_hour: Number(a.pay_rate ?? 0),
-      amount: Number((((a.billable_duration_minutes ?? 0) / 60) * Number(a.pay_rate ?? 0)).toFixed(2)),
-    }));
-  }
-
-  if (type === "agency_billing") {
-    const agencyIds = filters["agency_ids"] as string[] | undefined;
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        organization_id: organizationId,
-        status: "completed",
-        ...dateFilter,
-        ...(agencyIds?.length ? { agency_id: { in: agencyIds } } : {}),
-      },
-      include: { patient: true, clinic: true, interpreter: true, agency: true },
-      orderBy: [{ agency: { name: "asc" } }, { date_time: "asc" }],
-    });
-    return appointments.map((a) => ({
-      date: a.date_time.toISOString().slice(0, 10),
-      agency: a.agency?.name ?? "—",
-      patient: a.patient.name,
-      clinic: a.clinic.name,
-      interpreter: a.interpreter?.name ?? "—",
-      pre_auth_amount: a.pre_auth_amount ?? 0,
-      pre_auth_mileage: a.pre_auth_mileage ?? 0,
-      actual_amount: Number((((a.billable_duration_minutes ?? 0) / 60) * Number(a.pay_rate ?? 0)).toFixed(2)),
-    }));
-  }
-
-  if (type === "appointment_history") {
-    const statuses = filters["statuses"] as string[] | undefined;
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        organization_id: organizationId,
-        ...dateFilter,
-        ...(statuses?.length ? { status: { in: statuses } } : {}),
-      },
-      include: { patient: true, clinic: true, interpreter: true, type: true },
-      orderBy: { date_time: "asc" },
-    });
-    return appointments.map((a) => ({
-      date: a.date_time.toISOString().slice(0, 10),
-      patient: a.patient.name,
-      clinic: a.clinic.name,
-      interpreter: a.interpreter?.name ?? "—",
-      language: a.language,
-      appointment_type: a.type.name,
-      status: a.status,
-      duration_minutes: a.actual_duration_minutes ?? a.duration_minutes,
-    }));
-  }
-
-  if (type === "interpreter_performance") {
-    const interpreterIds = filters["interpreter_ids"] as string[] | undefined;
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        organization_id: organizationId,
-        ...dateFilter,
-        ...(interpreterIds?.length ? { interpreter_id: { in: interpreterIds } } : {}),
-      },
-      include: { interpreter: true },
-      orderBy: [{ interpreter: { name: "asc" } }, { date_time: "asc" }],
-    });
-    return appointments.map((a) => ({
-      interpreter: a.interpreter?.name ?? "—",
-      date: a.date_time.toISOString().slice(0, 10),
-      status: a.status,
-      scheduled_time: a.date_time.toISOString().slice(11, 16),
-      clock_in_time: a.clock_in_time ? a.clock_in_time.toISOString().slice(11, 16) : "—",
-      hours_worked: ((a.actual_duration_minutes ?? 0) / 60).toFixed(2),
-    }));
-  }
-
-  return [];
 }
 
 // ─── CSV generation ───────────────────────────────────────────────────────────

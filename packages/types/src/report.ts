@@ -42,8 +42,16 @@ export const ReportListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),
 });
 
+export const ReportPreviewBodySchema = z.object({
+  type: ReportTypeSchema,
+  filters: ReportFiltersSchema,
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+
 export type ReportFilters = z.infer<typeof ReportFiltersSchema>;
 export type ReportOptions = z.infer<typeof ReportOptionsSchema>;
 export type GenerateReportBody = z.infer<typeof GenerateReportBodySchema>;
 export type ReportJob = z.infer<typeof ReportJobSchema>;
 export type ReportListQuery = z.infer<typeof ReportListQuerySchema>;
+export type ReportPreviewBody = z.infer<typeof ReportPreviewBodySchema>;

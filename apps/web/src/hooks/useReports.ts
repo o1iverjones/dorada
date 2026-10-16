@@ -93,6 +93,17 @@ export async function downloadReport(downloadUrl: string, filename: string): Pro
   URL.revokeObjectURL(objectUrl);
 }
 
+export function usePreviewReport() {
+  return useMutation({
+    mutationFn: (body: { type: string; filters: Record<string, unknown>; page?: number; limit?: number }) =>
+      api.post<{
+        columns: Array<{ key: string; label: string }>;
+        data: Record<string, unknown>[];
+        pagination: { page: number; total: number; total_pages: number; has_more: boolean };
+      }>("/reports/preview", body),
+  });
+}
+
 export function useGenerateReport() {
   const qc = useQueryClient();
   return useMutation({

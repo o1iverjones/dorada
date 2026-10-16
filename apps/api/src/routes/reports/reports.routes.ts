@@ -2,11 +2,11 @@ import type { FastifyInstance } from "fastify";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { GenerateReportBodySchema, ReportListQuerySchema } from "@dorada/types";
+import { GenerateReportBodySchema, ReportListQuerySchema, ReportPreviewBodySchema } from "@dorada/types";
 import { authenticateAdmin } from "../../middleware/auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import type { JwtPayload } from "../../middleware/auth.js";
-import { generateReport, getReportStatus, listReports } from "./reports.service.js";
+import { generateReport, getReportStatus, listReports, previewReport } from "./reports.service.js";
 import { getQueues } from "../../workers/queues.js";
 import { writeActivityLog } from "../../lib/activityLog.js";
 
@@ -19,6 +19,12 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     const query = ReportListQuerySchema.parse(req.query);
     const payload = req.user as JwtPayload;
     return reply.send(await listReports(query, payload.organization_id, fastify.prisma));
+  });
+
+  fastify.post("/preview", { preHandler }, async (req, reply) => {
+    const body = ReportPreviewBodySchema.parse(req.body);
+    const payload = req.user as JwtPayload;
+    return reply.send(await previewReport(body, payload.organization_id, fastify.prisma));
   });
 
   fastify.post("/", { preHandler }, async (req, reply) => {
