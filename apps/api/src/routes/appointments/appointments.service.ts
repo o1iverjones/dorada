@@ -996,6 +996,7 @@ export async function getInterpreterOffers(interpreterId: string, prisma: Prisma
       expires_at: o.expires_at,
       date_time: o.appointment.date_time,
       duration_minutes: o.appointment.duration_minutes,
+      pre_auth_amount: o.appointment.pre_auth_amount ? Number(o.appointment.pre_auth_amount) : null,
       language: o.appointment.language,
       interpreter_type_required: o.appointment.interpreter_type_required,
       clinic_name: o.appointment.clinic?.name ?? null,

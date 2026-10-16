@@ -163,6 +163,14 @@ function OfferCard({ offer }: { offer: Record<string, unknown> }) {
       <p className="text-sm text-[var(--color-text-muted)]">
         {offer.language as string} · {offer.interpreter_type_required as string}
       </p>
+      <div className="flex gap-3 mt-1.5 text-sm">
+        {offer.duration_minutes != null && (
+          <span className="text-[var(--color-text-muted)]">{offer.duration_minutes as number} min</span>
+        )}
+        {offer.pre_auth_amount != null && Number(offer.pre_auth_amount) > 0 && (
+          <span className="font-semibold text-[var(--color-text)]">${Number(offer.pre_auth_amount).toFixed(2)}/hr</span>
+        )}
+      </div>
       <div className="flex gap-3 mt-3">
         <button
           onClick={() => confirm.mutate()}
