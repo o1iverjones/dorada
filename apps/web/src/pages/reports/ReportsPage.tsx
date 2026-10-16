@@ -11,7 +11,7 @@ import { Label } from "../../components/ui/label.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select.js";
 import { StatusBadge } from "../../components/shared/StatusBadge.js";
 import { toast } from "../../hooks/use-toast.js";
-import { Download, FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, FileText, Eye, ChevronLeft, ChevronRight, TableProperties } from "lucide-react";
 
 const REPORT_TYPES = [
   "interpreter_compensation",
@@ -101,23 +101,158 @@ export function ReportsPage() {
     <div className="space-y-6">
       <PageHeader title={t("reports.title")} />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Left: preview table + controls */}
-        <div className="space-y-4">
-          {/* Preview data table */}
-          {previewData && previewData.data.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    {REPORT_INFO[selectedType].title}
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      {previewData.pagination.total} record{previewData.pagination.total !== 1 ? "s" : ""}
-                    </span>
-                  </CardTitle>
+      {/* Top row: Generate controls (left) + Preview table (right) */}
+      <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+        {/* Left: Generate report controls */}
+        <Card>
+          <CardHeader><CardTitle>{t("reports.generate")}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1">
+              <Label>{t("reports.type")}</Label>
+              <Select value={selectedType} onValueChange={(v) => setSelectedType(v as ReportType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {REPORT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>{REPORT_INFO[type].title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{REPORT_INFO[selectedType].description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>{t("common.date_from")}</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("common.date_to")}</Label>
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+              </div>
+            </div>
+
+            {(selectedType === "interpreter_compensation" || selectedType === "interpreter_performance") && (
+              <div className="space-y-1">
+                <Label>{t("reports.select_interpreters")}</Label>
+                <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
+                  {((interpreters?.data ?? []) as Array<{ id: string; name: string }>).map((i) => (
+                    <label key={i.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={interpreterIds.includes(i.id)}
+                        onChange={(e) => setInterpreterIds(e.target.checked ? [...interpreterIds, i.id] : interpreterIds.filter((x) => x !== i.id))}
+                      />
+                      {i.name}
+                    </label>
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent className="p-0">
+              </div>
+            )}
+
+            {selectedType === "agency_billing" && (
+              <div className="space-y-1">
+                <Label>{t("reports.select_agencies")}</Label>
+                <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
+                  {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map((a) => (
+                    <label key={a.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={agencyIds.includes(a.id)}
+                        onChange={(e) => setAgencyIds(e.target.checked ? [...agencyIds, a.id] : agencyIds.filter((x) => x !== a.id))}
+                      />
+                      {a.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => handlePreview(1)}
+                disabled={preview.isPending || !canPreview}
+                variant="outline"
+                className="flex-1"
+              >
+                <Eye className="mr-2 h-4 w-4" /> Preview
+              </Button>
+              <div className="flex gap-2 flex-1">
+                <Select value={format} onValueChange={(v) => setFormat(v as "pdf" | "csv")}>
+                  <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="csv">CSV</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleGenerate} disabled={generate.isPending || !canPreview} className="flex-1">
+                  <FileText className="mr-2 h-4 w-4" /> Generate
+                </Button>
+              </div>
+            </div>
+
+            {jobData && (
+              <div className="rounded-md border p-3 text-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    {t("reports.status")}: <StatusBadge status={jobData.status as string} />
+                  </span>
+                  {jobData.status === "completed" && jobData.download_url && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => downloadReport(jobData.download_url as string, pendingFilename)
+                        .catch(() => toast({ title: t("common.error"), variant: "destructive" }))}
+                    >
+                      <Download className="mr-2 h-4 w-4" /> {t("reports.download")}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground font-mono truncate">{pendingFilename}</p>
+                {jobData.status === "failed" && jobData.error && (
+                  <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
+                    {jobData.error as string}
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right: Preview data table (always visible) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TableProperties className="h-4 w-4" />
+              Data Preview
+              {previewData && previewData.data.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  — {previewData.pagination.total} record{previewData.pagination.total !== 1 ? "s" : ""}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {preview.isPending && (
+              <div className="px-6 py-12 text-center text-muted-foreground">
+                Loading preview…
+              </div>
+            )}
+
+            {!preview.isPending && !previewData && (
+              <div className="px-6 py-12 text-center text-muted-foreground">
+                <TableProperties className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                <p>Select a report type and date range, then click <strong>Preview</strong> to see the data here.</p>
+              </div>
+            )}
+
+            {!preview.isPending && previewData && previewData.data.length === 0 && (
+              <div className="px-6 py-12 text-center text-muted-foreground">
+                No data for the selected filters and date range.
+              </div>
+            )}
+
+            {previewData && previewData.data.length > 0 && (
+              <>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -171,205 +306,73 @@ export function ReportsPage() {
                     </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-          {previewData && previewData.data.length === 0 && (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No data for the selected filters and date range.
-              </CardContent>
-            </Card>
-          )}
-
-          {preview.isPending && (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Loading preview…
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Report history — below preview */}
-          <Card>
-            <CardHeader><CardTitle>{t("reports.history")}</CardTitle></CardHeader>
-            <CardContent>
-              {!jobHistory?.data.length ? (
-                <p className="text-sm text-muted-foreground">{t("reports.no_history")}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {(jobHistory.data as Array<Record<string, unknown>>).map((j) => {
-                    const typeKey = j.type as ReportType;
-                    const typeLabel = REPORT_INFO[typeKey]?.title ?? String(j.type);
-                    const historyLabel = buildReportLabel(
-                      j.type as string,
-                      (j.filters as Record<string, unknown>) ?? {},
-                      interpreterMap,
-                    );
-                    return (
-                      <li key={j.id as string} className="flex flex-wrap items-center justify-between rounded-md border p-3 text-sm">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{typeLabel}</p>
-                          {historyLabel && <p className="text-sm truncate">{historyLabel}</p>}
-                          <p className="text-muted-foreground text-xs">
-                            {new Date(j.created_at as string).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                            {" · "}
-                            <span className="uppercase">{j.format as string}</span>
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 ml-3 shrink-0">
-                          <StatusBadge status={j.status as string} />
-                          {j.download_url && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => downloadReport(
-                                j.download_url as string,
-                                buildReportFilename(
-                                  j.type as string,
-                                  j.format as string,
-                                  (j.filters as Record<string, unknown>) ?? {},
-                                  interpreterMap,
-                                ),
-                              ).catch(() => toast({ title: t("common.error"), variant: "destructive" }))}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        {j.status === "failed" && j.error_message && (
-                          <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1 mt-1 w-full">
-                            {j.error_message as string}
-                          </p>
+      {/* Report history — below, aligned left */}
+      <div className="lg:max-w-[380px]">
+        <Card>
+          <CardHeader><CardTitle>{t("reports.history")}</CardTitle></CardHeader>
+          <CardContent>
+            {!jobHistory?.data.length ? (
+              <p className="text-sm text-muted-foreground">{t("reports.no_history")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {(jobHistory.data as Array<Record<string, unknown>>).map((j) => {
+                  const typeKey = j.type as ReportType;
+                  const typeLabel = REPORT_INFO[typeKey]?.title ?? String(j.type);
+                  const historyLabel = buildReportLabel(
+                    j.type as string,
+                    (j.filters as Record<string, unknown>) ?? {},
+                    interpreterMap,
+                  );
+                  return (
+                    <li key={j.id as string} className="flex flex-wrap items-center justify-between rounded-md border p-3 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{typeLabel}</p>
+                        {historyLabel && <p className="text-sm truncate">{historyLabel}</p>}
+                        <p className="text-muted-foreground text-xs">
+                          {new Date(j.created_at as string).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                          {" · "}
+                          <span className="uppercase">{j.format as string}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-3 shrink-0">
+                        <StatusBadge status={j.status as string} />
+                        {j.download_url && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => downloadReport(
+                              j.download_url as string,
+                              buildReportFilename(
+                                j.type as string,
+                                j.format as string,
+                                (j.filters as Record<string, unknown>) ?? {},
+                                interpreterMap,
+                              ),
+                            ).catch(() => toast({ title: t("common.error"), variant: "destructive" }))}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
                         )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right sidebar: report controls */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle>{t("reports.generate")}</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <Label>{t("reports.type")}</Label>
-                <Select value={selectedType} onValueChange={(v) => setSelectedType(v as ReportType)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {REPORT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>{REPORT_INFO[type].title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">{REPORT_INFO[selectedType].description}</p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label>{t("common.date_from")}</Label>
-                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label>{t("common.date_to")}</Label>
-                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-                </div>
-              </div>
-
-              {(selectedType === "interpreter_compensation" || selectedType === "interpreter_performance") && (
-                <div className="space-y-1">
-                  <Label>{t("reports.select_interpreters")}</Label>
-                  <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
-                    {((interpreters?.data ?? []) as Array<{ id: string; name: string }>).map((i) => (
-                      <label key={i.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                        <input
-                          type="checkbox"
-                          checked={interpreterIds.includes(i.id)}
-                          onChange={(e) => setInterpreterIds(e.target.checked ? [...interpreterIds, i.id] : interpreterIds.filter((x) => x !== i.id))}
-                        />
-                        {i.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedType === "agency_billing" && (
-                <div className="space-y-1">
-                  <Label>{t("reports.select_agencies")}</Label>
-                  <div className="max-h-32 overflow-y-auto space-y-1 rounded-md border p-2">
-                    {((agencies?.data ?? []) as Array<{ id: string; name: string }>).map((a) => (
-                      <label key={a.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                        <input
-                          type="checkbox"
-                          checked={agencyIds.includes(a.id)}
-                          onChange={(e) => setAgencyIds(e.target.checked ? [...agencyIds, a.id] : agencyIds.filter((x) => x !== a.id))}
-                        />
-                        {a.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={() => handlePreview(1)}
-                disabled={preview.isPending || !canPreview}
-                variant="outline"
-                className="w-full"
-              >
-                <Eye className="mr-2 h-4 w-4" /> Preview data
-              </Button>
-
-              <div className="space-y-1">
-                <Label>{t("reports.format")}</Label>
-                <Select value={format} onValueChange={(v) => setFormat(v as "pdf" | "csv")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                    <SelectItem value="csv">CSV</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button onClick={handleGenerate} disabled={generate.isPending || !canPreview} className="w-full">
-                <FileText className="mr-2 h-4 w-4" /> {t("reports.generate")}
-              </Button>
-
-              {jobData && (
-                <div className="rounded-md border p-3 text-sm space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      {t("reports.status")}: <StatusBadge status={jobData.status as string} />
-                    </span>
-                    {jobData.status === "completed" && jobData.download_url && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadReport(jobData.download_url as string, pendingFilename)
-                          .catch(() => toast({ title: t("common.error"), variant: "destructive" }))}
-                      >
-                        <Download className="mr-2 h-4 w-4" /> {t("reports.download")}
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground font-mono truncate">{pendingFilename}</p>
-                  {jobData.status === "failed" && jobData.error && (
-                    <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
-                      {jobData.error as string}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                      </div>
+                      {j.status === "failed" && j.error_message && (
+                        <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1 mt-1 w-full">
+                          {j.error_message as string}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
