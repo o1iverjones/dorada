@@ -976,7 +976,11 @@ export async function getInterpreterAppointments(
 
 export async function getInterpreterOffers(interpreterId: string, prisma: PrismaClient) {
   const offers = await prisma.appointmentOffer.findMany({
-    where: { interpreter_id: interpreterId, status: "pending", expires_at: { gt: new Date() } },
+    where: {
+      interpreter_id: interpreterId,
+      status: "pending",
+      appointment: { interpreter_id: null },
+    },
     include: {
       appointment: {
         include: {
