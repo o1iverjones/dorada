@@ -239,6 +239,11 @@ export function ReportsPage() {
                           </Button>
                         )}
                       </div>
+                      {j.status === "failed" && j.error_message && (
+                        <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1 mt-1 w-full">
+                          {j.error_message as string}
+                        </p>
+                      )}
                     </li>
                   );
                 })}
