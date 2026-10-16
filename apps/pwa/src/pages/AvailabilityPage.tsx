@@ -1,8 +1,107 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, Calendar } from "lucide-react";
+import { Plus, Trash2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../lib/api";
+
+function fmt(y: number, m: number, d: number) {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function DateRangePicker({ start, end, onChange }: {
+  start: string;
+  end: string;
+  onChange: (s: string, e: string) => void;
+}) {
+  const today = new Date();
+  const todayStr = fmt(today.getFullYear(), today.getMonth(), today.getDate());
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+  function prev() {
+    if (viewMonth === 0) { setViewYear(viewYear - 1); setViewMonth(11); }
+    else setViewMonth(viewMonth - 1);
+  }
+  function next() {
+    if (viewMonth === 11) { setViewYear(viewYear + 1); setViewMonth(0); }
+    else setViewMonth(viewMonth + 1);
+  }
+
+  function handleTap(dateStr: string) {
+    if (dateStr < todayStr) return;
+    if (!start || (start && end)) {
+      onChange(dateStr, "");
+    } else if (dateStr < start) {
+      onChange(dateStr, "");
+    } else {
+      onChange(start, dateStr);
+    }
+  }
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const monthLabel = new Date(viewYear, viewMonth).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <button type="button" onClick={prev} className="p-1.5 active:bg-gray-100 rounded-lg"><ChevronLeft size={18} /></button>
+        <span className="text-sm font-semibold">{monthLabel}</span>
+        <button type="button" onClick={next} className="p-1.5 active:bg-gray-100 rounded-lg"><ChevronRight size={18} /></button>
+      </div>
+      <div className="grid grid-cols-7 gap-0">
+        {weekdays.map((wd) => (
+          <div key={wd} className="text-center text-[10px] font-semibold text-[var(--color-text-muted)] uppercase pb-1.5">{wd}</div>
+        ))}
+        {cells.map((day, i) => {
+          if (day === null) return <div key={`e${i}`} />;
+          const dateStr = fmt(viewYear, viewMonth, day);
+          const isPast = dateStr < todayStr;
+          const isStart = dateStr === start;
+          const isEnd = dateStr === end;
+          const inRange = start && end && dateStr > start && dateStr < end;
+          const isToday = dateStr === todayStr;
+
+          let bg = "";
+          let text = "text-[var(--color-text)]";
+          let rounded = "rounded-full";
+          if (isStart || isEnd) { bg = "bg-forest"; text = "text-white"; }
+          else if (inRange) { bg = "bg-forest/10"; text = "text-forest"; rounded = "rounded-none"; }
+          if (isPast) text = "text-[var(--color-text-subtle)] opacity-40";
+
+          if (isStart && end) rounded = "rounded-l-full";
+          if (isEnd && start) rounded = "rounded-r-full";
+          if (isStart && !end) rounded = "rounded-full";
+
+          return (
+            <button
+              key={dateStr}
+              type="button"
+              disabled={isPast}
+              onClick={() => handleTap(dateStr)}
+              className={`h-9 flex items-center justify-center text-sm font-medium ${bg} ${text} ${rounded} transition-colors ${!isPast ? "active:opacity-70" : ""}`}
+            >
+              <span className={isToday && !isStart && !isEnd ? "underline underline-offset-2" : ""}>{day}</span>
+            </button>
+          );
+        })}
+      </div>
+      {start && (
+        <p className="text-xs text-[var(--color-text-muted)] mt-2 text-center">
+          {end
+            ? `${new Date(start + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" })} – ${new Date(end + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" })}`
+            : `${new Date(start + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" })} – select end date`}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function AvailabilityPage() {
   const { t } = useTranslation();
@@ -57,28 +156,11 @@ export default function AvailabilityPage() {
 
         {showForm && (
           <form onSubmit={handleSubmit} className="bg-surface rounded-xl p-4 space-y-3 border border-[var(--color-border)]">
-            <div>
-              <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("availability.start_date")}</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                min={new Date().toISOString().slice(0, 10)}
-                required
-                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm outline-none focus:border-forest"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("availability.end_date")}</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate || new Date().toISOString().slice(0, 10)}
-                required
-                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm outline-none focus:border-forest"
-              />
-            </div>
+            <DateRangePicker
+              start={startDate}
+              end={endDate}
+              onChange={(s, e) => { setStartDate(s); setEndDate(e); }}
+            />
             <div>
               <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("availability.reason")}</label>
               <input
@@ -91,7 +173,7 @@ export default function AvailabilityPage() {
             </div>
             <button
               type="submit"
-              disabled={addBlock.isPending}
+              disabled={addBlock.isPending || !startDate || !endDate}
               className="w-full bg-forest text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-60 active:opacity-80"
             >
               {addBlock.isPending ? t("common.loading") : t("common.save")}

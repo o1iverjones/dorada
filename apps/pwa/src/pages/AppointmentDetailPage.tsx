@@ -42,6 +42,7 @@ export default function AppointmentDetailPage() {
   const agency = appt.agency as Record<string, unknown> | null;
   const interpreterNotes = (clinic?.interpreter_notes as Array<{ id: string; content: string; type: string }>) ?? [];
   const invoice = appt.invoice as { status: string; amount: number } | null | undefined;
+  const followUpResponse = appt.follow_up_response as { id: string } | null | undefined;
   const status = appt.status as string;
   const dt = new Date(appt.date_time as string);
 
@@ -159,8 +160,56 @@ export default function AppointmentDetailPage() {
           </>
         )}
 
-        {/* Invoice banner */}
-        {invoice && (
+        {/* Follow-up form — at very top after clock-out, stays visible but disabled after submit */}
+        {(showFollowUp || followUpSent || (status === "completed" && !followUpResponse)) && (
+          <div className={`bg-surface rounded-xl p-4 border border-[var(--color-border-strong)] space-y-3 ${followUpSent ? "opacity-60 pointer-events-none" : ""}`}>
+            <p className="font-semibold">{t("follow_up.question")}</p>
+            <ToggleRow
+              value={followUp.has_follow_up}
+              onChange={(v) => setFollowUp((s) => ({ ...s, has_follow_up: v }))}
+            />
+            {followUp.has_follow_up && (
+              <>
+                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.same_clinic")}</label>
+                <ToggleRow value={followUp.same_clinic} onChange={(v) => setFollowUp((s) => ({ ...s, same_clinic: v, preferred_clinic_name: "", preferred_doctor_name: "" }))} />
+                {!followUp.same_clinic && (
+                  <ClinicAutocomplete
+                    value={followUp.preferred_clinic_name}
+                    onChange={(name) => setFollowUp((s) => ({ ...s, preferred_clinic_name: name, preferred_doctor_name: "" }))}
+                  />
+                )}
+                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.same_physician")}</label>
+                <ToggleRow value={followUp.same_physician} onChange={(v) => setFollowUp((s) => ({ ...s, same_physician: v, preferred_doctor_name: "" }))} />
+                {!followUp.same_physician && (
+                  <DoctorAutocomplete
+                    clinicName={followUp.same_clinic ? (clinic?.name as string) : followUp.preferred_clinic_name}
+                    value={followUp.preferred_doctor_name}
+                    onChange={(name) => setFollowUp((s) => ({ ...s, preferred_doctor_name: name }))}
+                  />
+                )}
+                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.date_time")}</label>
+                <input
+                  type="datetime-local"
+                  step={300}
+                  value={followUp.follow_up_datetime ? new Date(followUp.follow_up_datetime).toISOString().slice(0, 16) : ""}
+                  onChange={(e) => setFollowUp((s) => ({ ...s, follow_up_datetime: new Date(e.target.value).toISOString() }))}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm outline-none focus:border-forest"
+                />
+              </>
+            )}
+            {!followUpSent && (
+              <ActionButton onClick={handleSubmitFollowUp} loading={submitFollowUp.isPending} className="bg-forest">
+                {t("common.submit")}
+              </ActionButton>
+            )}
+          </div>
+        )}
+
+        {followUpSent && <SuccessBanner text={t("appointments.follow_up_sent")} />}
+
+        {/* Invoice banner — only shown after follow-up is dealt with */}
+        {invoice && (followUpSent || followUpResponse) && (
           <div className={`flex items-center gap-3 rounded-xl p-4 border ${
             invoice.status === "approved" ? "bg-green-50 border-green-300" : "bg-amber-50 border-amber-300"
           }`}>
@@ -297,51 +346,7 @@ export default function AppointmentDetailPage() {
           </div>
         )}
 
-        {/* Follow-up form */}
-        {showFollowUp && (
-          <div className="bg-surface rounded-xl p-4 border border-[var(--color-border-strong)] space-y-3">
-            <p className="font-semibold">{t("follow_up.question")}</p>
-            <ToggleRow
-              value={followUp.has_follow_up}
-              onChange={(v) => setFollowUp((s) => ({ ...s, has_follow_up: v }))}
-            />
-            {followUp.has_follow_up && (
-              <>
-                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.same_clinic")}</label>
-                <ToggleRow value={followUp.same_clinic} onChange={(v) => setFollowUp((s) => ({ ...s, same_clinic: v, preferred_clinic_name: "", preferred_doctor_name: "" }))} />
-                {!followUp.same_clinic && (
-                  <ClinicAutocomplete
-                    value={followUp.preferred_clinic_name}
-                    onChange={(name) => setFollowUp((s) => ({ ...s, preferred_clinic_name: name, preferred_doctor_name: "" }))}
-                  />
-                )}
-                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.same_physician")}</label>
-                <ToggleRow value={followUp.same_physician} onChange={(v) => setFollowUp((s) => ({ ...s, same_physician: v, preferred_doctor_name: "" }))} />
-                {!followUp.same_physician && (
-                  <DoctorAutocomplete
-                    clinicName={followUp.same_clinic ? (clinic?.name as string) : followUp.preferred_clinic_name}
-                    value={followUp.preferred_doctor_name}
-                    onChange={(name) => setFollowUp((s) => ({ ...s, preferred_doctor_name: name }))}
-                  />
-                )}
-                <label className="block text-sm text-[var(--color-text-muted)]">{t("follow_up.date_time")}</label>
-                <input
-                  type="datetime-local"
-                  value={followUp.follow_up_datetime ? new Date(followUp.follow_up_datetime).toISOString().slice(0, 16) : ""}
-                  onChange={(e) => setFollowUp((s) => ({ ...s, follow_up_datetime: new Date(e.target.value).toISOString() }))}
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2.5 text-sm outline-none focus:border-forest"
-                />
-              </>
-            )}
-            <ActionButton onClick={handleSubmitFollowUp} loading={submitFollowUp.isPending} className="bg-forest">
-              {t("common.submit")}
-            </ActionButton>
-          </div>
-        )}
-
         {notesSaved && <SuccessBanner text={t("appointments.notes_saved")} />}
-        {followUpSent && <SuccessBanner text={t("appointments.follow_up_sent")} />}
 
         {/* Photos */}
         {(status === "in_progress" || status === "completed") && (() => {

@@ -63,8 +63,8 @@ export default function AppointmentsPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 py-3.5 text-sm font-medium text-center relative transition-colors ${
-              tab === key ? "text-forest" : "text-[var(--color-text-muted)]"
+            className={`flex-1 py-3.5 text-base font-medium text-center relative transition-colors ${
+              tab === key ? "text-forest" : "text-[var(--color-text)]"
             }`}
           >
             {label}
@@ -102,12 +102,18 @@ function AppointmentCard({ item }: { item: Record<string, unknown> }) {
   const dt = new Date(item.date_time as string);
   const notes = (clinic?.interpreter_notes as Array<{ id: string; type: string }>) ?? [];
   const noteTypes = [...new Set(notes.map((n) => n.type))];
+  const isInProgress = item.status === "in_progress";
 
   return (
     <button
       onClick={() => navigate(`/appointments/${item.id}`)}
-      className="w-full bg-surface rounded-xl p-4 shadow-sm text-left relative active:bg-gray-50 transition-colors"
+      className={`w-full rounded-xl p-4 shadow-sm text-left relative transition-colors ${
+        isInProgress ? "bg-amber-50 border border-amber-300 active:bg-amber-100" : "bg-surface active:bg-gray-50"
+      }`}
     >
+      {isInProgress && (
+        <span className="inline-block text-[11px] font-bold uppercase tracking-wide text-amber-700 bg-amber-200 rounded px-1.5 py-0.5 mb-2">In Progress</span>
+      )}
       <div className="flex items-center gap-2 mb-2">
         <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[item.status as string] ?? "bg-slate-400"}`} />
         <span className="text-sm font-semibold text-[var(--color-text)]">

@@ -921,6 +921,7 @@ export async function getInterpreterAppointment(appointmentId: string, interpret
       patient: { select: { id: true, name: true } },
       invoice: { select: { id: true, status: true, amount: true } },
       media: { select: { id: true, public_url: true, filename: true, mime_type: true, file_size: true, uploaded_at: true }, orderBy: { uploaded_at: "asc" } },
+      follow_up_response: { select: { id: true, has_follow_up: true, submitted_at: true } },
     },
   });
   if (!appt || appt.interpreter_id !== interpreterId) {
