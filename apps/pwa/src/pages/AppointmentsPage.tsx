@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Check, X, AlertCircle, AlertTriangle, Info, Bell } from "lucide-react";
 import { useMyAppointments, useAppointmentOffers, useConfirmOffer, useDeclineOffer } from "../hooks/useAppointments";
@@ -17,7 +17,18 @@ type Tab = "upcoming" | "offers" | "history";
 
 export default function AppointmentsPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<Tab>("upcoming");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get("tab") as Tab) || "upcoming";
+  const [tab, setTab] = useState<Tab>(["upcoming", "offers", "history"].includes(initialTab) ? initialTab : "upcoming");
+
+  function handleTabChange(newTab: Tab) {
+    setTab(newTab);
+    if (newTab === "upcoming") {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab: newTab }, { replace: true });
+    }
+  }
 
   const { data: appts, isLoading: apptLoading, refetch: refetchAppts } = useMyAppointments({ status: "accepted,in_progress", limit: "30" });
   const { data: offers, isLoading: offersLoading, refetch: refetchOffers } = useAppointmentOffers();
@@ -62,7 +73,7 @@ export default function AppointmentsPage() {
         {tabs.map(({ key, label, badge }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => handleTabChange(key)}
             className={`flex-1 py-3.5 text-base font-medium text-center relative transition-colors ${
               tab === key ? "text-forest" : "text-[var(--color-text)]"
             }`}
