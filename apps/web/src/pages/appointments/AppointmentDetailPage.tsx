@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getSocket } from "../../lib/socket.js";
-import { useAppointment, useCancelAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, useDeleteOffer, type BillingFields } from "../../hooks/useAppointments.js";
+import { useAppointment, useCancelAppointment, useReactivateAppointment, useOfferAppointment, useUpdateAppointment, useAppointmentActivity, useAppointmentNotes, useAddAppointmentNote, useUploadAppointmentNoteImage, usePatchClockTimes, useAppointmentMedia, useManualConfirm, useUnassignInterpreter, usePatchBilling, useDeleteOffer, type BillingFields } from "../../hooks/useAppointments.js";
 import { useInterpreters } from "../../hooks/useInterpreters.js";
 import { useClinic, useClinics, useClinicDoctors } from "../../hooks/useClinics.js";
 import { useAgencies } from "../../hooks/useAgencies.js";
@@ -38,6 +38,7 @@ type FormState = {
   type_id: string;
   language: string;
   interpreter_type_required: "certified" | "qualified";
+  appointment_type: "in_person" | "telemed" | "qme" | "pt" | null;
   clinic_id: string;
   agency_id: string;
   patient_id: string;
@@ -113,6 +114,7 @@ export function AppointmentDetailPage() {
   }, [id, refetch]);
 
   const cancel = useCancelAppointment(id!);
+  const reactivate = useReactivateAppointment(id!);
   const offer = useOfferAppointment(id!);
   const update = useUpdateAppointment(id!);
   const patchClock = usePatchClockTimes(id!);
@@ -190,6 +192,7 @@ export function AppointmentDetailPage() {
       type_id: (a!.type as Record<string, unknown>)?.id as string ?? "",
       language: a!.language as string ?? "",
       interpreter_type_required: (a!.interpreter_type_required as string)?.toLowerCase() as "certified" | "qualified",
+      appointment_type: (a!.appointment_type as string | null) as "in_person" | "telemed" | "qme" | "pt" | null ?? null,
       clinic_id: (a!.clinic as Record<string, unknown>)?.id as string ?? "",
       agency_id: (a!.agency as Record<string, unknown>)?.id as string ?? "",
       patient_id: (a!.patient as Record<string, unknown>)?.id as string ?? "",
@@ -216,6 +219,7 @@ export function AppointmentDetailPage() {
         ...(form.type_id ? { type_id: form.type_id } : {}),
         ...(form.language ? { language: form.language } : {}),
         ...(form.interpreter_type_required ? { interpreter_type_required: form.interpreter_type_required } : {}),
+        appointment_type: form.appointment_type || null,
         ...(form.clinic_id ? { clinic_id: form.clinic_id } : {}),
         ...(form.agency_id ? { agency_id: form.agency_id } : {}),
         ...(form.patient_id ? { patient_id: form.patient_id } : {}),
@@ -248,6 +252,15 @@ export function AppointmentDetailPage() {
     try {
       await cancel.mutateAsync(undefined);
       toast({ title: t("appointments.cancelled") });
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
+  }
+
+  async function handleReactivate() {
+    try {
+      await reactivate.mutateAsync(undefined);
+      toast({ title: t("appointments.reactivated") });
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     }
@@ -287,6 +300,7 @@ export function AppointmentDetailPage() {
                       type_id: a.type_id,
                       language: a.language,
                       interpreter_type_required: a.interpreter_type_required,
+                      appointment_type: a.appointment_type,
                       clinic_id: (a.clinic as Record<string, unknown>)?.id,
                       agency_id: (a.agency as Record<string, unknown>)?.id,
                       patient_id: (a.patient as Record<string, unknown>)?.id,
@@ -301,6 +315,11 @@ export function AppointmentDetailPage() {
                 {a.status !== "completed" && a.status !== "cancelled" && (
                   <Button variant="destructive" onClick={handleCancel} disabled={cancel.isPending}>
                     {t("appointments.cancel")}
+                  </Button>
+                )}
+                {a.status === "cancelled" && (
+                  <Button onClick={handleReactivate} disabled={reactivate.isPending}>
+                    {t("appointments.reactivate")}
                   </Button>
                 )}
               </>
@@ -439,15 +458,12 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Interpreter B cert number */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {(() => {
-                const interpBName = editing ? form.billing_interpreter : (a.billing_interpreter as string | null);
-                const interpB = interpBName ? allInterpreterList.find((i) => (i.name as string) === interpBName) : null;
-                const certNum = (interpB?.certificate_number as string | null) ?? null;
-                return <Field label="Cert number" value={certNum ?? "—"} />;
-              })()}
-            </div>
+            {/* Cert number — only for certified appointments with an assigned interpreter */}
+            {(a.interpreter_type_required as string) === "certified" && a.interpreter && (
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                <Field label={t("appointments.cert_number")} value={((a.interpreter as Record<string, unknown>).certificate_number as string) || "—"} />
+              </div>
+            )}
 
             {/* DOB */}
             <div className="px-6 py-2.5 even:bg-muted/40">
@@ -485,6 +501,27 @@ export function AppointmentDetailPage() {
                 </div>
               ) : (
                 <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
+              )}
+            </div>
+
+            {/* Appointment Type */}
+            <div className="px-6 py-2.5 even:bg-muted/40">
+              {editing ? (
+                <InlineRow label={t("appointments.appointment_type")}>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                    value={form.appointment_type ?? ""}
+                    onChange={(e) => set("appointment_type", (e.target.value || null) as FormState["appointment_type"])}
+                  >
+                    <option value="">{t("common.select")}</option>
+                    <option value="in_person">{t("appointments.appointment_type_in_person")}</option>
+                    <option value="telemed">{t("appointments.appointment_type_telemed")}</option>
+                    <option value="qme">{t("appointments.appointment_type_qme")}</option>
+                    <option value="pt">{t("appointments.appointment_type_pt")}</option>
+                  </select>
+                </InlineRow>
+              ) : (
+                <Field label={t("appointments.appointment_type")} value={a.appointment_type ? t(`appointments.appointment_type_${a.appointment_type as string}`) : "—"} />
               )}
             </div>
 

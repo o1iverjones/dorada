@@ -488,6 +488,7 @@ model Appointment {
   type_id                    String
   language                   String
   interpreter_type_required  String
+  appointment_type           String?
   interpreter_id             String?
   clinic_id                  String
   agency_id        String

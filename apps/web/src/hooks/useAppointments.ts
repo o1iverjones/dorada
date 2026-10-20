@@ -55,6 +55,19 @@ export function useCancelAppointment(id: string) {
   });
 }
 
+export function useReactivateAppointment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(`/appointments/${id}/reactivate`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments", id] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["appointments", id, "activity"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+    },
+  });
+}
+
 export function useOfferAppointment(id: string) {
   const qc = useQueryClient();
   return useMutation({

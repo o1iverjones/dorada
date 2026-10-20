@@ -29,6 +29,7 @@ const schema = z.object({
   type_id: z.string().min(1),
   language: z.string().min(1),
   interpreter_type_required: z.enum(["certified", "qualified"]),
+  appointment_type: z.enum(["in_person", "telemed", "qme", "pt"]).nullish(),
   clinic_id: z.string().min(1),
   agency_id: z.string().min(1),
   patient_id: z.string().min(1),
@@ -174,6 +175,22 @@ export function NewAppointmentPage() {
                 </div>
               )} />
             </div>
+
+            <FormField label={t("appointments.appointment_type")}>
+              <Controller name="appointment_type" control={control} render={({ field }) => (
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                >
+                  <option value="">{t("common.select")}</option>
+                  <option value="in_person">{t("appointments.appointment_type_in_person")}</option>
+                  <option value="telemed">{t("appointments.appointment_type_telemed")}</option>
+                  <option value="qme">{t("appointments.appointment_type_qme")}</option>
+                  <option value="pt">{t("appointments.appointment_type_pt")}</option>
+                </select>
+              )} />
+            </FormField>
 
             {showLanguage && (
               <div className="col-span-full space-y-2">

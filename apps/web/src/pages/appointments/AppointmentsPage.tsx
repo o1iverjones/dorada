@@ -203,6 +203,14 @@ export function AppointmentsPage() {
           className="w-40"
           title={t("appointments.date_time")}
         />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => { setDateFilter(""); saveFilters({ dateFilter: "" }); }}
+          className={dateFilter ? "" : "opacity-40 cursor-default"}
+        >
+          {t("calendar.today")}
+        </Button>
 
         {/* Interpreter filter */}
         <div className="w-52">

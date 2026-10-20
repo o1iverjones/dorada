@@ -28,6 +28,7 @@ import {
   createAppointment,
   updateAppointment,
   cancelAppointment,
+  reactivateAppointment,
   offerAppointment,
   confirmOffer,
   declineOffer,
@@ -230,6 +231,16 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     await cancelAppointment(id, payload.organization_id, actor, fastify.prisma);
     const { getQueues } = await import("../../workers/queues.js");
     cancelRemindersForAppointment(id, fastify.prisma, getQueues().appointmentRemindersQueue).catch(console.error);
+    return reply.status(204).send();
+  });
+
+  // POST /appointments/:id/reactivate
+  fastify.post("/:id/reactivate", { preHandler: [authenticateAdmin, requirePermission("manage_appointments")] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const payload = req.user as JwtPayload;
+    const actor = await resolveActor(payload, fastify);
+    await reactivateAppointment(id, payload.organization_id, actor, fastify.prisma);
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "reactivated" });
     return reply.status(204).send();
   });
 

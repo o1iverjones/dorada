@@ -32,6 +32,7 @@ const schema = z.object({
   type_id: z.string().min(1),
   language: z.string().min(1),
   interpreter_type_required: z.enum(["certified", "qualified"]),
+  appointment_type: z.enum(["in_person", "telemed", "qme", "pt"]).nullish(),
   clinic_id: z.string().min(1),
   agency_id: z.string().min(1),
   patient_id: z.string().min(1),
@@ -101,6 +102,7 @@ export function EditAppointmentPage() {
       type_id: (a.type as Record<string, unknown>)?.id as string,
       language: a.language as string,
       interpreter_type_required: a.interpreter_type_required as "certified" | "qualified",
+      appointment_type: (a.appointment_type as string | null) as "in_person" | "telemed" | "qme" | "pt" | null ?? null,
       clinic_id: clinicId,
       agency_id: (a.agency as Record<string, unknown>)?.id as string,
       patient_id: (a.patient as Record<string, unknown>)?.id as string,
@@ -116,6 +118,7 @@ export function EditAppointmentPage() {
     try {
       await update.mutateAsync({
         ...data,
+        appointment_type: data.appointment_type || null,
         date_time: fromTzDateTimeInput(data.date_time, tz),
         pre_auth_mileage: Math.round(data.pre_auth_mileage),
         referring_physician: data.referring_physician || undefined,
@@ -175,6 +178,22 @@ export function EditAppointmentPage() {
                 </div>
               )} />
             </div>
+
+            <FormField label={t("appointments.appointment_type")}>
+              <Controller name="appointment_type" control={control} render={({ field }) => (
+                <select
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                >
+                  <option value="">{t("common.select")}</option>
+                  <option value="in_person">{t("appointments.appointment_type_in_person")}</option>
+                  <option value="telemed">{t("appointments.appointment_type_telemed")}</option>
+                  <option value="qme">{t("appointments.appointment_type_qme")}</option>
+                  <option value="pt">{t("appointments.appointment_type_pt")}</option>
+                </select>
+              )} />
+            </FormField>
 
             <div className="col-span-full space-y-2">
               <Label>{t("appointments.language")}</Label>

@@ -49,6 +49,7 @@ export const CreateAppointmentBodySchema = z.object({
   type_id: UuidSchema,
   language: z.string().min(1).max(50),
   interpreter_type_required: InterpreterTypeSchema,
+  appointment_type: z.enum(["in_person", "telemed", "qme", "pt"]).nullish(),
   clinic_id: UuidSchema,
   agency_id: UuidSchema,
   patient_id: UuidSchema,

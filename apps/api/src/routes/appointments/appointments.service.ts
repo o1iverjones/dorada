@@ -147,7 +147,7 @@ export async function getAppointment(id: string, organizationId: string, prisma:
     where: { id },
     include: {
       type: true,
-      interpreter: { select: { id: true, name: true } },
+      interpreter: { select: { id: true, name: true, certificate_number: true } },
       clinic: { select: { id: true, name: true, address: true, parking: true, phone: true } },
       agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true, date_of_birth: true } },
@@ -228,6 +228,7 @@ export async function createAppointment(
       type_id: body.type_id,
       language: body.language,
       interpreter_type_required: body.interpreter_type_required,
+      appointment_type: body.appointment_type ?? null,
       clinic_id: body.clinic_id,
       agency_id: body.agency_id,
       patient_id: body.patient_id,
@@ -272,6 +273,7 @@ export async function updateAppointment(
       ...(body.type_id ? { type_id: body.type_id } : {}),
       ...(body.language ? { language: body.language } : {}),
       ...(body.interpreter_type_required ? { interpreter_type_required: body.interpreter_type_required } : {}),
+      ...(body.appointment_type !== undefined ? { appointment_type: body.appointment_type ?? null } : {}),
       ...(body.clinic_id ? { clinic_id: body.clinic_id } : {}),
       ...(body.agency_id ? { agency_id: body.agency_id } : {}),
       ...(body.patient_id ? { patient_id: body.patient_id } : {}),
@@ -293,9 +295,10 @@ export async function updateAppointment(
   });
   const FIELD_LABELS: Record<string, string> = {
     duration_minutes: "Duration",
-    type_id: "Appointment Type",
+    type_id: "Interpreter Type",
     language: "Language",
     interpreter_type_required: "Interpreter Type",
+    appointment_type: "Appointment Type",
     clinic_id: "Clinic",
     agency_id: "Insurance Agency",
     patient_id: "Patient",
@@ -398,6 +401,18 @@ export async function cancelAppointment(id: string, organizationId: string, acto
     }),
   ]);
   await logActivity(id, organizationId, "cancelled", actor.name, actor.id, null, prisma, appt!.patient?.name ?? null, appt!.po_number);
+}
+
+export async function reactivateAppointment(id: string, organizationId: string, actor: { id: string; name: string }, prisma: PrismaClient) {
+  const appt = await prisma.appointment.findUnique({ where: { id }, include: { patient: { select: { name: true } } } });
+  ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
+  assertValidTransition(appt!.status, "unassigned");
+
+  await prisma.appointment.update({
+    where: { id },
+    data: { status: "unassigned", interpreter_id: null },
+  });
+  await logActivity(id, organizationId, "reactivated", actor.name, actor.id, null, prisma, appt!.patient?.name ?? null, appt!.po_number);
 }
 
 export async function unassignInterpreter(id: string, organizationId: string, actor: { id: string; name: string }, prisma: PrismaClient) {
