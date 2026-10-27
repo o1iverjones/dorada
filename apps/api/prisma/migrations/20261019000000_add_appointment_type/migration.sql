@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "Appointment" ADD COLUMN "appointment_type" TEXT;
+ALTER TABLE "appointments" ADD COLUMN "appointment_type" TEXT;
