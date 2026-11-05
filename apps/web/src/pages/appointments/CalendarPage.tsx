@@ -144,8 +144,7 @@ export function CalendarPage() {
   // ── Data fetching ──────────────────────────────────────────────────────────
 
   const statusValues = [...activeFilters].filter((k) => k.startsWith("status:")).map((k) => k.slice(7));
-  const billingPaymentStatusOptions = ["paid", "not_paid"].filter((v) => activeFilters.has(`billing_payment_status:${v}`));
-  const billingApprovalStatusOptions = ["pending_approval", "approved"].filter((v) => activeFilters.has(`billing_approval_status:${v}`));
+  const billingStatusValues = [...activeFilters].filter((k) => k.startsWith("billing_status:")).map((k) => k.slice(15));
   const clinicConfirmedOptions = ["true", "false"].filter((v) => activeFilters.has(`clinic_confirmed:${v}`));
 
   const apptParams: Record<string, string> = { date_from: dateFrom, date_to: dateTo, limit: "500" };
@@ -153,12 +152,7 @@ export function CalendarPage() {
   if (clinicFilter !== "all") apptParams.clinic_id = clinicFilter;
   if (agencyFilter !== "all") apptParams.agency_id = agencyFilter;
   if (statusValues.length > 0) apptParams.status = statusValues.join(",");
-  if (activeFilters.has("billing_billed")) apptParams.billing_billed = "true";
-  if (activeFilters.has("billing_invoiced")) apptParams.billing_invoiced = "true";
-  if (activeFilters.has("billing_retro")) apptParams.billing_retro = "true";
-  if (activeFilters.has("billing_payment_under_claim")) apptParams.billing_payment_under_claim = "true";
-  if (billingPaymentStatusOptions.length === 1) apptParams.billing_payment_status = billingPaymentStatusOptions[0];
-  if (billingApprovalStatusOptions.length === 1) apptParams.billing_approval_status = billingApprovalStatusOptions[0];
+  if (billingStatusValues.length > 0) apptParams.billing_status = billingStatusValues.join(",");
   if (clinicConfirmedOptions.length === 1) apptParams.clinic_confirmed = clinicConfirmedOptions[0];
 
   const { data } = useAppointments(apptParams);
@@ -255,8 +249,9 @@ export function CalendarPage() {
 
   function apptColorClass(a: Record<string, unknown>) {
     const status = a.status as string;
+    const billingStatus = (a.billing_status as string) ?? "Pending Approval";
     // Billing approved always renders green regardless of appointment status
-    if ((a.billing_approval_status as string) === "approved") {
+    if (billingStatus === "Approved" || billingStatus === "Paid") {
       return "bg-green-100 border-green-300 text-green-800";
     }
     // Certain terminal/non-active statuses always use their status colour regardless of interpreter
@@ -270,7 +265,7 @@ export function CalendarPage() {
       return "bg-gray-100 border-gray-300 text-gray-500";
     }
     // Accepted + billing pending approval → blue
-    if (status === "accepted" && (a.billing_approval_status as string) === "pending_approval") {
+    if (status === "accepted" && billingStatus === "Pending Approval") {
       return "bg-blue-100 border-blue-400 text-blue-900";
     }
     return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
@@ -536,14 +531,15 @@ export function CalendarPage() {
             <FilterChipGroup
               label="Billing"
               options={[
-                { key: "billing_billed", label: "Billed" },
-                { key: "billing_invoiced", label: "Invoiced" },
-                { key: "billing_retro", label: "Retro" },
-                { key: "billing_payment_under_claim", label: "Payment Under Claim" },
-                { key: "billing_payment_status:paid", label: "Paid" },
-                { key: "billing_payment_status:not_paid", label: "Not Paid" },
-                { key: "billing_approval_status:pending_approval", label: "Pending Approval" },
-                { key: "billing_approval_status:approved", label: "Approved" },
+                { key: "billing_status:Pending Approval", label: "Pending Approval" },
+                { key: "billing_status:Approved", label: "Approved" },
+                { key: "billing_status:Invoiced", label: "Invoiced" },
+                { key: "billing_status:Billed", label: "Billed" },
+                { key: "billing_status:Payment Under Claim", label: "Payment Under Claim" },
+                { key: "billing_status:Lost", label: "Lost" },
+                { key: "billing_status:Not Paid", label: "Not Paid" },
+                { key: "billing_status:Retro", label: "Retro" },
+                { key: "billing_status:Paid", label: "Paid" },
               ]}
               activeFilters={activeFilters}
               onToggle={(key) => setActiveFilters((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}

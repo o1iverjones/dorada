@@ -512,14 +512,7 @@ model Appointment {
   follow_up_status           String?
   shift_notes                String?
   billing_amount             Decimal?  @db.Decimal(10, 2)
-  billing_billed             Boolean   @default(false)
-  billing_invoiced           Boolean   @default(false)
-  billing_lost               Boolean   @default(false)
-  billing_payment_under_claim Boolean  @default(false)
-  billing_pending_auth       Boolean   @default(false)
-  billing_retro              Boolean   @default(false)
-  billing_payment_status     String    @default("not_paid")
-  billing_approval_status    String    @default("pending_approval")
+  billing_status             String    @default("Pending Approval")
   created_at                 DateTime  @default(now())
   updated_at                 DateTime  @updatedAt
 

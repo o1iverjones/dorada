@@ -102,12 +102,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
     ...(query.type_id ? { type_id: query.type_id } : {}),
     ...((query.date_from || query.date_to) ? { date_time: dateFilter } : {}),
     ...(query.cursor ? { id: { gt: query.cursor } } : {}),
-    ...(query.billing_billed !== undefined ? { billing_billed: query.billing_billed } : {}),
-    ...(query.billing_invoiced !== undefined ? { billing_invoiced: query.billing_invoiced } : {}),
-    ...(query.billing_retro !== undefined ? { billing_retro: query.billing_retro } : {}),
-    ...(query.billing_payment_under_claim !== undefined ? { billing_payment_under_claim: query.billing_payment_under_claim } : {}),
-    ...(query.billing_payment_status ? { billing_payment_status: query.billing_payment_status } : {}),
-    ...(query.billing_approval_status ? { billing_approval_status: query.billing_approval_status } : {}),
+    ...(query.billing_status ? { billing_status: query.billing_status.includes(",") ? { in: query.billing_status.split(",") } : query.billing_status } : {}),
     ...(query.clinic_confirmed !== undefined ? { clinic_confirmed: query.clinic_confirmed } : {}),
   };
 
@@ -446,14 +441,7 @@ export async function patchBilling(
   id: string,
   body: {
     billing_amount?: number | null;
-    billing_billed?: boolean;
-    billing_invoiced?: boolean;
-    billing_lost?: boolean;
-    billing_payment_under_claim?: boolean;
-    billing_pending_auth?: boolean;
-    billing_retro?: boolean;
-    billing_payment_status?: string;
-    billing_approval_status?: string;
+    billing_status?: string;
     clinic_confirmed?: boolean;
   },
   organizationId: string,
@@ -484,41 +472,10 @@ export async function patchBilling(
     );
   }
 
-  // Build a human-readable description of every billing field that changed
-  const BOOL_LABELS: Record<string, string> = {
-    billing_billed:               "Billed",
-    billing_invoiced:             "Invoiced",
-    billing_lost:                 "Lost",
-    billing_payment_under_claim:  "Payment Under Claim",
-    billing_pending_auth:         "Pending Auth",
-    billing_retro:                "Retro",
-  };
-  const STATUS_LABELS: Record<string, string> = {
-    billing_payment_status:  "Payment",
-    billing_approval_status: "Approval",
-  };
-  const STATUS_VALUES: Record<string, Record<string, string>> = {
-    billing_payment_status:  { not_paid: "Not Paid", paid: "Paid" },
-    billing_approval_status: { pending_approval: "Pending Approval", approved: "Approved" },
-  };
-
   const changes: string[] = [];
 
-  for (const [field, label] of Object.entries(BOOL_LABELS)) {
-    const newVal = (body as Record<string, unknown>)[field];
-    if (newVal === undefined) continue;
-    const oldVal = (appt as Record<string, unknown>)[field];
-    if (newVal !== oldVal) {
-      changes.push(`${label} ${newVal ? "checked" : "unchecked"}`);
-    }
-  }
-  for (const [field, label] of Object.entries(STATUS_LABELS)) {
-    const newVal = (body as Record<string, unknown>)[field] as string | undefined;
-    if (newVal === undefined) continue;
-    const oldVal = (appt as Record<string, unknown>)[field] as string;
-    if (newVal !== oldVal) {
-      changes.push(`${label}: ${STATUS_VALUES[field][newVal] ?? newVal}`);
-    }
+  if (body.billing_status !== undefined && body.billing_status !== appt!.billing_status) {
+    changes.push(`Status: ${appt!.billing_status} → ${body.billing_status}`);
   }
 
   if (body.billing_amount !== undefined) {

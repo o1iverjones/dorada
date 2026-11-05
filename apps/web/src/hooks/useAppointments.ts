@@ -197,14 +197,7 @@ export function useAppointmentMedia(id: string) {
 
 export interface BillingFields {
   billing_amount: number | null;
-  billing_billed: boolean;
-  billing_invoiced: boolean;
-  billing_lost: boolean;
-  billing_payment_under_claim: boolean;
-  billing_pending_auth: boolean;
-  billing_retro: boolean;
-  billing_payment_status: "not_paid" | "paid";
-  billing_approval_status: "pending_approval" | "approved";
+  billing_status: string;
   clinic_confirmed: boolean;
 }
 

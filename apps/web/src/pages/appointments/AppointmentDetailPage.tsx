@@ -646,11 +646,7 @@ export function AppointmentDetailPage() {
 
         <div className="space-y-6">
           <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
-          <BillingCard appointmentId={id!} appointment={a} onPoRequired={() => {
-            poRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-            setHighlightPo(true);
-            setTimeout(() => setHighlightPo(false), 3000);
-          }} />
+          <BillingCard appointmentId={id!} appointment={a} />
         </div>
 
         {a.shift_notes && (
@@ -1126,7 +1122,19 @@ export function AppointmentDetailPage() {
   );
 }
 
-function BillingCard({ appointmentId, appointment, onPoRequired }: { appointmentId: string; appointment: Record<string, unknown>; onPoRequired: () => void }) {
+const BILLING_STATUSES = [
+  "Pending Approval",
+  "Approved",
+  "Invoiced",
+  "Billed",
+  "Payment Under Claim",
+  "Lost",
+  "Not Paid",
+  "Retro",
+  "Paid",
+];
+
+function BillingCard({ appointmentId, appointment }: { appointmentId: string; appointment: Record<string, unknown> }) {
   const { t } = useTranslation();
   const patch = usePatchBilling(appointmentId);
 
@@ -1134,27 +1142,37 @@ function BillingCard({ appointmentId, appointment, onPoRequired }: { appointment
   const rawAmount = b.billing_amount as unknown as string | number | null;
   const initialAmount = rawAmount != null && Number(rawAmount) !== 0 ? String(rawAmount) : "";
   const [amountInput, setAmountInput] = useState(initialAmount);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusSearch, setStatusSearch] = useState("");
+  const statusRef = useRef<HTMLDivElement>(null);
 
-  function toggle(field: keyof BillingFields, value: boolean | string | number | null) {
-    patch.mutate({ [field]: value } as Partial<BillingFields>);
-  }
+  const currentStatus = (b.billing_status as string) ?? "Pending Approval";
+  const filteredStatuses = statusSearch.trim()
+    ? BILLING_STATUSES.filter((s) => s.toLowerCase().includes(statusSearch.toLowerCase()))
+    : BILLING_STATUSES;
 
   function saveAmount() {
     const val = amountInput.trim() === "" ? null : parseFloat(amountInput);
     if (val !== null && isNaN(val)) return;
-    toggle("billing_amount", val);
+    patch.mutate({ billing_amount: val });
   }
 
-  const checkboxes: { field: keyof BillingFields; label: string }[] = [
-    { field: "billing_invoiced",             label: t("appointments.billing_invoiced") },
-    { field: "billing_billed",               label: t("appointments.billing_billed") },
-    { field: "billing_payment_under_claim",  label: t("appointments.billing_payment_under_claim") },
-    { field: "billing_lost",                 label: t("appointments.billing_lost") },
-    { field: "billing_retro",                label: t("appointments.billing_retro") },
-  ];
+  function selectStatus(status: string) {
+    patch.mutate({ billing_status: status });
+    setStatusOpen(false);
+    setStatusSearch("");
+  }
 
-  const paymentStatus = (b.billing_payment_status as string) ?? "not_paid";
-  const approvalStatus = (b.billing_approval_status as string) ?? "pending_approval";
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (statusRef.current && !statusRef.current.contains(e.target as Node)) {
+        setStatusOpen(false);
+        setStatusSearch("");
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <Card>
@@ -1184,70 +1202,50 @@ function BillingCard({ appointmentId, appointment, onPoRequired }: { appointment
 
         <div className="border-t" />
 
-        {/* Checkboxes */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-          {checkboxes.map(({ field, label }) => (
-            <label key={field} className="flex items-center gap-2 text-sm cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 accent-primary"
-                checked={!!b[field]}
-                onChange={(e) => toggle(field, e.target.checked)}
-                disabled={patch.isPending}
-              />
-              <span>{label}</span>
-            </label>
-          ))}
-        </div>
-
-        <div className="border-t" />
-
-        {/* Payment status toggle */}
+        {/* Billing status dropdown */}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{t("appointments.billing_payment")}</span>
-          <div className="flex rounded-md border overflow-hidden text-xs font-medium">
+          <span className="text-muted-foreground">{t("appointments.billing_status")}</span>
+          <div ref={statusRef} className="relative w-48">
             <button
-              onClick={() => toggle("billing_payment_status", "not_paid")}
+              type="button"
+              onClick={() => { setStatusOpen(!statusOpen); setStatusSearch(""); }}
               disabled={patch.isPending}
-              className={`px-3 py-1.5 transition-colors ${paymentStatus === "not_paid" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+              className={`w-full rounded-md border px-3 py-1.5 text-sm text-left bg-background hover:bg-muted transition-colors ${
+                currentStatus === "Paid" ? "border-green-500 text-green-700 font-medium" :
+                currentStatus === "Lost" ? "border-red-300 text-red-700 font-medium" :
+                ""
+              }`}
             >
-              {t("appointments.billing_not_paid")}
+              {currentStatus}
             </button>
-            <button
-              onClick={() => toggle("billing_payment_status", "paid")}
-              disabled={patch.isPending}
-              className={`px-3 py-1.5 transition-colors ${paymentStatus === "paid" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
-            >
-              {t("appointments.billing_paid")}
-            </button>
-          </div>
-        </div>
-
-        {/* Approval status toggle */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{t("appointments.billing_approval")}</span>
-          <div className="flex rounded-md border overflow-hidden text-xs font-medium">
-            <button
-              onClick={() => toggle("billing_approval_status", "pending_approval")}
-              disabled={patch.isPending}
-              className={`px-3 py-1.5 transition-colors ${approvalStatus === "pending_approval" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
-            >
-              {t("appointments.billing_pending_approval")}
-            </button>
-            <button
-              onClick={() => {
-                if (!b.po_number) {
-                  toast({ title: t("appointments.po_number_required"), variant: "destructive" });
-                  onPoRequired();
-                  return;
-                }
-                toggle("billing_approval_status", "approved");
-              }}
-              disabled={patch.isPending}
-              className={`px-3 py-1.5 transition-colors ${approvalStatus === "approved" ? "bg-green-600 text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}
-            >
-              {t("appointments.billing_approved")}
-            </button>
+            {statusOpen && (
+              <div className="absolute z-50 right-0 mt-1 w-full rounded-md border bg-popover shadow-md">
+                <input
+                  type="text"
+                  value={statusSearch}
+                  onChange={(e) => setStatusSearch(e.target.value)}
+                  placeholder={t("common.search")}
+                  className="w-full border-b px-3 py-2 text-sm bg-background outline-none"
+                  autoFocus
+                />
+                <ul className="max-h-52 overflow-y-auto">
+                  {filteredStatuses.map((s) => (
+                    <li
+                      key={s}
+                      onMouseDown={(e) => { e.preventDefault(); selectStatus(s); }}
+                      className={`cursor-pointer px-3 py-2 text-sm ${
+                        s === currentStatus ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted"
+                      }`}
+                    >
+                      {s}
+                    </li>
+                  ))}
+                  {filteredStatuses.length === 0 && (
+                    <li className="px-3 py-2 text-sm text-muted-foreground">{t("common.no_results")}</li>
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

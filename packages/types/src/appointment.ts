@@ -93,12 +93,7 @@ export const AppointmentListQuerySchema = z.object({
   date_to: z.string().date().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(25),
-  billing_billed: z.coerce.boolean().optional(),
-  billing_invoiced: z.coerce.boolean().optional(),
-  billing_retro: z.coerce.boolean().optional(),
-  billing_payment_under_claim: z.coerce.boolean().optional(),
-  billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
-  billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
+  billing_status: z.string().optional(),
   clinic_confirmed: z.coerce.boolean().optional(),
 });
 

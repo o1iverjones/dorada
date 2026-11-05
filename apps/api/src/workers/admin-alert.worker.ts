@@ -82,7 +82,7 @@ async function runStaleBillingCheck(prisma: PrismaClient, emitter: Emitter) {
   const candidates = await prisma.appointment.findMany({
     where: {
       date_time: { lt: cutoff },
-      OR: [{ billing_billed: true }, { billing_invoiced: true }],
+      billing_status: { in: ["Billed", "Invoiced"] },
       status: { notIn: ["cancelled"] },
     },
     select: {
@@ -90,15 +90,13 @@ async function runStaleBillingCheck(prisma: PrismaClient, emitter: Emitter) {
       organization_id: true,
       date_time: true,
       po_number: true,
-      billing_billed: true,
-      billing_invoiced: true,
-      billing_payment_status: true,
+      billing_status: true,
       patient: { select: { name: true } },
       clinic: { select: { name: true } },
     },
   });
 
-  const stale = candidates.filter((a) => a.billing_payment_status !== "paid");
+  const stale = candidates.filter((a) => a.billing_status !== "Paid");
 
   for (const appt of stale) {
     // One alert per appointment — skip if one already exists
@@ -111,7 +109,7 @@ async function runStaleBillingCheck(prisma: PrismaClient, emitter: Emitter) {
     const poStr = appt.po_number ? ` — PO: ${appt.po_number}` : "";
     const patientStr = appt.patient?.name ? ` for ${appt.patient.name}` : "";
     const clinicStr = appt.clinic?.name ? ` at ${appt.clinic.name}` : "";
-    const flags = [appt.billing_billed && "Billed", appt.billing_invoiced && "Invoiced"].filter(Boolean).join(" / ");
+    const flags = appt.billing_status;
 
     const alert = await prisma.adminAlert.create({
       data: {

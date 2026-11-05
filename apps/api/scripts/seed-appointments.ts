@@ -226,12 +226,7 @@ async function main() {
           pre_auth_mileage:          appt.pre_auth_mileage,
           po_number:                 appt.po_number ?? null,
           billing_interpreter:       appt.billing_interpreter ?? null,
-          billing_payment_status:    appt.billing_payment_status,
-          billing_approval_status:   appt.billing_approval_status,
-          billing_billed:            appt.billing_billed,
-          billing_invoiced:          appt.billing_invoiced,
-          billing_payment_under_claim: appt.billing_payment_under_claim,
-          billing_retro:             appt.billing_retro,
+          billing_status:            "Pending Approval",
         },
       });
       // ── Create admin note if present ───────────────────────────────────

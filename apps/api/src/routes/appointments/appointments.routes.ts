@@ -198,27 +198,13 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const actor = await resolveActor(payload, fastify);
     const body = z.object({
       billing_amount: z.number().min(0).nullish(),
-      billing_billed: z.boolean().optional(),
-      billing_invoiced: z.boolean().optional(),
-      billing_lost: z.boolean().optional(),
-      billing_payment_under_claim: z.boolean().optional(),
-      billing_pending_auth: z.boolean().optional(),
-      billing_retro: z.boolean().optional(),
-      billing_payment_status: z.enum(["not_paid", "paid"]).optional(),
-      billing_approval_status: z.enum(["pending_approval", "approved"]).optional(),
+      billing_status: z.string().optional(),
       clinic_confirmed: z.boolean().optional(),
     }).parse(req.body);
     const updated = await patchBilling(id, body, payload.organization_id, actor, fastify.prisma);
     return reply.send({ ok: true, billing: {
       billing_amount: updated.billing_amount != null ? Number(updated.billing_amount) : null,
-      billing_billed: updated.billing_billed,
-      billing_invoiced: updated.billing_invoiced,
-      billing_lost: updated.billing_lost,
-      billing_payment_under_claim: updated.billing_payment_under_claim,
-      billing_pending_auth: updated.billing_pending_auth,
-      billing_retro: updated.billing_retro,
-      billing_payment_status: updated.billing_payment_status,
-      billing_approval_status: updated.billing_approval_status,
+      billing_status: updated.billing_status,
       clinic_confirmed: updated.clinic_confirmed,
     }});
   });
