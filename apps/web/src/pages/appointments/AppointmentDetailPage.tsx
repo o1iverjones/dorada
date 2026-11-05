@@ -646,7 +646,7 @@ export function AppointmentDetailPage() {
 
         <div className="space-y-6">
           <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
-          <BillingCard appointmentId={id!} appointment={a} />
+          <BillingCard appointmentId={id!} appointment={a} editing={editing} />
         </div>
 
         {a.shift_notes && (
@@ -1134,7 +1134,7 @@ const BILLING_STATUSES = [
   "Paid",
 ];
 
-function BillingCard({ appointmentId, appointment }: { appointmentId: string; appointment: Record<string, unknown> }) {
+function BillingCard({ appointmentId, appointment, editing }: { appointmentId: string; appointment: Record<string, unknown>; editing: boolean }) {
   const { t } = useTranslation();
   const patch = usePatchBilling(appointmentId);
 
@@ -1174,6 +1174,11 @@ function BillingCard({ appointmentId, appointment }: { appointmentId: string; ap
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const statusColorClass =
+    currentStatus === "Paid" ? "text-green-700 font-medium" :
+    currentStatus === "Lost" ? "text-red-700 font-medium" :
+    "";
+
   return (
     <Card>
       <CardHeader className="pb-2 pt-4 px-4">
@@ -1183,70 +1188,78 @@ function BillingCard({ appointmentId, appointment }: { appointmentId: string; ap
         {/* Billing amount */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">{t("appointments.billing_amount")}</span>
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground">$</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              className="w-28 rounded-md border px-2 py-1.5 text-sm text-right bg-background"
-              value={amountInput}
-              onChange={(e) => setAmountInput(e.target.value)}
-              onBlur={saveAmount}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
-              disabled={patch.isPending}
-              placeholder="0.00"
-            />
-          </div>
+          {editing ? (
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-28 rounded-md border px-2 py-1.5 text-sm text-right bg-background"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+                onBlur={saveAmount}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
+                disabled={patch.isPending}
+                placeholder="0.00"
+              />
+            </div>
+          ) : (
+            <span>{rawAmount != null && Number(rawAmount) !== 0 ? `$${Number(rawAmount).toFixed(2)}` : "—"}</span>
+          )}
         </div>
 
         <div className="border-t" />
 
-        {/* Billing status dropdown */}
+        {/* Billing status */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">{t("appointments.billing_status")}</span>
-          <div ref={statusRef} className="relative w-48">
-            <button
-              type="button"
-              onClick={() => { setStatusOpen(!statusOpen); setStatusSearch(""); }}
-              disabled={patch.isPending}
-              className={`w-full rounded-md border px-3 py-1.5 text-sm text-left bg-background hover:bg-muted transition-colors ${
-                currentStatus === "Paid" ? "border-green-500 text-green-700 font-medium" :
-                currentStatus === "Lost" ? "border-red-300 text-red-700 font-medium" :
-                ""
-              }`}
-            >
-              {currentStatus || <span className="text-muted-foreground">{t("common.select")}</span>}
-            </button>
-            {statusOpen && (
-              <div className="absolute z-50 right-0 mt-1 w-full rounded-md border bg-popover shadow-md">
-                <input
-                  type="text"
-                  value={statusSearch}
-                  onChange={(e) => setStatusSearch(e.target.value)}
-                  placeholder={t("common.search")}
-                  className="w-full border-b px-3 py-2 text-sm bg-background outline-none"
-                  autoFocus
-                />
-                <ul className="max-h-52 overflow-y-auto">
-                  {filteredStatuses.map((s) => (
-                    <li
-                      key={s}
-                      onMouseDown={(e) => { e.preventDefault(); selectStatus(s); }}
-                      className={`cursor-pointer px-3 py-2 text-sm ${
-                        s === currentStatus ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted"
-                      }`}
-                    >
-                      {s}
-                    </li>
-                  ))}
-                  {filteredStatuses.length === 0 && (
-                    <li className="px-3 py-2 text-sm text-muted-foreground">{t("common.no_results")}</li>
-                  )}
-                </ul>
-              </div>
-            )}
-          </div>
+          {editing ? (
+            <div ref={statusRef} className="relative w-48">
+              <button
+                type="button"
+                onClick={() => { setStatusOpen(!statusOpen); setStatusSearch(""); }}
+                disabled={patch.isPending}
+                className={`w-full rounded-md border px-3 py-1.5 text-sm text-left bg-background hover:bg-muted transition-colors ${
+                  currentStatus === "Paid" ? "border-green-500 text-green-700 font-medium" :
+                  currentStatus === "Lost" ? "border-red-300 text-red-700 font-medium" :
+                  ""
+                }`}
+              >
+                {currentStatus || <span className="text-muted-foreground">{t("common.select")}</span>}
+              </button>
+              {statusOpen && (
+                <div className="absolute z-50 right-0 mt-1 w-full rounded-md border bg-popover shadow-md">
+                  <input
+                    type="text"
+                    value={statusSearch}
+                    onChange={(e) => setStatusSearch(e.target.value)}
+                    placeholder={t("common.search")}
+                    className="w-full border-b px-3 py-2 text-sm bg-background outline-none"
+                    autoFocus
+                  />
+                  <ul className="max-h-52 overflow-y-auto">
+                    {filteredStatuses.map((s) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => { e.preventDefault(); selectStatus(s); }}
+                        className={`cursor-pointer px-3 py-2 text-sm ${
+                          s === currentStatus ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                    {filteredStatuses.length === 0 && (
+                      <li className="px-3 py-2 text-sm text-muted-foreground">{t("common.no_results")}</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className={statusColorClass}>{currentStatus || "—"}</span>
+          )}
         </div>
       </CardContent>
     </Card>
