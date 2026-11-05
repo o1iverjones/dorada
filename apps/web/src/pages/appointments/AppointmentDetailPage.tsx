@@ -1298,11 +1298,6 @@ function AppointmentCard({
             </InlineRow>
           )}
 
-          {/* Clinic / Patient Confirmed toggle */}
-          {!editing && (
-            <ClinicConfirmedToggle appointmentId={a.id as string} confirmed={a.clinic_confirmed as boolean ?? false} label={t("appointments.clinic_confirmed")} />
-          )}
-
           {/* Parking */}
           {!editing && parking && (
             <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -1318,6 +1313,11 @@ function AppointmentCard({
             </InlineRow>
           ) : (
             <Field label={t("appointments.provider")} value={(a.referring_physician as string) || "—"} />
+          )}
+
+          {/* Clinic / Patient Confirmed toggle */}
+          {!editing && (
+            <ClinicConfirmedToggle appointmentId={a.id as string} confirmed={a.clinic_confirmed as boolean ?? false} label={t("appointments.clinic_confirmed")} />
           )}
         </div>
       </CardContent>
