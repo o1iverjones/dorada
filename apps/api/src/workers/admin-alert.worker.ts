@@ -98,12 +98,15 @@ async function runStaleBillingCheck(prisma: PrismaClient, emitter: Emitter) {
 
   const stale = candidates.filter((a) => a.billing_status !== "Paid");
 
+  const cooldown = new Date();
+  cooldown.setHours(cooldown.getHours() - 24);
+
   for (const appt of stale) {
-    // One alert per appointment — skip if one already exists
-    const existing = await prisma.adminAlert.findFirst({
-      where: { appointment_id: appt.id, type: "stale_billing" },
+    // Skip if an alert was created for this appointment in the last 24 hours
+    const recent = await prisma.adminAlert.findFirst({
+      where: { appointment_id: appt.id, type: "stale_billing", created_at: { gte: cooldown } },
     });
-    if (existing) continue;
+    if (recent) continue;
 
     const dateStr = new Date(appt.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     const poStr = appt.po_number ? ` — PO: ${appt.po_number}` : "";
