@@ -6,13 +6,20 @@ import { useToast } from "../../hooks/use-toast.js";
 const SUGGESTIONS = [
   "Agendada y Asignada",
   "Autorizada",
+  "Call auto pendiente",
+  "Confirmada con pt",
+  "confirmada con la clinica",
+  "Email - Autorization pending",
+  "Follow up Tele-med",
   "Invoiced",
   "LC no follow up",
   "LC no show",
-  "confirmada con la clinica",
-  "Email - Autorization pending",
+  "No f/u",
   "NO ASIGNAR SIN AUTO",
   "PRIVADO NO Follow up",
+  "Regresada por",
+  "Reported",
+  "Solicitada",
 ];
 
 interface NoteInputProps {
