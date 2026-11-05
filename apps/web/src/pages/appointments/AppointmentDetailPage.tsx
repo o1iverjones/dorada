@@ -1146,7 +1146,7 @@ function BillingCard({ appointmentId, appointment }: { appointmentId: string; ap
   const [statusSearch, setStatusSearch] = useState("");
   const statusRef = useRef<HTMLDivElement>(null);
 
-  const currentStatus = (b.billing_status as string) ?? "Pending Approval";
+  const currentStatus = (b.billing_status as string) ?? "";
   const filteredStatuses = statusSearch.trim()
     ? BILLING_STATUSES.filter((s) => s.toLowerCase().includes(statusSearch.toLowerCase()))
     : BILLING_STATUSES;
@@ -1216,7 +1216,7 @@ function BillingCard({ appointmentId, appointment }: { appointmentId: string; ap
                 ""
               }`}
             >
-              {currentStatus}
+              {currentStatus || <span className="text-muted-foreground">{t("common.select")}</span>}
             </button>
             {statusOpen && (
               <div className="absolute z-50 right-0 mt-1 w-full rounded-md border bg-popover shadow-md">

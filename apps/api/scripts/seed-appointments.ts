@@ -226,7 +226,7 @@ async function main() {
           pre_auth_mileage:          appt.pre_auth_mileage,
           po_number:                 appt.po_number ?? null,
           billing_interpreter:       appt.billing_interpreter ?? null,
-          billing_status:            "Pending Approval",
+          billing_status:            "",
         },
       });
       // ── Create admin note if present ───────────────────────────────────

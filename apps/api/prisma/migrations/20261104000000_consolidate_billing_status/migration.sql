@@ -1,5 +1,5 @@
 -- Add the new consolidated billing_status column
-ALTER TABLE "appointments" ADD COLUMN "billing_status" TEXT NOT NULL DEFAULT 'Pending Approval';
+ALTER TABLE "appointments" ADD COLUMN "billing_status" TEXT NOT NULL DEFAULT '';
 
 -- Migrate existing data: pick the most advanced billing state
 UPDATE "appointments" SET "billing_status" = CASE
@@ -11,7 +11,7 @@ UPDATE "appointments" SET "billing_status" = CASE
   WHEN "billing_retro" = true THEN 'Retro'
   WHEN "billing_pending_auth" = true THEN 'Pending Approval'
   WHEN "billing_approval_status" = 'approved' THEN 'Approved'
-  ELSE 'Pending Approval'
+  ELSE ''
 END;
 
 -- Drop the old columns

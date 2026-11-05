@@ -447,6 +447,7 @@
     "billing_approval": "Aprobación",
     "billing_pending_approval": "Pendiente de aprobación",
     "billing_approved": "Aprobado",
+    "billing_status": "Estado de facturación",
     "po_number_required": "Se requiere número de PO antes de aprobar",
     "clinic_confirmed": "Confirmado por clínica / paciente",
     "clock_in": "Entrada",

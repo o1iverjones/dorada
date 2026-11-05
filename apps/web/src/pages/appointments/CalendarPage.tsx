@@ -249,7 +249,7 @@ export function CalendarPage() {
 
   function apptColorClass(a: Record<string, unknown>) {
     const status = a.status as string;
-    const billingStatus = (a.billing_status as string) ?? "Pending Approval";
+    const billingStatus = (a.billing_status as string) ?? "";
     // Billing approved always renders green regardless of appointment status
     if (billingStatus === "Approved" || billingStatus === "Paid") {
       return "bg-green-100 border-green-300 text-green-800";
@@ -265,7 +265,7 @@ export function CalendarPage() {
       return "bg-gray-100 border-gray-300 text-gray-500";
     }
     // Accepted + billing pending approval → blue
-    if (status === "accepted" && billingStatus === "Pending Approval") {
+    if (status === "accepted" && (!billingStatus || billingStatus === "Pending Approval")) {
       return "bg-blue-100 border-blue-400 text-blue-900";
     }
     return STATUS_COLORS[status] ?? "bg-muted border-gray-300";

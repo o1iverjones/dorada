@@ -512,7 +512,7 @@ model Appointment {
   follow_up_status           String?
   shift_notes                String?
   billing_amount             Decimal?  @db.Decimal(10, 2)
-  billing_status             String    @default("Pending Approval")
+  billing_status             String    @default("")
   created_at                 DateTime  @default(now())
   updated_at                 DateTime  @updatedAt
 

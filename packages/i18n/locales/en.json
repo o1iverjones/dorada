@@ -447,6 +447,7 @@
     "billing_approval": "Approval",
     "billing_pending_approval": "Pending approval",
     "billing_approved": "Approved",
+    "billing_status": "Billing status",
     "po_number_required": "PO number required before approving",
     "clinic_confirmed": "Clinic / Patient Confirmed",
     "clock_in": "Clock in",
