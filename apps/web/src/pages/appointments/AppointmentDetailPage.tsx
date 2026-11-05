@@ -329,323 +329,209 @@ export function AppointmentDetailPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("appointments.details")}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm p-0 pb-2">
-
-            {/* Patient */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.patient")}>
-                  <AutocompleteInput options={patientOptions} value={form.patient_id} onChange={(v) => set("patient_id", v)} placeholder={t("common.search")} />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.patient")} value={
-                  <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-bold text-primary hover:underline text-base">
-                    {((a.patient as Record<string, unknown>)?.name as string ?? "—").toUpperCase()}
-                  </button>
-                } />
-              )}
-            </div>
-
-            {/* Interpreter */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.interpreter")}>
-                  <div className="flex items-center gap-2">
-                    {(a.interpreter as Record<string, unknown>)?.name ? (
-                      <>
-                        <span className="font-bold text-sm">
-                          {(a.interpreter as Record<string, unknown>)?.name as string}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-destructive border-destructive hover:bg-destructive/10"
-                          onClick={() => setConfirmUnassign(true)}
-                        >
-                          <UserX className="h-3.5 w-3.5 mr-1" />
-                          {t("appointments.unassign")}
-                        </Button>
-                      </>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">{t("appointments.unassigned")} — {t("appointments.select_interpreters_below", { defaultValue: "use the card below to assign" })}</span>
-                    )}
-                  </div>
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.interpreter")} value={
-                  (a.interpreter as Record<string, unknown>)?.id ? (
-                    <button
-                      type="button"
-                      className="font-bold text-primary hover:underline text-left"
-                      onClick={() => navigate(`/interpreters/${(a.interpreter as Record<string, unknown>).id}`)}
-                    >
-                      {(a.interpreter as Record<string, unknown>).name as string}
-                    </button>
-                  ) : (
-                    <span className="font-bold">{t("appointments.unassigned")}</span>
-                  )
-                } />
-              )}
-            </div>
-
-            {/* PO Number */}
-            <div ref={poRef} className={`px-6 py-2.5 even:bg-muted/40 transition-colors duration-300 ${highlightPo ? "ring-2 ring-inset ring-destructive bg-destructive/5" : ""}`}>
-              {editing ? (
-                <InlineRow label={t("appointments.po_number")}>
-                  <Input className="h-7 text-sm" value={form.po_number} onChange={(e) => set("po_number", e.target.value)} placeholder="—" />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.po_number")} value={(a.po_number as string) ?? "—"} />
-              )}
-            </div>
-
-            {/* Date/Time */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.date_time")} wide>
-                  <DateTimePicker value={form.date_time} onChange={(v) => set("date_time", v)} />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.date_time")} value={formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)} />
-              )}
-            </div>
-
-            {/* Status */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.status")} wide>
-                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                    <SelectTrigger className="h-7 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[
-                        "unassigned", "pending_offer", "accepted", "in_progress", "completed",
-                        "cancelled", "late_cancellation", "no_show", "rescheduled",
-                        "double_booking", "pt_speaks_eng", "dr_speaks_es",
-                      ].map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {t(`appointment.status.${s}`, { defaultValue: s.replace(/_/g, " ") })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
-              )}
-            </div>
-
-            {/* Interpreter B */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.billing_interpreter")}>
-                  <AutocompleteInput
-                    options={allInterpreterList.map((i) => ({ value: i.name as string, label: i.name as string }))}
-                    value={form.billing_interpreter}
-                    onChange={(v) => set("billing_interpreter", v)}
-                    placeholder="—"
-                    freeText
-                  />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.billing_interpreter")} value={(a.billing_interpreter as string) ?? "—"} />
-              )}
-            </div>
-
-            {/* Cert number — show when the assigned interpreter has one */}
-            {a.interpreter && (a.interpreter as Record<string, unknown>).certificate_number && (
+        {/* ── LEFT COLUMN ── */}
+        <div className="space-y-6">
+          {/* Patient Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("appointments.patient_details")}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm p-0 pb-2">
+              {/* Patient */}
               <div className="px-6 py-2.5 even:bg-muted/40">
-                <Field label={t("appointments.cert_number")} value={(a.interpreter as Record<string, unknown>).certificate_number as string} />
+                {editing ? (
+                  <InlineRow label={t("appointments.patient")}>
+                    <AutocompleteInput options={patientOptions} value={form.patient_id} onChange={(v) => set("patient_id", v)} placeholder={t("common.search")} />
+                  </InlineRow>
+                ) : (
+                  <Field label={t("appointments.patient")} value={
+                    <button onClick={() => navigate(`/patients/${(a.patient as Record<string, unknown>)?.id as string}`)} className="font-bold text-primary hover:underline text-base">
+                      {((a.patient as Record<string, unknown>)?.name as string ?? "—").toUpperCase()}
+                    </button>
+                  } />
+                )}
               </div>
-            )}
 
-            {/* DOB */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.dob")}>
-                  <Input
-                    type="date"
-                    className="h-7 text-sm"
-                    value={form.dob}
-                    onChange={(e) => set("dob", e.target.value)}
-                  />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.dob")} value={
-                  (a.patient as Record<string, unknown>)?.date_of_birth
-                    ? new Date((a.patient as Record<string, unknown>).date_of_birth as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
-                    : "—"
-                } />
-              )}
-            </div>
+              {/* DOB */}
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                {editing ? (
+                  <InlineRow label={t("appointments.dob")}>
+                    <Input type="date" className="h-7 text-sm" value={form.dob} onChange={(e) => set("dob", e.target.value)} />
+                  </InlineRow>
+                ) : (
+                  <Field label={t("appointments.dob")} value={
+                    (a.patient as Record<string, unknown>)?.date_of_birth
+                      ? new Date((a.patient as Record<string, unknown>).date_of_birth as string).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
+                      : "—"
+                  } />
+                )}
+              </div>
 
-            {/* Interpreter Type */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <div className="space-y-1.5">
-                  <span className="text-muted-foreground">{t("appointments.type")}</span>
-                  <div className="flex gap-2">
-                    {certQualTypes.map((ty) => (
-                      <button key={ty.id} type="button" onClick={() => { set("type_id", ty.id); set("interpreter_type_required", ty.name.toLowerCase() as "certified" | "qualified"); }}
-                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.type_id === ty.id ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
-                        {ty.name}
+              {/* Agency */}
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                {editing ? (
+                  <InlineRow label={t("appointments.agency")}>
+                    <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => { if (v) { setPendingAgencyId(v); } else { set("agency_id", v); } }} placeholder={t("common.search")} />
+                  </InlineRow>
+                ) : (
+                  <Field label={t("appointments.agency")} value={
+                    (a.agency as Record<string, unknown>)?.id
+                      ? <button type="button" className="text-primary hover:underline font-medium text-left" onClick={() => navigate(`/agencies/${(a.agency as Record<string, unknown>).id}`)}>{(a.agency as Record<string, unknown>).name as string}</button>
+                      : "—"
+                  } />
+                )}
+              </div>
+
+              {/* PO Number */}
+              <div ref={poRef} className={`px-6 py-2.5 even:bg-muted/40 transition-colors duration-300 ${highlightPo ? "ring-2 ring-inset ring-destructive bg-destructive/5" : ""}`}>
+                {editing ? (
+                  <InlineRow label={t("appointments.po_number")}>
+                    <Input className="h-7 text-sm" value={form.po_number} onChange={(e) => set("po_number", e.target.value)} placeholder="—" />
+                  </InlineRow>
+                ) : (
+                  <Field label={t("appointments.po_number")} value={(a.po_number as string) ?? "—"} />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Interpreter Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("appointments.interpreter_details")}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm p-0 pb-2">
+              {/* Interpreter */}
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                {editing ? (
+                  <InlineRow label={t("appointments.interpreter")}>
+                    <div className="flex items-center gap-2">
+                      {(a.interpreter as Record<string, unknown>)?.name ? (
+                        <>
+                          <span className="font-bold text-sm">
+                            {(a.interpreter as Record<string, unknown>)?.name as string}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-destructive border-destructive hover:bg-destructive/10"
+                            onClick={() => setConfirmUnassign(true)}
+                          >
+                            <UserX className="h-3.5 w-3.5 mr-1" />
+                            {t("appointments.unassign")}
+                          </Button>
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{t("appointments.unassigned")} — {t("appointments.select_interpreters_below", { defaultValue: "use the card below to assign" })}</span>
+                      )}
+                    </div>
+                  </InlineRow>
+                ) : (
+                  <Field label={t("appointments.interpreter")} value={
+                    (a.interpreter as Record<string, unknown>)?.id ? (
+                      <button
+                        type="button"
+                        className="font-bold text-primary hover:underline text-left"
+                        onClick={() => navigate(`/interpreters/${(a.interpreter as Record<string, unknown>).id}`)}
+                      >
+                        {(a.interpreter as Record<string, unknown>).name as string}
                       </button>
-                    ))}
-                  </div>
+                    ) : (
+                      <span className="font-bold">{t("appointments.unassigned")}</span>
+                    )
+                  } />
+                )}
+              </div>
+
+              {/* Cert number */}
+              {a.interpreter && (a.interpreter as Record<string, unknown>).certificate_number && (
+                <div className="px-6 py-2.5 even:bg-muted/40">
+                  <Field label={t("appointments.cert_number")} value={(a.interpreter as Record<string, unknown>).certificate_number as string} />
                 </div>
-              ) : (
-                <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
               )}
-            </div>
 
-            {/* Appointment Type */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.appointment_type")}>
-                  <select
-                    className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                    value={form.appointment_type ?? ""}
-                    onChange={(e) => set("appointment_type", (e.target.value || null) as FormState["appointment_type"])}
-                  >
-                    <option value="">{t("common.select")}</option>
-                    <option value="in_person">{t("appointments.appointment_type_in_person")}</option>
-                    <option value="telemed">{t("appointments.appointment_type_telemed")}</option>
-                    <option value="qme">{t("appointments.appointment_type_qme")}</option>
-                    <option value="pt">{t("appointments.appointment_type_pt")}</option>
-                  </select>
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.appointment_type")} value={a.appointment_type ? t(`appointments.appointment_type_${a.appointment_type as string}`) : "—"} />
-              )}
-            </div>
+              {/* Interpreter B */}
+              <div className="px-6 py-2.5 even:bg-muted/40">
+                {editing ? (
+                  <InlineRow label={t("appointments.billing_interpreter")}>
+                    <AutocompleteInput
+                      options={allInterpreterList.map((i) => ({ value: i.name as string, label: i.name as string }))}
+                      value={form.billing_interpreter}
+                      onChange={(v) => set("billing_interpreter", v)}
+                      placeholder="—"
+                      freeText
+                    />
+                  </InlineRow>
+                ) : (
+                  <Field label={t("appointments.billing_interpreter")} value={(a.billing_interpreter as string) ?? "—"} />
+                )}
+              </div>
 
-            {/* Duration */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.duration")}>
-                  <DurationInput value={form.duration_minutes} onChange={(mins) => set("duration_minutes", mins)} className="h-7 text-sm" />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.duration")} value={formatDuration(a.duration_minutes as number)} />
-              )}
-            </div>
-
-            {/* Language */}
-            {showLanguage && (
+              {/* Interpreter Type */}
               <div className="px-6 py-2.5 even:bg-muted/40">
                 {editing ? (
                   <div className="space-y-1.5">
-                    <span className="text-muted-foreground">{t("appointments.language")}</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {LANGUAGES.map((lang) => (
-                        <button key={lang} type="button" onClick={() => set("language", lang)}
-                          className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.language === lang ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
-                          {lang}
+                    <span className="text-muted-foreground">{t("appointments.type")}</span>
+                    <div className="flex gap-2">
+                      {certQualTypes.map((ty) => (
+                        <button key={ty.id} type="button" onClick={() => { set("type_id", ty.id); set("interpreter_type_required", ty.name.toLowerCase() as "certified" | "qualified"); }}
+                          className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.type_id === ty.id ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
+                          {ty.name}
                         </button>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <Field label={t("appointments.language")} value={a.language as string} />
+                  <Field label={t("appointments.interpreter_type")} value={t(`interpreters.${a.interpreter_type_required as string}`, { defaultValue: a.interpreter_type_required as string })} />
                 )}
               </div>
-            )}
 
-            {/* Clinic */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.clinic")}>
-                  <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => { set("clinic_id", v); set("referring_physician", ""); }} placeholder={t("common.search")} />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.clinic")} value={
-                  (a.clinic as Record<string, unknown>)?.id
-                    ? <button type="button" className="text-primary hover:underline font-medium text-left" onClick={() => navigate(`/clinics/${(a.clinic as Record<string, unknown>).id}`)}>{(a.clinic as Record<string, unknown>).name as string}</button>
-                    : "—"
-                } />
-              )}
-            </div>
-
-            {/* Clinic / Patient Confirmed toggle */}
-            {!editing && (
-              <div className="px-6 py-2.5 even:bg-muted/40">
-                <ClinicConfirmedToggle appointmentId={a.id as string} confirmed={a.clinic_confirmed as boolean ?? false} label={t("appointments.clinic_confirmed")} />
-              </div>
-            )}
-
-            {/* Clinic phone */}
-            {!editing && (
-              <div className="px-6 py-2.5 even:bg-muted/40">
-                <Field label={t("appointments.clinic_phone")} value={<PhoneLink phone={(a.clinic as Record<string, unknown>)?.phone as string} />} />
-              </div>
-            )}
-
-            {/* Agency */}
-            <div className="px-6 py-2.5 even:bg-muted/40">
-              {editing ? (
-                <InlineRow label={t("appointments.agency")}>
-                  <AutocompleteInput options={agencyOptions} value={form.agency_id} onChange={(v) => { if (v) { setPendingAgencyId(v); } else { set("agency_id", v); } }} placeholder={t("common.search")} />
-                </InlineRow>
-              ) : (
-                <Field label={t("appointments.agency")} value={
-                  (a.agency as Record<string, unknown>)?.id
-                    ? <button type="button" className="text-primary hover:underline font-medium text-left" onClick={() => navigate(`/agencies/${(a.agency as Record<string, unknown>).id}`)}>{(a.agency as Record<string, unknown>).name as string}</button>
-                    : "—"
-                } />
-              )}
-            </div>
-
-            {/* Provider */}
-            {(editing || a.referring_physician) && (
+              {/* Status */}
               <div className="px-6 py-2.5 even:bg-muted/40">
                 {editing ? (
-                  <InlineRow label={t("appointments.provider")}>
-                    <AutocompleteInput options={providerOptions} value={form.referring_physician} onChange={(v) => set("referring_physician", v)} placeholder={t("common.search")} freeText />
+                  <InlineRow label={t("appointments.status")} wide>
+                    <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                      <SelectTrigger className="h-7 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          "unassigned", "pending_offer", "accepted", "in_progress", "completed",
+                          "cancelled", "late_cancellation", "no_show", "rescheduled",
+                          "double_booking", "pt_speaks_eng", "dr_speaks_es",
+                        ].map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {t(`appointment.status.${s}`, { defaultValue: s.replace(/_/g, " ") })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </InlineRow>
                 ) : (
-                  <Field label={t("appointments.provider")} value={a.referring_physician as string} />
+                  <Field label={t("appointments.status")} value={<StatusBadge status={a.status as string} />} />
                 )}
               </div>
-            )}
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Pre-auth rate */}
-            {editing && (
-              <div className="px-6 py-2.5 even:bg-muted/40">
-                <InlineRow label={t("settings.interpreter_rates")}>
-                  <select
-                    className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                    value={form.pre_auth_amount}
-                    onChange={(e) => set("pre_auth_amount", parseFloat(e.target.value) || 0)}
-                  >
-                    <option value="">{t("common.select")}</option>
-                    {interpreterRates.map((r) => (
-                      <option key={r.id} value={r.amount}>{r.title} — ${r.amount.toFixed(2)}</option>
-                    ))}
-                  </select>
-                </InlineRow>
-              </div>
-            )}
-
-            {/* Pre-auth mileage */}
-            {editing && (
-              <div className="px-6 py-2.5 even:bg-muted/40">
-                <InlineRow label={t("appointments.pre_auth_mileage")}>
-                  <Input type="number" step="0.1" min={0} className="h-7 text-sm" value={form.pre_auth_mileage} onChange={(e) => set("pre_auth_mileage", Number(e.target.value))} />
-                </InlineRow>
-              </div>
-            )}
-
-          </CardContent>
-        </Card>
-
+        {/* ── RIGHT COLUMN ── */}
         <div className="space-y-6">
-          <LocationCard clinic={a.clinic as Record<string, unknown>} physician={a.referring_physician as string | null} />
+          {/* Appointment (location + scheduling) */}
+          <AppointmentCard
+            clinic={a.clinic as Record<string, unknown>}
+            appointment={a}
+            editing={editing}
+            form={form}
+            set={set}
+            showLanguage={showLanguage}
+            clinicOptions={clinicOptions}
+            providerOptions={providerOptions}
+            tz={tz}
+            navigate={navigate}
+            t={t}
+          />
           <BillingCard appointmentId={id!} appointment={a} editing={editing} />
         </div>
 
@@ -1266,8 +1152,31 @@ function BillingCard({ appointmentId, appointment, editing }: { appointmentId: s
   );
 }
 
-function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; physician: string | null }) {
-  const { t } = useTranslation();
+function AppointmentCard({
+  clinic,
+  appointment: a,
+  editing,
+  form,
+  set,
+  showLanguage,
+  clinicOptions,
+  providerOptions,
+  tz,
+  navigate,
+  t,
+}: {
+  clinic: Record<string, unknown>;
+  appointment: Record<string, unknown>;
+  editing: boolean;
+  form: FormState;
+  set: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  showLanguage: boolean;
+  clinicOptions: Array<{ value: string; label: string }>;
+  providerOptions: Array<{ value: string; label: string }>;
+  tz: string;
+  navigate: (path: string) => void;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}) {
   const address = clinic?.address as string | null;
   const parking = clinic?.parking as string | null;
   const clinicName = clinic?.name as string;
@@ -1277,41 +1186,138 @@ function LocationCard({ clinic, physician }: { clinic: Record<string, unknown>; 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
-        <CardTitle>{t("appointments.location")}</CardTitle>
+        <CardTitle>{t("appointments.appointment")}</CardTitle>
         {mapsUrl && (
           <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
             <ExternalLink className="h-4 w-4" />
           </a>
         )}
       </CardHeader>
-      <CardContent className="space-y-2 px-4 pb-4">
-        {embedUrl ? (
-          <div className="overflow-hidden rounded-md border">
-            <iframe src={embedUrl} width="100%" height="130" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
+      <CardContent className="px-4 pb-4 space-y-4">
+        {/* Map + clinic info on right, scheduling on left */}
+        <div className="flex gap-4">
+          {/* Left: scheduling fields */}
+          <div className="flex-1 text-sm space-y-3">
+            {/* Date/Time */}
+            {editing ? (
+              <InlineRow label={t("appointments.date_time")} wide>
+                <DateTimePicker value={form.date_time} onChange={(v) => set("date_time", v)} />
+              </InlineRow>
+            ) : (
+              <Field label={t("appointments.date_time")} value={formatInTz(a.date_time as string, { dateStyle: "medium", timeStyle: "short" }, tz)} />
+            )}
+
+            {/* Duration */}
+            {editing ? (
+              <InlineRow label={t("appointments.duration")}>
+                <DurationInput value={form.duration_minutes} onChange={(mins) => set("duration_minutes", mins)} className="h-7 text-sm" />
+              </InlineRow>
+            ) : (
+              <Field label={t("appointments.duration")} value={formatDuration(a.duration_minutes as number)} />
+            )}
+
+            {/* Appointment Type */}
+            {editing ? (
+              <InlineRow label={t("appointments.appointment_type")}>
+                <select
+                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  value={form.appointment_type ?? ""}
+                  onChange={(e) => set("appointment_type", (e.target.value || null) as FormState["appointment_type"])}
+                >
+                  <option value="">{t("common.select")}</option>
+                  <option value="in_person">{t("appointments.appointment_type_in_person")}</option>
+                  <option value="telemed">{t("appointments.appointment_type_telemed")}</option>
+                  <option value="qme">{t("appointments.appointment_type_qme")}</option>
+                  <option value="pt">{t("appointments.appointment_type_pt")}</option>
+                </select>
+              </InlineRow>
+            ) : (
+              <Field label={t("appointments.appointment_type")} value={a.appointment_type ? t(`appointments.appointment_type_${a.appointment_type as string}`) : "—"} />
+            )}
           </div>
-        ) : (
-          <div className="flex h-16 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
-            {t("appointments.no_address")}
-          </div>
-        )}
-        <div className="space-y-1 text-sm">
-          {physician && <p className="font-semibold">{physician}</p>}
-          <p className="font-semibold">{clinicName}</p>
-          {address && (
-            <div className="flex gap-1.5 text-muted-foreground">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span className="leading-snug">
-                {formatUSAddress(address).map((line, i) => (
-                  <span key={i} className="block">{line}</span>
-                ))}
-              </span>
+
+          {/* Right: map + clinic info */}
+          <div className="w-48 shrink-0 space-y-2">
+            {embedUrl ? (
+              <div className="overflow-hidden rounded-md border">
+                <iframe src={embedUrl} width="100%" height="100" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
+              </div>
+            ) : (
+              <div className="flex h-16 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
+                {t("appointments.no_address")}
+              </div>
+            )}
+            <div className="space-y-0.5 text-xs">
+              <p className="font-semibold text-sm">{clinicName}</p>
+              {address && (
+                <div className="flex gap-1 text-muted-foreground">
+                  <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span className="leading-snug">
+                    {formatUSAddress(address).map((line, i) => (
+                      <span key={i} className="block">{line}</span>
+                    ))}
+                  </span>
+                </div>
+              )}
+              {(clinic?.phone as string) && (
+                <div className="text-muted-foreground">
+                  <PhoneLink phone={clinic.phone as string} />
+                </div>
+              )}
             </div>
+          </div>
+        </div>
+
+        <div className="border-t" />
+
+        {/* Additional appointment fields */}
+        <div className="text-sm space-y-3">
+          {/* Language */}
+          {showLanguage && (
+            editing ? (
+              <div className="space-y-1.5">
+                <span className="text-muted-foreground">{t("appointments.language")}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {LANGUAGES.map((lang) => (
+                    <button key={lang} type="button" onClick={() => set("language", lang)}
+                      className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${form.language === lang ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"}`}>
+                      {lang}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Field label={t("appointments.language")} value={a.language as string} />
+            )
           )}
-          {parking && (
+
+          {/* Clinic (edit mode) */}
+          {editing && (
+            <InlineRow label={t("appointments.clinic")}>
+              <AutocompleteInput options={clinicOptions} value={form.clinic_id} onChange={(v) => { set("clinic_id", v); set("referring_physician", ""); }} placeholder={t("common.search")} />
+            </InlineRow>
+          )}
+
+          {/* Clinic / Patient Confirmed toggle */}
+          {!editing && (
+            <ClinicConfirmedToggle appointmentId={a.id as string} confirmed={a.clinic_confirmed as boolean ?? false} label={t("appointments.clinic_confirmed")} />
+          )}
+
+          {/* Parking */}
+          {!editing && parking && (
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <ParkingCircle className="h-3.5 w-3.5 shrink-0" />
               <p>{parking}</p>
             </div>
+          )}
+
+          {/* Provider */}
+          {editing ? (
+            <InlineRow label={t("appointments.provider")}>
+              <AutocompleteInput options={providerOptions} value={form.referring_physician} onChange={(v) => set("referring_physician", v)} placeholder={t("common.search")} freeText />
+            </InlineRow>
+          ) : (
+            <Field label={t("appointments.provider")} value={(a.referring_physician as string) || "—"} />
           )}
         </div>
       </CardContent>
