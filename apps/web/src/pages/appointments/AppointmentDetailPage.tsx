@@ -1175,9 +1175,9 @@ function BillingCard({ appointmentId, appointment, editing }: { appointmentId: s
   }, []);
 
   const statusColorClass =
-    currentStatus === "Paid" ? "text-green-700 font-medium" :
-    currentStatus === "Lost" ? "text-red-700 font-medium" :
-    "";
+    currentStatus === "Paid" ? "text-green-700 font-bold" :
+    currentStatus === "Lost" ? "text-red-700 font-bold" :
+    "font-bold";
 
   return (
     <Card>
