@@ -458,10 +458,10 @@ export function AppointmentDetailPage() {
               )}
             </div>
 
-            {/* Cert number — only for certified appointments with an assigned interpreter */}
-            {(a.interpreter_type_required as string) === "certified" && a.interpreter && (
+            {/* Cert number — show when the assigned interpreter has one */}
+            {a.interpreter && (a.interpreter as Record<string, unknown>).certificate_number && (
               <div className="px-6 py-2.5 even:bg-muted/40">
-                <Field label={t("appointments.cert_number")} value={((a.interpreter as Record<string, unknown>).certificate_number as string) || "—"} />
+                <Field label={t("appointments.cert_number")} value={(a.interpreter as Record<string, unknown>).certificate_number as string} />
               </div>
             )}
 
