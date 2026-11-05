@@ -1194,10 +1194,21 @@ function AppointmentCard({
         )}
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
-        {/* Map + clinic info on right, scheduling on left */}
-        <div className="flex gap-4">
+        {/* Map — full width at top */}
+        {embedUrl ? (
+          <div className="overflow-hidden rounded-md border">
+            <iframe src={embedUrl} width="100%" height="160" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
+          </div>
+        ) : (
+          <div className="flex h-16 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
+            {t("appointments.no_address")}
+          </div>
+        )}
+
+        {/* Two columns below the map */}
+        <div className="flex gap-6 text-sm">
           {/* Left: scheduling fields */}
-          <div className="flex-1 text-sm space-y-3">
+          <div className="flex-1 space-y-3">
             {/* Date/Time */}
             {editing ? (
               <InlineRow label={t("appointments.date_time")} wide>
@@ -1236,35 +1247,24 @@ function AppointmentCard({
             )}
           </div>
 
-          {/* Right: map + clinic info */}
-          <div className="w-48 shrink-0 space-y-2">
-            {embedUrl ? (
-              <div className="overflow-hidden rounded-md border">
-                <iframe src={embedUrl} width="100%" height="100" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={clinicName} />
-              </div>
-            ) : (
-              <div className="flex h-16 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
-                {t("appointments.no_address")}
+          {/* Right: clinic info */}
+          <div className="flex-1 space-y-1.5">
+            <p className="font-semibold">{clinicName}</p>
+            {address && (
+              <div className="flex gap-1.5 text-muted-foreground">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="leading-snug">
+                  {formatUSAddress(address).map((line, i) => (
+                    <span key={i} className="block">{line}</span>
+                  ))}
+                </span>
               </div>
             )}
-            <div className="space-y-0.5 text-xs">
-              <p className="font-semibold text-sm">{clinicName}</p>
-              {address && (
-                <div className="flex gap-1 text-muted-foreground">
-                  <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
-                  <span className="leading-snug">
-                    {formatUSAddress(address).map((line, i) => (
-                      <span key={i} className="block">{line}</span>
-                    ))}
-                  </span>
-                </div>
-              )}
-              {(clinic?.phone as string) && (
-                <div className="text-muted-foreground">
-                  <PhoneLink phone={clinic.phone as string} />
-                </div>
-              )}
-            </div>
+            {(clinic?.phone as string) && (
+              <div className="text-muted-foreground">
+                <PhoneLink phone={clinic.phone as string} />
+              </div>
+            )}
           </div>
         </div>
 
