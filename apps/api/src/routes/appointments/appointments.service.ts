@@ -143,6 +143,7 @@ export async function getAppointment(id: string, organizationId: string, prisma:
     include: {
       type: true,
       interpreter: { select: { id: true, name: true, certificate_number: true } },
+      interpreter_b: { select: { id: true, name: true, certificate_number: true } },
       clinic: { select: { id: true, name: true, address: true, parking: true, phone: true } },
       agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true, date_of_birth: true } },
@@ -233,6 +234,7 @@ export async function createAppointment(
       pre_auth_mileage: body.pre_auth_mileage,
       po_number: body.po_number ?? null,
       billing_interpreter: body.billing_interpreter ?? null,
+      interpreter_b_id: body.interpreter_b_id ?? null,
       status: "unassigned",
       source: "manual",
     },
@@ -276,6 +278,7 @@ export async function updateAppointment(
       ...(body.department !== undefined ? { department: body.department } : {}),
       ...(body.po_number !== undefined ? { po_number: body.po_number || null } : {}),
       ...(body.billing_interpreter !== undefined ? { billing_interpreter: body.billing_interpreter || null } : {}),
+      ...(body.interpreter_b_id !== undefined ? { interpreter_b_id: body.interpreter_b_id || null } : {}),
       ...(body.pre_auth_amount !== undefined ? { pre_auth_amount: body.pre_auth_amount } : {}),
       ...(body.pre_auth_mileage !== undefined ? { pre_auth_mileage: body.pre_auth_mileage } : {}),
       ...(body.status ? { status: body.status } : {}),
@@ -303,6 +306,7 @@ export async function updateAppointment(
     pre_auth_mileage: "Pre-Auth Mileage",
     po_number: "PO Number",
     billing_interpreter: "Billing Interpreter",
+    interpreter_b_id: "Interpreter B",
   };
 
   if (body.status && body.status !== appt!.status) {
@@ -328,6 +332,7 @@ export async function updateAppointment(
     if (body.pre_auth_mileage !== undefined && body.pre_auth_mileage !== appt!.pre_auth_mileage) changed.push(FIELD_LABELS.pre_auth_mileage);
     if (body.po_number !== undefined && (body.po_number ?? null) !== appt!.po_number) changed.push(FIELD_LABELS.po_number);
     if (body.billing_interpreter !== undefined && (body.billing_interpreter ?? null) !== appt!.billing_interpreter) changed.push(FIELD_LABELS.billing_interpreter);
+    if (body.interpreter_b_id !== undefined && (body.interpreter_b_id ?? null) !== appt!.interpreter_b_id) changed.push(FIELD_LABELS.interpreter_b_id);
     await logActivity(id, organizationId, "updated", actor.name, actor.id, changed.length ? changed.join(", ") : null, prisma, updated.patient?.name, updated.po_number);
   }
   return updated;

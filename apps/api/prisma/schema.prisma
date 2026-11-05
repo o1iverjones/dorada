@@ -192,6 +192,7 @@ model Interpreter {
   clinics_not_allowed ClinicInterpreterBlock[]
   offers              AppointmentOffer[]
   appointments        Appointment[]           @relation("AssignedInterpreter")
+  appointments_as_b   Appointment[]           @relation("InterpreterB")
   refresh_tokens      RefreshToken[]
   sent_messages       Message[]               @relation("SentByInterpreter")
   follow_up_responses FollowUpResponse[]
@@ -499,6 +500,7 @@ model Appointment {
   pre_auth_mileage           Int       @default(0)
   po_number                  String?
   billing_interpreter        String?
+  interpreter_b_id           String?
   source                     String    @default("manual")
   clock_in_time              DateTime?
   clock_in_lat               Float?
@@ -519,6 +521,7 @@ model Appointment {
   organization       Organization       @relation(fields: [organization_id], references: [id])
   type               AppointmentType    @relation(fields: [type_id], references: [id])
   interpreter        Interpreter?       @relation("AssignedInterpreter", fields: [interpreter_id], references: [id])
+  interpreter_b      Interpreter?       @relation("InterpreterB", fields: [interpreter_b_id], references: [id])
   clinic             Clinic             @relation(fields: [clinic_id], references: [id])
   agency   Agency    @relation(fields: [agency_id], references: [id])
   patient            Patient            @relation(fields: [patient_id], references: [id])
@@ -536,6 +539,7 @@ model Appointment {
   @@index([organization_id, date_time])
   @@index([organization_id, status])
   @@index([interpreter_id, date_time])
+  @@index([interpreter_b_id])
   @@index([clinic_id])
   @@index([patient_id])
   @@index([agency_id])

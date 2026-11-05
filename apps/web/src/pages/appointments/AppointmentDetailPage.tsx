@@ -45,6 +45,7 @@ type FormState = {
   referring_physician: string;
   po_number: string;
   billing_interpreter: string;
+  interpreter_b_id: string;
   pre_auth_amount: number;
   pre_auth_mileage: number;
   dob: string; // "YYYY-MM-DD" or ""
@@ -199,6 +200,7 @@ export function AppointmentDetailPage() {
       referring_physician: a!.referring_physician as string ?? "",
       po_number: a!.po_number as string ?? "",
       billing_interpreter: a!.billing_interpreter as string ?? "",
+      interpreter_b_id: (a!.interpreter_b_id as string) ?? "",
       pre_auth_amount: Number(a!.pre_auth_amount ?? 0),
       pre_auth_mileage: Number(a!.pre_auth_mileage ?? 0),
       dob: ((a!.patient as Record<string, unknown>)?.date_of_birth as string | null)?.slice(0, 10) ?? "",
@@ -225,7 +227,10 @@ export function AppointmentDetailPage() {
         ...(form.patient_id ? { patient_id: form.patient_id } : {}),
         referring_physician: form.referring_physician || undefined,
         po_number: form.po_number || undefined,
-        billing_interpreter: form.billing_interpreter || null,
+        billing_interpreter: form.interpreter_b_id
+          ? ((allInterpreterList.find((i) => i.id === form.interpreter_b_id)?.name as string) ?? (form.billing_interpreter || null))
+          : null,
+        interpreter_b_id: form.interpreter_b_id || null,
         pre_auth_amount: form.pre_auth_amount,
         pre_auth_mileage: Math.round(form.pre_auth_mileage),
         ...(form.status !== (a!.status as string) ? { status: form.status as import("@dorada/types").AppointmentStatus } : {}),
@@ -456,17 +461,25 @@ export function AppointmentDetailPage() {
                 {editing ? (
                   <InlineRow label={t("appointments.billing_interpreter")}>
                     <AutocompleteInput
-                      options={allInterpreterList.map((i) => ({ value: i.name as string, label: i.name as string }))}
-                      value={form.billing_interpreter}
-                      onChange={(v) => set("billing_interpreter", v)}
+                      options={allInterpreterList.map((i) => ({ value: i.id as string, label: i.name as string }))}
+                      value={form.interpreter_b_id}
+                      onChange={(v) => set("interpreter_b_id", v)}
                       placeholder="—"
-                      freeText
                     />
                   </InlineRow>
                 ) : (
-                  <Field label={t("appointments.billing_interpreter")} value={(a.billing_interpreter as string) ?? "—"} />
+                  <Field label={t("appointments.billing_interpreter")} value={
+                    (a.interpreter_b as Record<string, unknown>)?.name as string ?? (a.billing_interpreter as string) ?? "—"
+                  } />
                 )}
               </div>
+
+              {/* Interpreter B Cert number */}
+              {(a.interpreter_b as Record<string, unknown>)?.certificate_number && (
+                <div className="px-6 py-2.5 even:bg-muted/40">
+                  <Field label={t("appointments.cert_number")} value={(a.interpreter_b as Record<string, unknown>).certificate_number as string} />
+                </div>
+              )}
 
               {/* Interpreter Type */}
               <div className="px-6 py-2.5 even:bg-muted/40">

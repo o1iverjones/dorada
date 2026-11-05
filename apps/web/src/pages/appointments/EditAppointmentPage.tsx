@@ -39,6 +39,7 @@ const schema = z.object({
   referring_physician: z.string().optional(),
   po_number: z.string().optional(),
   billing_interpreter: z.string().optional(),
+  interpreter_b_id: z.string().optional(),
   pre_auth_amount: z.coerce.number().default(0),
   pre_auth_mileage: z.coerce.number().default(0),
 });
@@ -82,8 +83,9 @@ export function EditAppointmentPage() {
   const patientOptions = ((patients?.data ?? []) as Array<{ id: string; name: string }>).map((p) => ({ value: p.id, label: p.name }));
   const providerOptions = ((clinicDoctors ?? []) as Array<{ id: string; name: string }>)
     .map((d) => ({ value: d.name, label: d.name }));
-  const interpreterOptions = ((interpreters?.data ?? []) as Array<{ id: string; name: string }>)
-    .map((i) => ({ value: i.name, label: i.name }));
+  const interpreterList = (interpreters?.data ?? []) as Array<{ id: string; name: string }>;
+  const interpreterOptions = interpreterList.map((i) => ({ value: i.name, label: i.name }));
+  const interpreterIdOptions = interpreterList.map((i) => ({ value: i.id, label: i.name }));
 
   const { register, control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -109,6 +111,7 @@ export function EditAppointmentPage() {
       referring_physician: (a.referring_physician as string) ?? "",
       po_number: (a.po_number as string) ?? "",
       billing_interpreter: (a.billing_interpreter as string) ?? "",
+      interpreter_b_id: (a.interpreter_b_id as string) ?? "",
       pre_auth_amount: a.pre_auth_amount as number,
       pre_auth_mileage: a.pre_auth_mileage as number,
     });
@@ -124,6 +127,7 @@ export function EditAppointmentPage() {
         referring_physician: data.referring_physician || undefined,
         po_number: data.po_number || undefined,
         billing_interpreter: data.billing_interpreter || null,
+        interpreter_b_id: data.interpreter_b_id || null,
       });
       toast({ title: t("appointments.updated") });
       navigate(`/appointments/${id}`);
@@ -257,14 +261,13 @@ export function EditAppointmentPage() {
               <Input {...register("po_number")} placeholder="—" />
             </FormField>
 
-            <FormField label={t("appointments.billing_interpreter")} error={errors.billing_interpreter?.message}>
-              <Controller name="billing_interpreter" control={control} render={({ field }) => (
+            <FormField label={t("appointments.billing_interpreter")} error={errors.interpreter_b_id?.message}>
+              <Controller name="interpreter_b_id" control={control} render={({ field }) => (
                 <AutocompleteInput
-                  options={interpreterOptions}
+                  options={interpreterIdOptions}
                   value={field.value ?? ""}
                   onChange={field.onChange}
                   placeholder="—"
-                  freeText
                 />
               )} />
             </FormField>

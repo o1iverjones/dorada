@@ -24,7 +24,7 @@ export const AppointmentSchema = z.object({
   type: z.object({ id: UuidSchema, name: z.string() }),
   language: z.string(),
   interpreter_type_required: InterpreterTypeSchema,
-  interpreter: z.object({ id: UuidSchema, name: z.string() }).nullable(),
+  interpreter: z.object({ id: UuidSchema, name: z.string(), certificate_number: z.string().nullable().optional() }).nullable(),
   clinic: z.object({ id: UuidSchema, name: z.string(), address: z.string().nullable().optional(), parking: z.string().nullable().optional() }),
   agency: z.object({ id: UuidSchema, name: z.string() }),
   patient: z.object({ id: UuidSchema, name: z.string(), mrn: z.string(), date_of_birth: z.string().nullable().optional() }),
@@ -34,6 +34,8 @@ export const AppointmentSchema = z.object({
   pre_auth_mileage: z.number().int().nonnegative(),
   po_number: z.string().nullable(),
   billing_interpreter: z.string().nullable(),
+  interpreter_b_id: z.string().uuid().nullable().optional(),
+  interpreter_b: z.object({ id: UuidSchema, name: z.string(), certificate_number: z.string().nullable().optional() }).nullable().optional(),
   source: z.enum(["manual", "email_intake", "follow_up"]),
   clock_in: z.string().datetime().nullable(),
   clock_out: z.string().datetime().nullable(),
@@ -59,6 +61,7 @@ export const CreateAppointmentBodySchema = z.object({
   pre_auth_mileage: z.coerce.number().int().nonnegative(),
   po_number: z.string().max(100).optional(),
   billing_interpreter: z.string().max(255).nullish(),
+  interpreter_b_id: z.string().uuid().nullish(),
 });
 
 export const UpdateAppointmentBodySchema = CreateAppointmentBodySchema.partial().extend({
