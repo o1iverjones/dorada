@@ -47,7 +47,7 @@ export function ReportsPage() {
   const { data: job } = useReportJob(pendingJobId ?? "");
   const { data: jobHistory } = useReportJobs();
   const { data: interpreters } = useInterpreters({ limit: "100" });
-  const { data: agencies } = useAgencies();
+  const { data: agencies } = useAgencies({ limit: "500" });
 
   const interpreterMap: Record<string, string> = Object.fromEntries(
     ((interpreters?.data ?? []) as Array<{ id: string; name: string }>).map((i) => [i.id, i.name])
