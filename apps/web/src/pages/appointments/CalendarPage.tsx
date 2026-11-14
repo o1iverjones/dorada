@@ -271,6 +271,17 @@ export function CalendarPage() {
     return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
   }
 
+  function interpreterLabel(a: Record<string, unknown>): string {
+    const name = (a.interpreter as Record<string, unknown>)?.name as string | null ?? null;
+    if (name) return name;
+    const offers = (a.offers as Array<{ interpreter: { name: string } }>) ?? [];
+    if (offers.length > 0) {
+      const names = offers.map((o) => o.interpreter.name).join(", ");
+      return `${t("appointments.offered")} - ${names}`;
+    }
+    return t("appointments.unassigned");
+  }
+
   function ApptPill({ a }: { a: Record<string, unknown> }) {
     return (
       <button
@@ -313,7 +324,7 @@ export function CalendarPage() {
         {agencyName && <p className="text-xs leading-tight truncate opacity-75">{agencyName}</p>}
         {physician && <p className="text-xs leading-tight truncate opacity-75">{physician}</p>}
         <p className="text-xs leading-tight truncate opacity-75 italic">
-          {interpreterName ?? t("appointments.unassigned")}
+          {interpreterLabel(a)}
         </p>
       </button>
     );
@@ -356,7 +367,7 @@ export function CalendarPage() {
         <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
           {showLanguage && language && <DayRow label={t("appointments.language")} value={language} />}
           {interpType && <DayRow label={t("appointments.interpreter_type")} value={interpType} />}
-          <DayRow label={t("appointments.interpreter")} value={interpreterName ?? t("appointments.unassigned")} italic={!interpreterName} bold />
+          <DayRow label={t("appointments.interpreter")} value={interpreterLabel(a)} italic={!interpreterName} bold />
           {clinicName && <DayRow label={t("appointments.clinic")} value={clinicName} />}
           {agencyName && <DayRow label={t("appointments.agency")} value={agencyName} bold />}
           {physician && <DayRow label={t("appointments.provider")} value={physician} />}
