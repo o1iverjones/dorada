@@ -1,25 +1,40 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../ui/button.js";
 import { ImageIcon, X } from "lucide-react";
 import { useToast } from "../../hooks/use-toast.js";
 
-const SUGGESTIONS = [
-  "Agendada y Asignada",
-  "Autorizada",
-  "Call auto pendiente",
-  "Confirmada con pt",
-  "confirmada con la clinica",
-  "Email - Autorization pending",
-  "Follow up Tele-med",
-  "Invoiced",
-  "LC no follow up",
-  "LC no show",
-  "No f/u",
-  "NO ASIGNAR SIN AUTO",
-  "PRIVADO NO Follow up",
-  "Regresada por",
-  "Reported",
-  "Solicitada",
+const SUGGESTION_KEYS = [
+  "notes.scheduled_and_assigned",
+  "notes.authorized",
+  "notes.call_auth_pending",
+  "notes.confirmed_with_patient",
+  "notes.confirmed_with_clinic",
+  "notes.email_auth_pending",
+  "notes.follow_up_telemed",
+  "notes.invoiced",
+  "notes.lc_no_follow_up",
+  "notes.lc_no_show",
+  "notes.no_follow_up",
+  "notes.do_not_assign_without_auth",
+  "notes.private_no_follow_up",
+  "notes.returned_by",
+  "notes.reported",
+  "notes.requested",
+  "notes.double_booking",
+  "notes.paid",
+  "notes.texted_patient",
+  "notes.text_for_authorization",
+  "notes.call_for_authorization",
+  "notes.email_for_authorization",
+  "notes.cancelled_by_clinic",
+  "notes.cancelled_by_patient",
+  "notes.cancelled",
+  "notes.cancelled_by_agency",
+  "notes.telemed",
+  "notes.in_person",
+  "notes.in_person_but_telemed",
+  "notes.changed_time_waiting_order",
 ];
 
 interface NoteInputProps {
@@ -34,6 +49,7 @@ interface NoteInputProps {
 }
 
 export function NoteInput({ value, onChange, onSave, isSaving, onUploadImage, placeholder, maxLength = 800, saveLabel = "Save" }: NoteInputProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -44,9 +60,10 @@ export function NoteInput({ value, onChange, onSave, isSaving, onUploadImage, pl
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const suggestions = useMemo(() => SUGGESTION_KEYS.map((k) => t(k)), [t]);
   const matches = value.trim()
-    ? SUGGESTIONS.filter((s) => s.toLowerCase().includes(value.toLowerCase()))
-    : SUGGESTIONS;
+    ? suggestions.filter((s) => s.toLowerCase().includes(value.toLowerCase()))
+    : suggestions;
 
   const showDropdown = open && matches.length > 0;
 
