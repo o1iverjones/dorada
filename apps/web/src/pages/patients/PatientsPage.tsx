@@ -57,7 +57,7 @@ export function PatientsPage() {
           {r.name as string}
           {r.is_active === false && (
             <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#fee2e2", color: "#b91c1c" }}>
-              {t("status.inactive")}
+              {t("common.inactive")}
             </span>
           )}
         </span>
