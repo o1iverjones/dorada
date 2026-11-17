@@ -596,9 +596,16 @@ export function AppointmentDetailPage() {
                         : "bg-yellow-50 border-yellow-300"
                     }`}
                   >
-                    <span className={`font-medium ${isDeclined ? "text-muted-foreground line-through" : "text-yellow-900"}`}>
-                      {(o.interpreter as Record<string, unknown>)?.name as string}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium ${isDeclined ? "text-muted-foreground line-through" : "text-yellow-900"}`}>
+                        {(o.interpreter as Record<string, unknown>)?.name as string}
+                      </span>
+                      {o.message && (
+                        <span className="rounded bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800">
+                          {o.message as string}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3">
                       {isDeclined ? (
                         <span className="rounded-full bg-red-100 border border-red-300 px-2.5 py-0.5 text-xs font-semibold text-red-700">

@@ -678,6 +678,7 @@ model AppointmentOffer {
   offered_at     DateTime  @default(now())
   expires_at     DateTime?
   responded_at   DateTime?
+  message        String?
 
   appointment Appointment @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
   interpreter Interpreter @relation(fields: [interpreter_id], references: [id])

@@ -18,7 +18,7 @@ export default function AppointmentsScreen() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"upcoming" | "offers" | "history">("upcoming");
 
-  const { data: appts, isLoading: apptLoading, refetch: refetchAppts } = useMyAppointments({ status: "accepted,in_progress", limit: "30" });
+  const { data: appts, isLoading: apptLoading, refetch: refetchAppts } = useMyAppointments({ status: "accepted,in_progress,cancelled,late_cancellation", limit: "30" });
   const { data: offers, isLoading: offersLoading, refetch: refetchOffers } = useAppointmentOffers();
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useMyAppointments({ status: "completed", limit: "50" });
 
@@ -89,19 +89,27 @@ export default function AppointmentsScreen() {
 }
 
 function AppointmentCard({ item }: { item: Record<string, unknown> }) {
+  const { t } = useTranslation();
   const clinic = item.clinic as Record<string, unknown> | null;
   const patient = item.patient as Record<string, unknown> | null;
   const dt = new Date(item.date_time as string);
   const notes = (clinic?.interpreter_notes as Array<{ id: string; type: string }>) ?? [];
   const noteTypes = [...new Set(notes.map((n) => n.type))];
+  const isCancelled = item.status === "cancelled" || item.status === "late_cancellation";
   return (
-    <TouchableOpacity style={styles.card} onPress={() => { const id = item.id as string; if (id) router.navigate(`/appointment/${id}`); }}>
+    <TouchableOpacity style={[styles.card, isCancelled && styles.cardCancelled]} onPress={() => { const id = item.id as string; if (id) router.navigate(`/appointment/${id}`); }}>
+      {isCancelled && (
+        <View style={styles.cancelledBanner}>
+          <Ionicons name="close-circle" size={14} color="#dc2626" />
+          <Text style={styles.cancelledBannerText}>{t("appointments.cancelled")}</Text>
+        </View>
+      )}
       <View style={styles.cardHeader}>
         <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status as string] ?? C.completed }]} />
-        <Text style={styles.cardDate}>
+        <Text style={[styles.cardDate, isCancelled && styles.textCancelled]}>
           {dt.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}
         </Text>
-        <Text style={styles.cardTime}>
+        <Text style={[styles.cardTime, isCancelled && styles.textCancelled]}>
           {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </Text>
         {noteTypes.length > 0 && (
@@ -117,8 +125,8 @@ function AppointmentCard({ item }: { item: Record<string, unknown> }) {
           </View>
         )}
       </View>
-      <Text style={styles.cardPatient}>{patient?.name as string ?? "—"}</Text>
-      <Text style={styles.cardClinic}>{clinic?.name as string ?? "—"}</Text>
+      <Text style={[styles.cardPatient, isCancelled && styles.textCancelled]}>{patient?.name as string ?? "—"}</Text>
+      <Text style={[styles.cardClinic, isCancelled && styles.textCancelled]}>{clinic?.name as string ?? "—"}</Text>
       <Text style={styles.cardLang}>{item.language as string}</Text>
       <Ionicons name="chevron-forward" size={16} color={C.textMuted} style={styles.chevron} />
     </TouchableOpacity>
@@ -147,6 +155,12 @@ function OfferCard({ offer }: { offer: Record<string, unknown> }) {
 
   return (
     <View style={styles.offerCard}>
+      {offer.message && (
+        <View style={styles.offerMessageBanner}>
+          <Ionicons name="alert-circle" size={16} color="#b45309" />
+          <Text style={styles.offerMessageText}>{offer.message as string}</Text>
+        </View>
+      )}
       <Text style={styles.cardDate}>{new Date(offer.date_time as string).toLocaleString()}</Text>
       <Text style={styles.cardPatient}>{offer.clinic_name as string}</Text>
       <Text style={styles.cardClinic}>{offer.language as string} · {offer.interpreter_type_required as string}</Text>
@@ -174,6 +188,10 @@ const styles = StyleSheet.create({
   badge: { color: C.danger, fontWeight: "700" },
   list: { padding: 16, gap: 12 },
   card: { backgroundColor: C.surface, borderRadius: 12, padding: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  cardCancelled: { opacity: 0.7, borderWidth: 1, borderColor: "#fca5a5" },
+  cancelledBanner: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
+  cancelledBannerText: { fontSize: 12, fontWeight: "700", color: "#dc2626", textTransform: "uppercase", letterSpacing: 0.5 },
+  textCancelled: { textDecorationLine: "line-through", color: C.textMuted },
   offerCard: { backgroundColor: C.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: C.warningBorder },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
@@ -185,6 +203,8 @@ const styles = StyleSheet.create({
   cardLang: { fontSize: 12, color: C.textSubtle },
   chevron: { position: "absolute", right: 16, bottom: 16 },
   empty: { textAlign: "center", color: C.textSubtle, marginTop: 48, fontSize: 15 },
+  offerMessageBanner: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fef3c7", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8 },
+  offerMessageText: { fontSize: 13, fontWeight: "600", color: "#b45309" },
   offerActions: { flexDirection: "row", gap: 10, marginTop: 12 },
   actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 8, gap: 6 },
   confirmBtn: { backgroundColor: C.success },

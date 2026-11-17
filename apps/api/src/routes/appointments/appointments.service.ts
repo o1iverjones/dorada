@@ -116,7 +116,7 @@ export async function listAppointments(query: AppointmentListQuery, organization
       clinic: { select: { id: true, name: true } },
       agency: { select: { id: true, name: true } },
       patient: { select: { id: true, name: true } },
-      offers: { where: { status: "pending" }, select: { interpreter: { select: { id: true, name: true } } } },
+      offers: { where: { status: "pending" }, select: { message: true, interpreter: { select: { id: true, name: true } } } },
       invoice: { select: { id: true, status: true, billable_minutes: true } },
     },
   });
@@ -250,6 +250,82 @@ export async function createAppointment(
   return appt;
 }
 
+async function handleReofferOnChange(
+  oldAppt: { id: string; date_time: Date; clinic_id: string | null; interpreter_id: string | null; status: string; po_number: string | null },
+  body: UpdateAppointmentBody,
+  appointmentId: string,
+  organizationId: string,
+  actor: { id: string; name: string },
+  prisma: PrismaClient,
+): Promise<string | null> {
+  if (!oldAppt.interpreter_id) return null;
+  if (oldAppt.status !== "accepted" && oldAppt.status !== "in_progress") return null;
+
+  const dateTimeChanged = body.date_time !== undefined && new Date(body.date_time).toISOString() !== oldAppt.date_time.toISOString();
+  const clinicChanged = body.clinic_id !== undefined && body.clinic_id !== oldAppt.clinic_id;
+  if (!dateTimeChanged && !clinicChanged) return null;
+
+  const interpreterId = oldAppt.interpreter_id;
+
+  // Unassign interpreter and set status to pending_offer
+  await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { interpreter_id: null, status: "pending_offer" },
+  });
+
+  // Remove any existing offer for this interpreter (unique constraint)
+  await prisma.appointmentOffer.deleteMany({
+    where: { appointment_id: appointmentId, interpreter_id: interpreterId },
+  });
+
+  // Create a new offer with the "Appointment Time Changed" message
+  const settings = await prisma.systemSettings.findUnique({
+    where: { organization_id: organizationId },
+    select: { offer_expiry_default_minutes: true },
+  });
+  const expiryMinutes = settings?.offer_expiry_default_minutes ?? 60;
+  const expiresAt = new Date(Date.now() + expiryMinutes * 60_000);
+
+  await prisma.appointmentOffer.create({
+    data: {
+      appointment_id: appointmentId,
+      interpreter_id: interpreterId,
+      status: "pending",
+      expires_at: expiresAt,
+      message: "Appointment Time Changed",
+    },
+  });
+
+  await logActivity(appointmentId, organizationId, "re_offer_sent", actor.name, actor.id, `Re-offered due to schedule change`, prisma, null, oldAppt.po_number);
+
+  // Send push notifications
+  const interpreter = await prisma.interpreter.findUnique({
+    where: { id: interpreterId },
+    select: { fcm_token: true, web_push_subscription: true },
+  });
+
+  if (interpreter?.fcm_token?.startsWith("ExponentPushToken")) {
+    void sendExpoPushNotifications([{
+      to: interpreter.fcm_token,
+      title: "Appointment Time Changed",
+      body: "An appointment you were assigned to has been updated. Please review and confirm.",
+      data: { appointmentId, type: "offer" },
+      sound: "default" as const,
+      priority: "high" as const,
+    }]);
+  }
+
+  if (interpreter?.web_push_subscription) {
+    void sendWebPushNotification(interpreter.web_push_subscription, {
+      title: "Appointment Time Changed",
+      body: "An appointment you were assigned to has been updated. Please review and confirm.",
+      data: { type: "offer", appointmentId },
+    });
+  }
+
+  return interpreterId;
+}
+
 export async function updateAppointment(
   id: string,
   body: UpdateAppointmentBody,
@@ -335,7 +411,11 @@ export async function updateAppointment(
     if (body.interpreter_b_id !== undefined && (body.interpreter_b_id ?? null) !== appt!.interpreter_b_id) changed.push(FIELD_LABELS.interpreter_b_id);
     await logActivity(id, organizationId, "updated", actor.name, actor.id, changed.length ? changed.join(", ") : null, prisma, updated.patient?.name, updated.po_number);
   }
-  return updated;
+
+  // Re-offer to assigned interpreter when date/time/clinic changes
+  const reofferedInterpreter = await handleReofferOnChange(appt!, body, id, organizationId, actor, prisma);
+
+  return { ...updated, _reoffered_interpreter_id: reofferedInterpreter };
 }
 
 export async function patchClockTimes(
@@ -389,7 +469,13 @@ export async function patchClockTimes(
 }
 
 export async function cancelAppointment(id: string, organizationId: string, actor: { id: string; name: string }, prisma: PrismaClient) {
-  const appt = await prisma.appointment.findUnique({ where: { id }, include: { patient: { select: { name: true } } } });
+  const appt = await prisma.appointment.findUnique({
+    where: { id },
+    include: {
+      patient: { select: { name: true } },
+      clinic: { select: { name: true } },
+    },
+  });
   ensureTenant(appt, organizationId, "APPOINTMENT_NOT_FOUND");
   assertValidTransition(appt!.status, "cancelled");
 
@@ -401,6 +487,35 @@ export async function cancelAppointment(id: string, organizationId: string, acto
     }),
   ]);
   await logActivity(id, organizationId, "cancelled", actor.name, actor.id, null, prisma, appt!.patient?.name ?? null, appt!.po_number);
+
+  // Notify assigned interpreter about the cancellation
+  if (appt!.interpreter_id) {
+    const interpreter = await prisma.interpreter.findUnique({
+      where: { id: appt!.interpreter_id },
+      select: { fcm_token: true, web_push_subscription: true },
+    });
+    const apptDate = new Date(appt!.date_time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const clinicName = appt!.clinic?.name ?? "";
+    const bodyText = `Your appointment on ${apptDate}${clinicName ? ` at ${clinicName}` : ""} has been cancelled.`;
+
+    if (interpreter?.fcm_token?.startsWith("ExponentPushToken")) {
+      void sendExpoPushNotifications([{
+        to: interpreter.fcm_token,
+        title: "Appointment Cancelled",
+        body: bodyText,
+        data: { appointmentId: id, type: "cancellation" },
+        sound: "default" as const,
+        priority: "high" as const,
+      }]);
+    }
+    if (interpreter?.web_push_subscription) {
+      void sendWebPushNotification(interpreter.web_push_subscription, {
+        title: "Appointment Cancelled",
+        body: bodyText,
+        data: { type: "cancellation", appointmentId: id },
+      });
+    }
+  }
 }
 
 export async function reactivateAppointment(id: string, organizationId: string, actor: { id: string; name: string }, prisma: PrismaClient) {
@@ -975,6 +1090,7 @@ export async function getInterpreterOffers(interpreterId: string, prisma: Prisma
       offer_id: o.id,
       id: o.appointment_id,
       expires_at: o.expires_at,
+      message: o.message,
       date_time: o.appointment.date_time,
       duration_minutes: o.appointment.duration_minutes,
       pre_auth_amount: o.appointment.pre_auth_amount ? Number(o.appointment.pre_auth_amount) : null,

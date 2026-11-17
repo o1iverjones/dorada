@@ -15,13 +15,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "../../hooks/use-toast.js";
 import { Plus } from "lucide-react";
 
+const US_STATES: [string, string][] = [
+  ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],
+  ["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["FL","Florida"],["GA","Georgia"],
+  ["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],
+  ["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],
+  ["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],
+  ["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],
+  ["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],
+  ["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],
+  ["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],
+  ["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],
+  ["DC","District of Columbia"],
+];
+
 export function ClinicsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, isLoading } = useClinics({ limit: "300" });
   const create = useCreateClinic();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", address: "", phone: "", contact_name: "", contact_email: "" });
+  const [form, setForm] = useState({ name: "", address: "", city: "", state: "", zip_code: "", phone: "", contact_name: "", contact_email: "" });
   const [search, setSearch] = useState("");
 
   const allClinics = (data?.data ?? []) as Array<{ id: string; name: string; address?: string; is_active?: boolean } & Record<string, unknown>>;
@@ -51,6 +65,9 @@ export function ClinicsPage() {
         billing: { model: "hourly", hourly_rate: 0, flat_rate: null, invoice_cycle: "monthly" },
       };
       if (form.address) payload.address = form.address;
+      if (form.city) payload.city = form.city;
+      if (form.state) payload.state = form.state;
+      if (form.zip_code) payload.zip_code = form.zip_code;
       if (form.phone) payload.phone = form.phone;
       if (form.contact_name) {
         const contact: Record<string, string> = { name: form.contact_name };
@@ -123,20 +140,48 @@ export function ClinicsPage() {
           <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
             <DialogHeader><DialogTitle>{t("clinics.new")}</DialogTitle></DialogHeader>
             <div className="space-y-3 py-4">
-              {([
-                { key: "name", label: t("clinics.name") },
-                { key: "address", label: t("clinics.address") },
-                { key: "contact_name", label: t("clinics.primary_contact") },
-                { key: "contact_email", label: "Contact email" },
-              ] as const).map(({ key, label }) => (
-                <div key={key} className="space-y-1">
-                  <Label>{label}</Label>
-                  <Input value={form[key]} onChange={(e) => setForm(s => ({ ...s, [key]: e.target.value }))} />
+              <div className="space-y-1">
+                <Label>{t("clinics.name")}</Label>
+                <Input value={form.name} onChange={(e) => setForm(s => ({ ...s, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("clinics.address")}</Label>
+                <Input value={form.address} onChange={(e) => setForm(s => ({ ...s, address: e.target.value }))} placeholder="Street address" />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("clinics.city")}</Label>
+                <Input value={form.city} onChange={(e) => setForm(s => ({ ...s, city: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>{t("clinics.state")}</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={form.state}
+                    onChange={(e) => setForm(s => ({ ...s, state: e.target.value }))}
+                  >
+                    <option value="">—</option>
+                    {US_STATES.map(([abbr, name]) => (
+                      <option key={abbr} value={abbr}>{abbr} — {name}</option>
+                    ))}
+                  </select>
                 </div>
-              ))}
+                <div className="space-y-1">
+                  <Label>{t("clinics.zip_code")}</Label>
+                  <Input value={form.zip_code} onChange={(e) => setForm(s => ({ ...s, zip_code: e.target.value }))} placeholder="00000" />
+                </div>
+              </div>
               <div className="space-y-1">
                 <Label>{t("clinics.phone")}</Label>
                 <PhoneInput value={form.phone} onChange={(v) => setForm(s => ({ ...s, phone: v }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("clinics.primary_contact")}</Label>
+                <Input value={form.contact_name} onChange={(e) => setForm(s => ({ ...s, contact_name: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Contact email</Label>
+                <Input value={form.contact_email} onChange={(e) => setForm(s => ({ ...s, contact_email: e.target.value }))} />
               </div>
             </div>
             <DialogFooter>

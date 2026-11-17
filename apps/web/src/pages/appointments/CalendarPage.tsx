@@ -14,6 +14,34 @@ import { Button } from "../../components/ui/button.js";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, CalendarOff, CalendarDays } from "lucide-react";
 import { api } from "../../lib/api.js";
 
+function useStickyState(key: string, defaultValue: string): [string, (v: string) => void] {
+  const [value, setValue] = useState(() => {
+    try { return sessionStorage.getItem(key) ?? defaultValue; } catch { return defaultValue; }
+  });
+  const set = useCallback((v: string) => {
+    setValue(v);
+    try { sessionStorage.setItem(key, v); } catch { /* private browsing */ }
+  }, [key]);
+  return [value, set];
+}
+
+function useStickySetState(key: string): [Set<string>, (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => void] {
+  const [value, setValue] = useState<Set<string>>(() => {
+    try {
+      const stored = sessionStorage.getItem(key);
+      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
+  const set = useCallback((updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    setValue((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { sessionStorage.setItem(key, JSON.stringify([...next])); } catch { /* private browsing */ }
+      return next;
+    });
+  }, [key]);
+  return [value, set];
+}
+
 type View = "month" | "week" | "day";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -83,10 +111,10 @@ export function CalendarPage() {
     return new Date();
   });
   function changeDate(d: Date) { localStorage.setItem("dorada_calendar_date", d.toISOString()); setCurrentDate(d); }
-  const [interpreterFilter, setInterpreterFilter] = useState("");
-  const [clinicFilter, setClinicFilter] = useState("all");
-  const [agencyFilter, setAgencyFilter] = useState("all");
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [interpreterFilter, setInterpreterFilter] = useStickyState("dorada_cal_interpreter", "");
+  const [clinicFilter, setClinicFilter] = useStickyState("dorada_cal_clinic", "all");
+  const [agencyFilter, setAgencyFilter] = useStickyState("dorada_cal_agency", "all");
+  const [activeFilters, setActiveFilters] = useStickySetState("dorada_cal_active_filters");
   const [showBlocks, setShowBlocks] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [tooltip, setTooltip] = useState<{ appt: Record<string, unknown>; x: number; y: number } | null>(null);
@@ -250,12 +278,16 @@ export function CalendarPage() {
   function apptColorClass(a: Record<string, unknown>) {
     const status = a.status as string;
     const billingStatus = (a.billing_status as string) ?? "";
-    // Billing approved always renders green regardless of appointment status
+    // Unassigned/declined always use their status colour — billing status doesn't override
+    if (status === "unassigned" || status === "declined") {
+      return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
+    }
+    // Billing approved/paid renders green for active statuses
     if (billingStatus === "Approved" || billingStatus === "Paid") {
       return "bg-green-100 border-green-300 text-green-800";
     }
-    // Certain terminal/non-active statuses always use their status colour regardless of interpreter
-    if (status === "cancelled" || status === "completed" || status === "declined" || status === "unassigned") {
+    // Other terminal statuses use their status colour
+    if (status === "cancelled" || status === "completed") {
       return STATUS_COLORS[status] ?? "bg-muted border-gray-300";
     }
     const hasInterpreter = !!(a.interpreter as Record<string, unknown> | null)?.id;

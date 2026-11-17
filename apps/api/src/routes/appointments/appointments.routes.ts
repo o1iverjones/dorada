@@ -98,8 +98,10 @@ export default async function appointmentRoutes(fastify: FastifyInstance) {
     const payload = req.user as JwtPayload;
     const actor = await resolveActor(payload, fastify);
     const updated = await updateAppointment(id, body, payload.organization_id, actor, fastify.prisma);
-    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event: "updated" });
-    return reply.send(updated);
+    const event = updated._reoffered_interpreter_id ? "re_offered" : "updated";
+    fastify.io.to(`notify:${payload.organization_id}`).emit("appointment:updated", { appointmentId: id, event });
+    const { _reoffered_interpreter_id, ...response } = updated;
+    return reply.send(response);
   });
 
   // PATCH /appointments/:id/clock-times
