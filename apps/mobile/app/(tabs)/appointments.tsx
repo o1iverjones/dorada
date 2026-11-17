@@ -155,7 +155,7 @@ function OfferCard({ offer }: { offer: Record<string, unknown> }) {
 
   return (
     <View style={styles.offerCard}>
-      {offer.message && (
+      {!!(offer.message as string) && (
         <View style={styles.offerMessageBanner}>
           <Ionicons name="alert-circle" size={16} color="#b45309" />
           <Text style={styles.offerMessageText}>{offer.message as string}</Text>
