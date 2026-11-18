@@ -118,6 +118,7 @@ export function CalendarPage() {
   const [showBlocks, setShowBlocks] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [tooltip, setTooltip] = useState<{ appt: Record<string, unknown>; x: number; y: number } | null>(null);
+  const [morePopover, setMorePopover] = useState<{ appts: Record<string, unknown>[]; x: number; y: number } | null>(null);
 
   // Date picker popover
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -658,7 +659,15 @@ export function CalendarPage() {
                       <div className="space-y-0.5">
                         {dayAppts.slice(0, 3).map((a) => <ApptPill key={a.id as string} a={a} />)}
                         {dayAppts.length > 3 && (
-                          <p className="px-1 text-xs text-muted-foreground">+{dayAppts.length - 3} more</p>
+                          <p
+                            className="px-1 text-xs text-blue-600 hover:text-blue-800 cursor-pointer hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMorePopover({ appts: dayAppts, x: e.clientX, y: e.clientY });
+                            }}
+                          >
+                            +{dayAppts.length - 3} more
+                          </p>
                         )}
                         {dayBlocks.map((b) => <BlockPill key={b.id as string} b={b} />)}
                       </div>
@@ -720,6 +729,7 @@ export function CalendarPage() {
       )}
 
       {tooltip && <ApptTooltip appt={tooltip.appt} x={tooltip.x} y={tooltip.y} />}
+      {morePopover && <MorePopover appts={morePopover.appts} x={morePopover.x} y={morePopover.y} onClose={() => setMorePopover(null)} />}
     </div>
   );
 }
@@ -912,6 +922,60 @@ function JumpToDatePicker({
         </>
       )}
     </div>
+  );
+}
+
+function MorePopover({ appts, x, y, onClose }: { appts: Record<string, unknown>[]; x: number; y: number; onClose: () => void }) {
+  const { t } = useTranslation();
+  const tz = useOrgTimezone();
+  const navigate = useNavigate();
+
+  const flipLeft = x + 300 > window.innerWidth;
+  const flipUp = y + 400 > window.innerHeight;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        className="fixed z-50 w-72 max-h-80 overflow-y-auto rounded-lg border bg-popover shadow-lg text-sm"
+        style={{
+          left: flipLeft ? Math.max(8, x - 280) : x + 4,
+          top: flipUp ? Math.max(8, y - 360) : y + 4,
+        }}
+      >
+        <div className="border-b px-3 py-2 font-semibold text-xs text-muted-foreground">
+          {appts.length} {t("appointments.title").toLowerCase()}
+        </div>
+        <div className="divide-y">
+          {appts.map((a) => {
+            const dt = new Date(a.date_time as string);
+            const patientName = (a.patient as Record<string, unknown>)?.name as string ?? "—";
+            const clinicName = (a.clinic as Record<string, unknown>)?.name as string ?? "";
+            const interpreterName = (a.interpreter as Record<string, unknown>)?.name as string | null;
+            const status = String(a.status);
+            const isUnassigned = status === "unassigned" || status === "declined";
+            return (
+              <button
+                key={a.id as string}
+                className="w-full px-3 py-2 text-left hover:bg-accent/50 transition-colors"
+                onClick={() => { onClose(); navigate(`/appointments/${a.id}`); }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium">{formatInTz(dt, { hour: "2-digit", minute: "2-digit" }, tz)}</span>
+                  <span className="text-xs font-semibold truncate">{patientName}</span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {clinicName && <span className="text-[11px] text-muted-foreground truncate">{clinicName}</span>}
+                  <span className={`text-[11px] ml-auto shrink-0 ${isUnassigned ? "text-muted-foreground italic" : "text-foreground/70"}`}>
+                    {interpreterName ?? t("appointments.unassigned")}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
 
