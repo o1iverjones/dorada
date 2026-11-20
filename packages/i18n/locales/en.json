@@ -508,6 +508,7 @@
     "confirm": "Confirm",
     "decline": "Decline",
     "confirm_failed": "Could not confirm the appointment. Please try again.",
+    "time_change": "Time Change",
     "clocked_in_at": "Clocked in at",
     "patient_arrived": "Patient arrived",
     "patient_arrived_at": "Patient arrived at {{time}}",

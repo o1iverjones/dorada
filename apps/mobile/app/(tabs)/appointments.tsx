@@ -98,12 +98,6 @@ function AppointmentCard({ item }: { item: Record<string, unknown> }) {
   const isCancelled = item.status === "cancelled" || item.status === "late_cancellation";
   return (
     <TouchableOpacity style={[styles.card, isCancelled && styles.cardCancelled]} onPress={() => { const id = item.id as string; if (id) router.navigate(`/appointment/${id}`); }}>
-      {isCancelled && (
-        <View style={styles.cancelledBanner}>
-          <Ionicons name="close-circle" size={14} color="#dc2626" />
-          <Text style={styles.cancelledBannerText}>{t("appointments.cancelled")}</Text>
-        </View>
-      )}
       <View style={styles.cardHeader}>
         <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[item.status as string] ?? C.completed }]} />
         <Text style={[styles.cardDate, isCancelled && styles.textCancelled]}>
@@ -122,6 +116,11 @@ function AppointmentCard({ item }: { item: Record<string, unknown> }) {
                 color={type === "important" ? "#b91c1c" : type === "notice" ? C.warning : "#1e40af"}
               />
             ))}
+          </View>
+        )}
+        {isCancelled && (
+          <View style={[styles.cancelledBadge, noteTypes.length === 0 && { marginLeft: "auto" }]}>
+            <Text style={styles.cancelledBadgeText}>{t("appointments.cancelled")}</Text>
           </View>
         )}
       </View>
@@ -153,15 +152,27 @@ function OfferCard({ offer }: { offer: Record<string, unknown> }) {
     }
   }
 
+  const isTimeChange = typeof offer.message === "string" && /time\s*chang/i.test(offer.message);
+
   return (
-    <View style={styles.offerCard}>
-      {!!(offer.message as string) && (
+    <View style={[styles.offerCard, isTimeChange && styles.offerCardTimeChange]}>
+      <View style={styles.offerTopRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardDate}>{new Date(offer.date_time as string).toLocaleString()}</Text>
+        </View>
+        {isTimeChange && (
+          <View style={styles.timeChangeBadge}>
+            <Ionicons name="time-outline" size={14} color="#92400e" />
+            <Text style={styles.timeChangeBadgeText}>{t("appointments.time_change")}</Text>
+          </View>
+        )}
+      </View>
+      {!!(offer.message as string) && !isTimeChange && (
         <View style={styles.offerMessageBanner}>
           <Ionicons name="alert-circle" size={16} color="#b45309" />
           <Text style={styles.offerMessageText}>{offer.message as string}</Text>
         </View>
       )}
-      <Text style={styles.cardDate}>{new Date(offer.date_time as string).toLocaleString()}</Text>
       <Text style={styles.cardPatient}>{offer.clinic_name as string}</Text>
       <Text style={styles.cardClinic}>{offer.language as string} · {offer.interpreter_type_required as string}</Text>
       <View style={styles.offerActions}>
@@ -188,11 +199,15 @@ const styles = StyleSheet.create({
   badge: { color: C.danger, fontWeight: "700" },
   list: { padding: 16, gap: 12 },
   card: { backgroundColor: C.surface, borderRadius: 12, padding: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  cardCancelled: { opacity: 0.7, borderWidth: 1, borderColor: "#fca5a5" },
-  cancelledBanner: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
-  cancelledBannerText: { fontSize: 12, fontWeight: "700", color: "#dc2626", textTransform: "uppercase", letterSpacing: 0.5 },
+  cardCancelled: { backgroundColor: "#ffedd5", borderWidth: 1, borderColor: "#fdba74" },
+  cancelledBadge: { backgroundColor: "#fed7aa", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  cancelledBadgeText: { fontSize: 12, fontWeight: "700", color: "#c2410c", textTransform: "uppercase", letterSpacing: 0.5 },
   textCancelled: { textDecorationLine: "line-through", color: C.textMuted },
   offerCard: { backgroundColor: C.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: C.warningBorder },
+  offerCardTimeChange: { backgroundColor: "#fefce8", borderColor: "#facc15" },
+  offerTopRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  timeChangeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fef08a", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  timeChangeBadgeText: { fontSize: 12, fontWeight: "700", color: "#92400e", textTransform: "uppercase", letterSpacing: 0.5 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   cardDate: { fontSize: 13, fontWeight: "600", color: C.text },

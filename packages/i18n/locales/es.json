@@ -508,6 +508,7 @@
     "confirm": "Confirmar",
     "decline": "Rechazar",
     "confirm_failed": "No se pudo confirmar la cita. Intente de nuevo.",
+    "time_change": "Cambio de Hora",
     "clocked_in_at": "Entrada registrada a las",
     "patient_arrived": "Paciente llegó",
     "patient_arrived_at": "Paciente llegó a las {{time}}",
